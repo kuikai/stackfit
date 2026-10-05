@@ -30,6 +30,7 @@ workflows:
       - name: Build IPA
         script: |
           flutter build ipa --release \
+            --dart-define=UNLOCK_PRO=true \
             --build-name=1.0.0 \
             --build-number=$PROJECT_BUILD_NUMBER \
             --export-options-plist=/Users/builder/export_options.plist
