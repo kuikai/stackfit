@@ -6,6 +6,8 @@ workflows:
     integrations:
       app_store_connect: Codemagic
     environment:
+      groups:
+        - ios_signing
       vars:
         BUNDLE_ID: com.dix.stackfit
       flutter: stable
@@ -17,6 +19,7 @@ workflows:
         script: |
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
+            --certificate-key="@env:CERTIFICATE_PRIVATE_KEY" \
             --create
       - name: Add certificates to keychain
         script: keychain add-certificates
