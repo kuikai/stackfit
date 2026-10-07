@@ -57,6 +57,12 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_isNew ? 'New workout' : 'Edit workout'),
+        actions: [
+          TextButton(
+            onPressed: _saving ? null : _save,
+            child: const Text('Save'),
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),

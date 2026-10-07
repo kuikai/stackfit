@@ -69,6 +69,12 @@ class _ExerciseEditorScreenState extends State<ExerciseEditorScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(isEditing ? 'Edit exercise' : 'Add exercise'),
+        actions: [
+          TextButton(
+            onPressed: _save,
+            child: Text(isEditing ? 'Save' : 'Add'),
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
