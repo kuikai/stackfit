@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>StackFit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="brand">StackFit</p>
+        <p class="tagline">Custom workouts. Clean timers.</p>
+      </div>
+      <div class="toolbar-actions">
+        <a class="ghost" href="/tabata">Tabata</a>
+        <div id="account-bar" hidden>
+        <span id="account-email"></span>
+        <button id="sign-out" class="ghost" type="button">Sign out</button>
+        </div>
+      </div>
+    </header>
+
+    <p id="banner" class="banner" role="alert" hidden></p>
+
+    <main id="signed-out" class="wrap">
+      <section class="panel" id="sign-in-panel">
+        <h1>Sign in</h1>
+        <p class="lede">Same account as the StackFit app. Workouts and history stay in sync.</p>
+        <form id="sign-in-form">
+          <label class="field">Email
+            <input id="sign-in-email" name="email" type="email" autocomplete="username" required>
+          </label>
+          <label class="field">Password
+            <input id="sign-in-password" name="password" type="password" autocomplete="current-password" minlength="8" required>
+          </label>
+          <button class="primary" type="submit">Sign in</button>
+        </form>
+        <div class="link-row">
+          <button id="show-sign-up" class="text" type="button">Create account</button>
+          <button id="show-reset" class="text" type="button">Forgot password</button>
+        </div>
+      </section>
+
+      <section class="panel" id="sign-up-panel" hidden>
+        <h1>Create account</h1>
+        <p class="lede">Use the same email on the phone and here.</p>
+        <form id="sign-up-form">
+          <label class="field">Email
+            <input id="sign-up-email" name="email" type="email" autocomplete="username" required>
+          </label>
+          <label class="field">Password
+            <input id="sign-up-password" name="password" type="password" autocomplete="new-password" minlength="8" required>
+          </label>
+          <label class="field">Display name (optional)
+            <input id="sign-up-name" name="displayName" type="text" maxlength="40" autocomplete="nickname">
+          </label>
+          <button class="primary" type="submit">Create account</button>
+        </form>
+        <div class="link-row">
+          <button id="show-sign-in" class="text" type="button">Already have an account</button>
+        </div>
+      </section>
+
+      <section class="panel" id="reset-panel" hidden>
+        <h1>Reset password</h1>
+        <p class="lede">The reset code prints in the server window. Email is not connected yet.</p>
+        <form id="request-reset-form">
+          <label class="field">Email
+            <input id="reset-email" name="email" type="email" autocomplete="username" required>
+          </label>
+          <button class="primary" type="submit">Print reset code</button>
+        </form>
+        <form id="finish-reset-form">
+          <label class="field">Reset code
+            <input id="reset-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" required>
+          </label>
+          <label class="field">New password
+            <input id="reset-password" name="password" type="password" autocomplete="new-password" minlength="8" required>
+          </label>
+          <button class="primary" type="submit">Set new password</button>
+        </form>
+        <div class="link-row">
+          <button id="reset-back" class="text" type="button">Back to sign in</button>
+        </div>
+      </section>
+    </main>
+
+    <main id="share-view" class="wrap" hidden>
+      <section class="panel">
+        <p id="share-error" class="lede" hidden></p>
+        <div id="share-content">
+          <p id="share-kicker" class="lede"></p>
+          <h1 id="share-title"></h1>
+          <p id="share-summary" class="lede"></p>
+          <div id="share-body"></div>
+          <p id="share-note" class="lede"></p>
+          <div class="button-row">
+            <button id="share-add" class="primary" type="button">Add to my account</button>
+            <button id="share-copy" class="ghost" type="button">Copy link</button>
+            <a class="text" href="/">My workouts</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <main id="tabata" class="wrap" hidden>
+      <section class="panel" id="tabata-setup">
+        <h1>Tabata</h1>
+        <p class="lede">Set the work, rest, and rounds, then start. Rest is skipped after the last round.</p>
+        <button id="tabata-classic" class="ghost" type="button">Classic 20 / 10 × 8</button>
+        <form id="tabata-form">
+          <label class="field">Exercise
+            <input id="tabata-name" type="text" value="Tabata" maxlength="80">
+          </label>
+          <div class="tabata-fields">
+            <label class="field">Work seconds
+              <input id="tabata-work" type="number" min="1" max="3600" value="20" required>
+            </label>
+            <label class="field">Rest seconds
+              <input id="tabata-rest" type="number" min="0" max="600" value="10" required>
+            </label>
+            <label class="field">Rounds
+              <input id="tabata-rounds" type="number" min="1" max="99" value="8" required>
+            </label>
+          </div>
+          <div class="button-row">
+            <button class="primary" type="submit">Start</button>
+            <a class="text" href="/">My workouts</a>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel tabata-run" id="tabata-run" hidden>
+        <p id="tabata-phase" class="tabata-phase">Work</p>
+        <p id="tabata-clock" class="tabata-clock">0:20</p>
+        <p id="tabata-round" class="lede">Round 1 of 8</p>
+        <p id="tabata-exercise" class="lede"></p>
+        <div class="button-row">
+          <button id="tabata-pause" class="primary" type="button">Pause</button>
+          <button id="tabata-stop" class="danger" type="button">Stop</button>
+        </div>
+      </section>
+
+      <section class="panel" id="tabata-done" hidden>
+        <h1>Done</h1>
+        <p id="tabata-done-time" class="tabata-clock">0s</p>
+        <p class="lede">The phone shows a saved workout the next time it syncs.</p>
+        <div class="button-row">
+          <button id="tabata-again" class="ghost" type="button">Run again</button>
+          <button id="tabata-save" class="primary" type="button">Save to my account</button>
+          <a id="tabata-signin" class="text" href="/" hidden>Sign in to keep it</a>
+        </div>
+      </section>
+    </main>
+
+    <main id="signed-in" class="wrap" hidden>
+      <div class="toolbar">
+        <p id="save-status">Saved</p>
+        <div class="toolbar-actions">
+          <button id="refresh" class="ghost" type="button">Refresh</button>
+          <button id="log-session" class="ghost" type="button">Log session</button>
+          <button id="new-workout" class="primary" type="button">Create workout</button>
+        </div>
+      </div>
+
+      <section id="workout-run" class="panel tabata-run" hidden>
+        <p id="run-progress" class="lede"></p>
+        <h2 id="run-name"></h2>
+        <p id="run-phase" class="tabata-phase">Work</p>
+        <p id="run-clock" class="tabata-clock">0:00</p>
+        <p id="run-detail" class="lede"></p>
+        <div class="button-row">
+          <button id="run-primary" class="primary" type="button">Done</button>
+          <button id="run-pause" class="ghost" type="button">Pause</button>
+          <button id="run-skip" class="ghost" type="button">Skip</button>
+          <button id="run-stop" class="danger" type="button">Stop</button>
+        </div>
+      </section>
+
+      <section id="share-link-box" class="panel" hidden>
+        <p id="share-link-label" class="lede"></p>
+        <input id="share-link-input" type="text" readonly>
+        <div class="button-row">
+          <button id="share-link-copy" class="ghost" type="button">Copy again</button>
+          <button id="share-link-off" class="danger" type="button">Turn off link</button>
+        </div>
+      </section>
+
+      <section class="panel" id="receive">
+        <h2>Add a workout</h2>
+        <p class="lede">Paste a StackFit link, or choose a routine file from another site.</p>
+        <form id="receive-link-form" class="receive-row">
+          <label class="field">Link or code
+            <input id="receive-link" type="text" placeholder="https://…/s/…">
+          </label>
+          <button class="primary" type="submit">Open</button>
+        </form>
+        <label class="ghost file-button">
+          Add from file
+          <input id="receive-file" type="file" accept="application/json,.json">
+        </label>
+      </section>
+
+      <div id="library" class="columns">
+        <section>
+          <h2>Workouts</h2>
+          <div id="workout-list"></div>
+        </section>
+        <section>
+          <div class="section-head">
+            <h2>History</h2>
+            <button id="share-progress" class="text" type="button">Share</button>
+          </div>
+          <div id="history-list"></div>
+        </section>
+      </div>
+
+      <section id="progress-picker" class="panel" hidden>
+        <h2>Share progress</h2>
+        <p class="lede">Pick the sessions to include. The page does not show your email, and nobody can add these sessions to their history.</p>
+        <div id="progress-choices"></div>
+        <div class="button-row">
+          <button id="progress-create" class="primary" type="button">Copy link</button>
+          <button id="progress-cancel" class="ghost" type="button">Cancel</button>
+        </div>
+      </section>
+
+      <section id="editor" class="panel" hidden>
+        <h2 id="editor-title">Create workout</h2>
+        <form id="workout-form">
+          <label class="field">Workout name
+            <input id="workout-name" name="name" type="text" required>
+          </label>
+          <div id="exercise-list"></div>
+          <div class="button-row">
+            <button id="add-exercise" class="ghost" type="button">Add exercise</button>
+            <button id="save-workout" class="primary" type="submit">Save workout</button>
+            <button id="cancel-editor" class="ghost" type="button">Cancel</button>
+            <button id="delete-workout" class="danger" type="button" hidden>Delete workout</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="session-editor" class="panel" hidden>
+        <h2>Log session</h2>
+        <p class="lede">Add a finished workout by hand. The phone picks it up the next time it syncs.</p>
+        <form id="session-form">
+          <label class="field">Workout
+            <select id="session-workout" required></select>
+          </label>
+          <label class="field">When
+            <input id="session-when" type="datetime-local" required>
+          </label>
+          <div class="split">
+            <label class="field">Minutes
+              <input id="session-minutes" type="number" min="0" value="0" required>
+            </label>
+            <label class="field">Seconds
+              <input id="session-seconds" type="number" min="0" max="59" value="0" required>
+            </label>
+          </div>
+          <div class="button-row">
+            <button class="primary" type="submit">Add session</button>
+            <button id="cancel-session" class="ghost" type="button">Cancel</button>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <script type="module" src="/js/main.js"></script>
+  </body>
+</html>

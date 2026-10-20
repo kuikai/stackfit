@@ -1,36 +1,174 @@
+import 'dart:ui' show lerpDouble;
+
 import 'package:flutter/material.dart';
 
-/// Visual style presets for StackFit (Clean Athletic).
+/// Visual style presets for StackFit.
+/// Everyday skins stay free. Fun skins set [pro] and show under Pro skins.
 enum AppSkin {
   classic,
   midnight,
   forest,
   sunset,
   minimal,
-  synthwave;
+  synthwave,
+  boldSports,
+  chibi,
+  cyberpunk,
+  dumbbell;
+
+  const AppSkin({this.pro = false});
+
+  /// True for fun themes such as anime. They live in the Pro skins section.
+  final bool pro;
+
+  static List<AppSkin> get standardSkins =>
+      [for (final skin in values) if (!skin.pro) skin];
+
+  static List<AppSkin> get proSkins =>
+      [for (final skin in values) if (skin.pro) skin];
 
   String get displayName => switch (this) {
-        AppSkin.classic => 'Classic',
-        AppSkin.midnight => 'Midnight',
-        AppSkin.forest => 'Forest',
-        AppSkin.sunset => 'Sunset',
-        AppSkin.minimal => 'Minimal',
-        AppSkin.synthwave => 'Synthwave',
-      };
+    AppSkin.classic => 'Classic',
+    AppSkin.midnight => 'Midnight',
+    AppSkin.forest => 'Forest',
+    AppSkin.sunset => 'Sunset',
+    AppSkin.minimal => 'Minimal',
+    AppSkin.synthwave => 'Synthwave',
+    AppSkin.boldSports => 'Bold Sports',
+    AppSkin.chibi => 'Chibi',
+    AppSkin.cyberpunk => 'Cyberpunk',
+    AppSkin.dumbbell => 'Dumbbell',
+  };
 
   String get description => switch (this) {
-        AppSkin.classic => 'Fresh athletic green',
-        AppSkin.midnight => 'Gym-ready cool blue',
-        AppSkin.forest => 'Calm earthy focus',
-        AppSkin.sunset => 'Warm energetic coral',
-        AppSkin.minimal => 'Quiet premium neutrals',
-        AppSkin.synthwave => 'Neon pink & cyan fun',
-      };
+    AppSkin.classic => 'Fresh athletic green',
+    AppSkin.midnight => 'Gym-ready cool blue',
+    AppSkin.forest => 'Calm earthy focus',
+    AppSkin.sunset => 'Warm energetic coral',
+    AppSkin.minimal => 'Quiet premium neutrals',
+    AppSkin.synthwave => 'Neon pink & cyan fun',
+    AppSkin.boldSports => 'High-energy neon pink sports anime',
+    AppSkin.chibi => 'Soft pastel cute anime',
+    AppSkin.cyberpunk => 'Neon cyan and magenta night city',
+    AppSkin.dumbbell => 'Bright warm gym anime style',
+  };
+
+  /// Banner shown on the Pro skin card. Everyday skins stay colour-only.
+  String? get previewAsset => switch (this) {
+    AppSkin.boldSports => 'StackFitWeb/themes/bold-sports/icons/banner.jpg',
+    AppSkin.chibi => 'StackFitWeb/themes/chibi/icons/banner.jpg',
+    AppSkin.cyberpunk => 'StackFitWeb/themes/cyberpunk/icons/banner.jpg',
+    AppSkin.dumbbell => 'StackFitWeb/themes/dumbbell/icons/banner-home.jpg',
+    _ => null,
+  };
 
   static AppSkin fromStorage(String? value) {
     return AppSkin.values.firstWhere(
       (skin) => skin.name == value,
       orElse: () => AppSkin.classic,
+    );
+  }
+}
+
+/// Typeface used by a skin. Some skins pair a display face with a body face.
+enum SkinTypeface {
+  plusJakartaSans,
+  spaceGrotesk,
+  nunito,
+  outfit,
+  inter,
+  rajdhani,
+  orbitron,
+}
+
+/// Font, corners, and spacing for one skin. Colors stay on [SkinPalette].
+class SkinLook extends ThemeExtension<SkinLook> {
+  const SkinLook({
+    required this.bodyFont,
+    required this.displayFont,
+    required this.radius,
+    required this.radiusSmall,
+    required this.pagePadding,
+    required this.listGap,
+    required this.buttonPaddingHorizontal,
+    required this.buttonPaddingVertical,
+  });
+
+  final SkinTypeface bodyFont;
+  final SkinTypeface displayFont;
+  final double radius;
+  final double radiusSmall;
+  final double pagePadding;
+  final double listGap;
+  final double buttonPaddingHorizontal;
+  final double buttonPaddingVertical;
+
+  EdgeInsets get buttonPadding => EdgeInsets.symmetric(
+    horizontal: buttonPaddingHorizontal,
+    vertical: buttonPaddingVertical,
+  );
+
+  EdgeInsets get outlinedButtonPadding => EdgeInsets.symmetric(
+    horizontal: buttonPaddingHorizontal - 6,
+    vertical: buttonPaddingVertical - 2,
+  );
+
+  double get filledButtonHeight => buttonPaddingVertical * 2 + 24;
+
+  double get outlinedButtonHeight => (buttonPaddingVertical - 2) * 2 + 24;
+
+  BorderRadius get cornerRadius => BorderRadius.circular(radius);
+
+  BorderRadius get cornerRadiusSmall => BorderRadius.circular(radiusSmall);
+
+  @override
+  SkinLook copyWith({
+    SkinTypeface? bodyFont,
+    SkinTypeface? displayFont,
+    double? radius,
+    double? radiusSmall,
+    double? pagePadding,
+    double? listGap,
+    double? buttonPaddingHorizontal,
+    double? buttonPaddingVertical,
+  }) {
+    return SkinLook(
+      bodyFont: bodyFont ?? this.bodyFont,
+      displayFont: displayFont ?? this.displayFont,
+      radius: radius ?? this.radius,
+      radiusSmall: radiusSmall ?? this.radiusSmall,
+      pagePadding: pagePadding ?? this.pagePadding,
+      listGap: listGap ?? this.listGap,
+      buttonPaddingHorizontal:
+          buttonPaddingHorizontal ?? this.buttonPaddingHorizontal,
+      buttonPaddingVertical:
+          buttonPaddingVertical ?? this.buttonPaddingVertical,
+    );
+  }
+
+  @override
+  SkinLook lerp(SkinLook? other, double t) {
+    if (other == null) {
+      return this;
+    }
+    final useOther = t >= 0.5;
+    return SkinLook(
+      bodyFont: useOther ? other.bodyFont : bodyFont,
+      displayFont: useOther ? other.displayFont : displayFont,
+      radius: lerpDouble(radius, other.radius, t)!,
+      radiusSmall: lerpDouble(radiusSmall, other.radiusSmall, t)!,
+      pagePadding: lerpDouble(pagePadding, other.pagePadding, t)!,
+      listGap: lerpDouble(listGap, other.listGap, t)!,
+      buttonPaddingHorizontal: lerpDouble(
+        buttonPaddingHorizontal,
+        other.buttonPaddingHorizontal,
+        t,
+      )!,
+      buttonPaddingVertical: lerpDouble(
+        buttonPaddingVertical,
+        other.buttonPaddingVertical,
+        t,
+      )!,
     );
   }
 }
@@ -97,8 +235,137 @@ class AppSkins {
       AppSkin.sunset => isDark ? _sunsetDark : _sunsetLight,
       AppSkin.minimal => isDark ? _minimalDark : _minimalLight,
       AppSkin.synthwave => isDark ? _synthwaveDark : _synthwaveLight,
+      AppSkin.boldSports => isDark ? _boldSportsDark : _boldSportsLight,
+      AppSkin.chibi => isDark ? _chibiDark : _chibiLight,
+      AppSkin.cyberpunk => isDark ? _cyberpunkDark : _cyberpunkLight,
+      AppSkin.dumbbell => isDark ? _dumbbellDark : _dumbbellLight,
     };
   }
+
+  static SkinLook look(AppSkin skin) {
+    return switch (skin) {
+      AppSkin.classic => _classicLook,
+      AppSkin.midnight => _midnightLook,
+      AppSkin.forest => _forestLook,
+      AppSkin.sunset => _sunsetLook,
+      AppSkin.minimal => _minimalLook,
+      AppSkin.synthwave => _synthwaveLook,
+      AppSkin.boldSports => _boldSportsLook,
+      AppSkin.chibi => _chibiLook,
+      AppSkin.cyberpunk => _cyberpunkLook,
+      AppSkin.dumbbell => _dumbbellLook,
+    };
+  }
+
+  static const _classicLook = SkinLook(
+    bodyFont: SkinTypeface.plusJakartaSans,
+    displayFont: SkinTypeface.plusJakartaSans,
+    radius: 18,
+    radiusSmall: 14,
+    pagePadding: 16,
+    listGap: 12,
+    buttonPaddingHorizontal: 24,
+    buttonPaddingVertical: 14,
+  );
+
+  static const _midnightLook = SkinLook(
+    bodyFont: SkinTypeface.spaceGrotesk,
+    displayFont: SkinTypeface.spaceGrotesk,
+    radius: 10,
+    radiusSmall: 8,
+    pagePadding: 12,
+    listGap: 8,
+    buttonPaddingHorizontal: 18,
+    buttonPaddingVertical: 10,
+  );
+
+  static const _forestLook = SkinLook(
+    bodyFont: SkinTypeface.nunito,
+    displayFont: SkinTypeface.nunito,
+    radius: 28,
+    radiusSmall: 20,
+    pagePadding: 22,
+    listGap: 16,
+    buttonPaddingHorizontal: 28,
+    buttonPaddingVertical: 16,
+  );
+
+  static const _sunsetLook = SkinLook(
+    bodyFont: SkinTypeface.outfit,
+    displayFont: SkinTypeface.outfit,
+    radius: 20,
+    radiusSmall: 16,
+    pagePadding: 16,
+    listGap: 12,
+    buttonPaddingHorizontal: 24,
+    buttonPaddingVertical: 14,
+  );
+
+  static const _minimalLook = SkinLook(
+    bodyFont: SkinTypeface.inter,
+    displayFont: SkinTypeface.inter,
+    radius: 4,
+    radiusSmall: 4,
+    pagePadding: 12,
+    listGap: 8,
+    buttonPaddingHorizontal: 18,
+    buttonPaddingVertical: 10,
+  );
+
+  static const _synthwaveLook = SkinLook(
+    bodyFont: SkinTypeface.rajdhani,
+    displayFont: SkinTypeface.orbitron,
+    radius: 6,
+    radiusSmall: 4,
+    pagePadding: 12,
+    listGap: 8,
+    buttonPaddingHorizontal: 18,
+    buttonPaddingVertical: 10,
+  );
+
+  static const _boldSportsLook = SkinLook(
+    bodyFont: SkinTypeface.rajdhani,
+    displayFont: SkinTypeface.orbitron,
+    radius: 8,
+    radiusSmall: 6,
+    pagePadding: 12,
+    listGap: 8,
+    buttonPaddingHorizontal: 18,
+    buttonPaddingVertical: 10,
+  );
+
+  static const _chibiLook = SkinLook(
+    bodyFont: SkinTypeface.nunito,
+    displayFont: SkinTypeface.nunito,
+    radius: 28,
+    radiusSmall: 22,
+    pagePadding: 22,
+    listGap: 16,
+    buttonPaddingHorizontal: 28,
+    buttonPaddingVertical: 16,
+  );
+
+  static const _cyberpunkLook = SkinLook(
+    bodyFont: SkinTypeface.spaceGrotesk,
+    displayFont: SkinTypeface.orbitron,
+    radius: 4,
+    radiusSmall: 4,
+    pagePadding: 12,
+    listGap: 8,
+    buttonPaddingHorizontal: 18,
+    buttonPaddingVertical: 10,
+  );
+
+  static const _dumbbellLook = SkinLook(
+    bodyFont: SkinTypeface.outfit,
+    displayFont: SkinTypeface.outfit,
+    radius: 20,
+    radiusSmall: 16,
+    pagePadding: 16,
+    listGap: 12,
+    buttonPaddingHorizontal: 24,
+    buttonPaddingVertical: 14,
+  );
 
   static const _classicLight = SkinPalette(
     primary: Color(0xFF0F9F6E),
@@ -230,5 +497,93 @@ class AppSkins {
     onSecondary: Color(0xFF001820),
     onBackground: Color(0xFFFFEAF5),
     onSurface: Color(0xFFFFEAF5),
+  );
+
+  static const _boldSportsLight = SkinPalette(
+    primary: Color(0xFFE0187A),
+    secondary: Color(0xFFFFB703),
+    background: Color(0xFFFFF1F7),
+    surface: Color(0xFFFFFFFF),
+    onPrimary: Color(0xFFFFFFFF),
+    onSecondary: Color(0xFF3A2200),
+    onBackground: Color(0xFF2A1020),
+    onSurface: Color(0xFF2A1020),
+  );
+
+  static const _boldSportsDark = SkinPalette(
+    primary: Color(0xFFFF2D95),
+    secondary: Color(0xFFFFD60A),
+    background: Color(0xFF12040C),
+    surface: Color(0xFF1E0A16),
+    onPrimary: Color(0xFF1A0012),
+    onSecondary: Color(0xFF2A1A00),
+    onBackground: Color(0xFFFFE6F2),
+    onSurface: Color(0xFFFFE6F2),
+  );
+
+  static const _chibiLight = SkinPalette(
+    primary: Color(0xFFFF8FB8),
+    secondary: Color(0xFFC4B5FD),
+    background: Color(0xFFFFF6FB),
+    surface: Color(0xFFFFFFFF),
+    onPrimary: Color(0xFF3D2030),
+    onSecondary: Color(0xFF2A2040),
+    onBackground: Color(0xFF3A2A38),
+    onSurface: Color(0xFF3A2A38),
+  );
+
+  static const _chibiDark = SkinPalette(
+    primary: Color(0xFFFFB7D5),
+    secondary: Color(0xFFD4C4FF),
+    background: Color(0xFF1A121C),
+    surface: Color(0xFF261A28),
+    onPrimary: Color(0xFF3A1830),
+    onSecondary: Color(0xFF241838),
+    onBackground: Color(0xFFFFF0F8),
+    onSurface: Color(0xFFFFF0F8),
+  );
+
+  static const _cyberpunkLight = SkinPalette(
+    primary: Color(0xFF00C2E0),
+    secondary: Color(0xFFFF2D95),
+    background: Color(0xFFF2FBFD),
+    surface: Color(0xFFFFFFFF),
+    onPrimary: Color(0xFF002028),
+    onSecondary: Color(0xFFFFFFFF),
+    onBackground: Color(0xFF0B1A22),
+    onSurface: Color(0xFF0B1A22),
+  );
+
+  static const _cyberpunkDark = SkinPalette(
+    primary: Color(0xFF00E5FF),
+    secondary: Color(0xFFFF2D95),
+    background: Color(0xFF05060F),
+    surface: Color(0xFF10141F),
+    onPrimary: Color(0xFF001418),
+    onSecondary: Color(0xFF1A0012),
+    onBackground: Color(0xFFE8FBFF),
+    onSurface: Color(0xFFE8FBFF),
+  );
+
+  static const _dumbbellLight = SkinPalette(
+    primary: Color(0xFFFF6B4A),
+    secondary: Color(0xFFFFC43D),
+    background: Color(0xFFFFF8F0),
+    surface: Color(0xFFFFFFFF),
+    onPrimary: Color(0xFFFFFFFF),
+    onSecondary: Color(0xFF3A2200),
+    onBackground: Color(0xFF2A160C),
+    onSurface: Color(0xFF2A160C),
+  );
+
+  static const _dumbbellDark = SkinPalette(
+    primary: Color(0xFFFF8A5B),
+    secondary: Color(0xFFFFD166),
+    background: Color(0xFF1A100C),
+    surface: Color(0xFF261812),
+    onPrimary: Color(0xFF3A1408),
+    onSecondary: Color(0xFF2A1A00),
+    onBackground: Color(0xFFFFF3E8),
+    onSurface: Color(0xFFFFF3E8),
   );
 }

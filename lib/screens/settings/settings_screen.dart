@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
 import '../../core/skins.dart';
+import '../../core/theme.dart';
 import '../../providers/pro_provider.dart';
 import '../../providers/settings_provider.dart';
+import '../../widgets/account_settings_card.dart';
 import '../../widgets/skin_picker.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -18,12 +20,12 @@ class SettingsScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
+      appBar: AppBar(title: const Text('Settings')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        padding: context.pageGutter(top: 8, bottom: 32),
         children: [
+          const AccountSettingsCard(),
+          const SizedBox(height: 16),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -68,12 +70,35 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           _CollapsibleSkinSection(
-            selectedSkin: settings.skin,
-            onSkinSelected: (skin) {
-              ref.read(settingsProvider.notifier).setSkin(skin);
-            },
+            title: 'App Skin',
+            collapsedSubtitle: settings.skin.pro
+                ? 'Clean athletic styles'
+                : 'Current: ${settings.skin.displayName}',
+            expandedSubtitle:
+                'Try different visual styles. Changes apply instantly.',
+            child: SkinPicker(
+              skins: AppSkin.standardSkins,
+              selected: settings.skin,
+              onSelected: (skin) => _selectSkin(context, ref, skin),
+            ),
           ),
           const SizedBox(height: 16),
+          if (AppSkin.proSkins.isNotEmpty) ...[
+            _CollapsibleSkinSection(
+              title: 'Pro skins',
+              collapsedSubtitle: settings.skin.pro
+                  ? 'Current: ${settings.skin.displayName}'
+                  : 'Fun themes included with StackFit Pro',
+              expandedSubtitle: 'Playful skins included with StackFit Pro.',
+              child: SkinPicker(
+                skins: AppSkin.proSkins,
+                selected: settings.skin,
+                onSelected: (skin) => _selectSkin(context, ref, skin),
+                emptyMessage: 'No Pro skins in this build.',
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -91,10 +116,12 @@ class SettingsScreen extends ConsumerWidget {
                     isPro
                         ? 'Pro is unlocked. Unlimited workouts, full history, and duplicate.'
                         : 'Free: ${AppConstants.freeWorkoutLimit} workouts and '
-                            'last ${AppConstants.freeHistoryLimit} history sessions. '
-                            'Unlock Pro (${AppConstants.defaultProPrice}) for unlimited use.',
+                              'last ${AppConstants.freeHistoryLimit} history sessions. '
+                              'Unlock Pro (${AppConstants.defaultProPrice}) for unlimited use.',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                      color: theme.colorScheme.onSurface.withValues(
+                        alpha: 0.65,
+                      ),
                       height: 1.4,
                     ),
                   ),
@@ -201,6 +228,19 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
+  void _selectSkin(BuildContext context, WidgetRef ref, AppSkin skin) {
+    final isPro = ref.read(isProProvider);
+    if (skin.pro && !isPro) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pro skins unlock with StackFit Pro.'),
+        ),
+      );
+      return;
+    }
+    ref.read(settingsProvider.notifier).setSkin(skin);
+  }
+
   Future<void> _restorePurchases(BuildContext context, WidgetRef ref) async {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -214,12 +254,16 @@ class SettingsScreen extends ConsumerWidget {
 
 class _CollapsibleSkinSection extends StatefulWidget {
   const _CollapsibleSkinSection({
-    required this.selectedSkin,
-    required this.onSkinSelected,
+    required this.title,
+    required this.collapsedSubtitle,
+    required this.expandedSubtitle,
+    required this.child,
   });
 
-  final AppSkin selectedSkin;
-  final ValueChanged<AppSkin> onSkinSelected;
+  final String title;
+  final String collapsedSubtitle;
+  final String expandedSubtitle;
+  final Widget child;
 
   @override
   State<_CollapsibleSkinSection> createState() =>
@@ -251,7 +295,7 @@ class _CollapsibleSkinSectionState extends State<_CollapsibleSkinSection> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'App Skin',
+                            widget.title,
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w700,
                             ),
@@ -259,8 +303,8 @@ class _CollapsibleSkinSectionState extends State<_CollapsibleSkinSection> {
                           const SizedBox(height: 4),
                           Text(
                             _expanded
-                                ? 'Try different visual styles. Changes apply instantly.'
-                                : 'Current: ${widget.selectedSkin.displayName}',
+                                ? widget.expandedSubtitle
+                                : widget.collapsedSubtitle,
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: theme.colorScheme.onSurface.withValues(
                                 alpha: 0.62,
@@ -292,10 +336,7 @@ class _CollapsibleSkinSectionState extends State<_CollapsibleSkinSection> {
               firstChild: const SizedBox(width: double.infinity),
               secondChild: Padding(
                 padding: const EdgeInsets.only(top: 14),
-                child: SkinPicker(
-                  selected: widget.selectedSkin,
-                  onSelected: widget.onSkinSelected,
-                ),
+                child: widget.child,
               ),
               crossFadeState: _expanded
                   ? CrossFadeState.showSecond

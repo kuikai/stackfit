@@ -8,12 +8,16 @@ class Workout {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  /// Optional folder on Home, e.g. "Bro Split". Null means ungrouped.
+  final String? section;
+
   const Workout({
     required this.id,
     required this.name,
     required this.exercises,
     required this.createdAt,
     required this.updatedAt,
+    this.section,
   });
 
   Workout copyWith({
@@ -22,6 +26,8 @@ class Workout {
     List<Exercise>? exercises,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? section,
+    bool clearSection = false,
   }) {
     return Workout(
       id: id ?? this.id,
@@ -29,6 +35,7 @@ class Workout {
       exercises: exercises ?? this.exercises,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      section: clearSection ? null : (section ?? this.section),
     );
   }
 
@@ -55,6 +62,7 @@ class Workout {
       'exercises': exercises.map((e) => e.toJson()).toList(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      if (section != null) 'section': section,
     };
   }
 
@@ -67,6 +75,48 @@ class Workout {
           .toList(),
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
+      section: normalizeSection(json['section'] as String?),
     );
   }
+
+  /// Empty or whitespace is treated as ungrouped.
+  static String? normalizeSection(String? raw) {
+    final value = raw?.trim();
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+    return value;
+  }
+}
+
+/// One block on Home: either a named section or a single ungrouped workout.
+class WorkoutHomeGroup {
+  const WorkoutHomeGroup({this.section, required this.workouts});
+
+  final String? section;
+  final List<Workout> workouts;
+
+  bool get isSection => section != null;
+}
+
+/// Keeps list order. Workouts that share a section gather at the first one.
+List<WorkoutHomeGroup> groupWorkoutsForHome(List<Workout> workouts) {
+  final groups = <WorkoutHomeGroup>[];
+  final sectionIndex = <String, int>{};
+
+  for (final workout in workouts) {
+    final section = workout.section;
+    if (section == null) {
+      groups.add(WorkoutHomeGroup(section: null, workouts: [workout]));
+      continue;
+    }
+    final existing = sectionIndex[section];
+    if (existing == null) {
+      sectionIndex[section] = groups.length;
+      groups.add(WorkoutHomeGroup(section: section, workouts: [workout]));
+    } else {
+      groups[existing].workouts.add(workout);
+    }
+  }
+  return groups;
 }

@@ -1,0 +1,38 @@
+---
+description: Keep StackFit in layers so screens, providers, services, and models do not melt together
+alwaysApply: true
+---
+
+# Keep the code sharp
+
+The phone app has four layers. A layer only talks to the one below it.
+
+| Folder | Owns | Must not |
+|--------|------|----------|
+| `lib/screens/` | What the user sees. `ref.watch` in `build`, `ref.read` in callbacks. | HTTP, SharedPreferences, or JSON parsing |
+| `lib/providers/` | Riverpod state. Call services, then update state. | Build widgets |
+| `lib/services/` | Saving, syncing, and running the timer. | Import Flutter widgets |
+| `lib/models/` | Data shapes with `toJson` / `fromJson`. | I/O or UI |
+
+Screens never call the server. `accountProvider` is the only path that syncs.
+
+The website calls the server only through `website/js/api.js`. New server URLs go in `server/lib/` and get a test in `server/test/`.
+
+## Size
+
+Add the change to the file that already owns that job. If that file is past about 300 lines, split it first: one screen per file, shared pieces in `lib/widgets/`. Do not start a second copy of the same idea.
+
+## What the analyzer does not catch
+
+- Files are `snake_case`, types are `PascalCase`, providers end in `Provider`.
+- Await a future you start, or mark it unawaited on purpose.
+- An empty `catch` is only for a deliberate fallback (bad JSON already on disk), and a one-line comment says so.
+- New merge, sync, or plan-library behavior gets a test in `test/` or `server/test/`.
+
+```dart
+// ❌ BAD — a screen talking to the server
+await http.post(AppConstants.accountServerUrl);
+
+// ✅ GOOD — the screen asks the provider
+await ref.read(accountProvider.notifier).syncIfSignedIn();
+```

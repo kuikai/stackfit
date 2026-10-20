@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme.dart';
 import '../../core/utils.dart';
 import '../../models/models.dart';
 import '../../providers/workouts_provider.dart';
@@ -10,13 +11,13 @@ import '../catalog/catalog_screen.dart';
 import '../exercise_editor/exercise_editor_screen.dart';
 
 class WorkoutEditorScreen extends ConsumerStatefulWidget {
-  const WorkoutEditorScreen({
-    super.key,
-    this.workoutId,
-  });
+  const WorkoutEditorScreen({super.key, this.workoutId, this.initialSection});
 
   /// Null means create a new workout.
   final String? workoutId;
+
+  /// Pre-fills the section when creating from a folder on Home.
+  final String? initialSection;
 
   @override
   ConsumerState<WorkoutEditorScreen> createState() =>
@@ -25,6 +26,7 @@ class WorkoutEditorScreen extends ConsumerStatefulWidget {
 
 class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
   late final TextEditingController _nameController;
+  late final TextEditingController _sectionController;
   late String _workoutId;
   late DateTime _createdAt;
   late List<Exercise> _exercises;
@@ -44,11 +46,15 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
     _createdAt = existing?.createdAt ?? DateTime.now();
     _exercises = [...(existing?.exercises ?? const <Exercise>[])];
     _nameController = TextEditingController(text: existing?.name ?? '');
+    _sectionController = TextEditingController(
+      text: existing?.section ?? widget.initialSection ?? '',
+    );
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _sectionController.dispose();
     super.dispose();
   }
 
@@ -65,7 +71,7 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: context.pageGutter(top: 8, bottom: 24),
         children: [
           TextField(
             controller: _nameController,
@@ -75,12 +81,23 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
               hintText: 'e.g. Push Day',
             ),
           ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _sectionController,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              labelText: 'Section (optional)',
+              hintText: 'e.g. Bro Split',
+              helperText:
+                  'Workouts with the same section sit together on Home.',
+            ),
+          ),
           const SizedBox(height: 24),
           Text(
             'Exercises',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           if (_exercises.isEmpty)
@@ -114,7 +131,7 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          padding: context.pageGutter(top: 8, bottom: 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -199,9 +216,7 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
 
     final exercise = await Navigator.of(context).push<Exercise>(
       MaterialPageRoute(
-        builder: (_) => ExerciseEditorScreen(
-          initialName: catalogItem.name,
-        ),
+        builder: (_) => ExerciseEditorScreen(initialName: catalogItem.name),
       ),
     );
     if (!mounted || exercise == null) {
@@ -250,9 +265,9 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
   Future<void> _save() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a workout name')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enter a workout name')));
       return;
     }
     if (_exercises.isEmpty) {
@@ -269,6 +284,7 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
       exercises: List<Exercise>.unmodifiable(_exercises),
       createdAt: _createdAt,
       updatedAt: DateTime.now(),
+      section: Workout.normalizeSection(_sectionController.text),
     );
 
     final notifier = ref.read(workoutsProvider.notifier);

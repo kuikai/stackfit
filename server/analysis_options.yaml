@@ -1,0 +1,21 @@
+# Checks the account server for mistakes and the same house style as the app.
+# Run with: dart analyze
+include: package:lints/recommended.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+
+linter:
+  rules:
+    always_declare_return_types: true
+    avoid_escaping_inner_quotes: true
+    directives_ordering: true
+    prefer_final_in_for_each: true
+    prefer_final_locals: true
+    prefer_relative_imports: true
+    prefer_single_quotes: true
+    unawaited_futures: true
+    unnecessary_lambdas: true

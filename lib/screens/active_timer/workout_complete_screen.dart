@@ -5,15 +5,18 @@ import '../../core/utils.dart';
 import '../../models/models.dart';
 import '../../providers/completed_sessions_provider.dart';
 import '../../services/sound_service.dart';
+import '../../widgets/set_log_list.dart';
 
 class WorkoutCompleteArgs {
   const WorkoutCompleteArgs({
     required this.workout,
     required this.durationSeconds,
+    this.setLogs = const [],
   });
 
   final Workout workout;
   final int durationSeconds;
+  final List<SetLog> setLogs;
 }
 
 class WorkoutCompleteScreen extends ConsumerStatefulWidget {
@@ -54,6 +57,7 @@ class _WorkoutCompleteScreenState extends ConsumerState<WorkoutCompleteScreen> {
             completedAt: DateTime.now(),
             durationSeconds: widget.args.durationSeconds,
             totalExercises: workout.exercises.length,
+            setLogs: widget.args.setLogs,
           ),
         );
   }
@@ -115,6 +119,13 @@ class _WorkoutCompleteScreenState extends ConsumerState<WorkoutCompleteScreen> {
                   color: colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
+              if (args.setLogs.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                Flexible(
+                  flex: 3,
+                  child: SetLogList(logs: args.setLogs),
+                ),
+              ],
               const Spacer(),
               SizedBox(
                 width: double.infinity,

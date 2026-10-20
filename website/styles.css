@@ -1,0 +1,192 @@
+:root {
+  color-scheme: light;
+  --primary: #0f9f6e;
+  --primary-ink: #ffffff;
+  --background: #f3f6f4;
+  --surface: #ffffff;
+  --ink: #122018;
+  --muted: #5b8a78;
+  --line: #d7e4dc;
+  --danger: #b42318;
+  --radius: 18px;
+  --shadow: 0 10px 30px rgba(18, 32, 24, 0.06);
+  font-family: "Plus Jakarta Sans", sans-serif;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--ink);
+}
+
+button, input, select { font: inherit; }
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  padding: 20px 24px 8px;
+}
+
+.brand {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+}
+
+.tagline, .lede, #save-status, #account-email {
+  margin: 0;
+  color: var(--muted);
+}
+
+.wrap {
+  width: min(1040px, calc(100% - 32px));
+  margin: 0 auto 48px;
+}
+
+.panel {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  margin-top: 16px;
+}
+
+h1, h2 { letter-spacing: -0.04em; margin: 0 0 8px; }
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+  margin: 14px 0;
+}
+
+input, select {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: #fff;
+  color: var(--ink);
+}
+
+button {
+  border: 0;
+  border-radius: 14px;
+  padding: 12px 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary { background: var(--primary); color: var(--primary-ink); }
+.ghost { background: #e7f5ee; color: var(--ink); }
+.danger { background: #fde8e6; color: var(--danger); }
+.text { background: transparent; color: var(--primary); padding-left: 0; }
+a.text, a.ghost { font-weight: 700; text-decoration: none; }
+a.ghost { display: inline-block; }
+
+.tabata-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.tabata-fields .field { margin-top: 0; }
+
+.tabata-phase {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tabata-clock {
+  margin: 8px 0;
+  font-size: clamp(72px, 18vw, 140px);
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabata-run.work .tabata-phase,
+.tabata-run.work .tabata-clock { color: var(--primary); }
+.tabata-clock.set-prompt { font-size: clamp(36px, 8vw, 56px); }
+
+.section-head, .receive-row {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  justify-content: space-between;
+}
+
+.receive-row .field { flex: 1; margin-top: 0; }
+
+.file-button { display: inline-block; }
+.file-button input { display: none; }
+
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 8px 0;
+  font-weight: 500;
+}
+
+.button-row, .link-row, .toolbar, .toolbar-actions, .card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.workout-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.toolbar { justify-content: space-between; margin-top: 12px; }
+.columns { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px; }
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.card, .exercise {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin: 12px 0;
+  background: #fff;
+}
+
+.card h3, .exercise h3 { margin: 0; }
+
+.meta { color: var(--muted); margin: 6px 0 0; }
+
+.banner {
+  width: min(1040px, calc(100% - 32px));
+  margin: 12px auto 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #fde8e6;
+  color: var(--danger);
+}
+
+.banner.ok { background: #e7f5ee; color: #0b6b48; }
+
+.empty {
+  padding: 20px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  color: var(--muted);
+}
+
+.segment { display: flex; gap: 8px; }
+.segment button[aria-pressed="true"] { background: var(--primary); color: white; }
+
+@media (max-width: 800px) {
+  .columns, .split, .tabata-fields { grid-template-columns: 1fr; }
+  .topbar { align-items: flex-start; flex-direction: column; }
+}

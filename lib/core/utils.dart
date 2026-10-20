@@ -53,10 +53,16 @@ class AppUtils {
     return '$day $month ${local.year} · $hour:$minute';
   }
 
-  /// Simple unique id based on time + a short random suffix.
+  static int _idCounter = 0;
+
+  /// Simple unique id based on time plus a per-process counter.
+  ///
+  /// The counter keeps ids distinct when many are created in the same clock
+  /// tick (for example copying every day of a plan at once).
   static String newId() {
     final now = DateTime.now().microsecondsSinceEpoch;
-    final suffix = now.hashCode.toRadixString(16);
+    _idCounter = (_idCounter + 1) & 0xFFFFFF;
+    final suffix = _idCounter.toRadixString(16);
     return '${now}_$suffix';
   }
 }

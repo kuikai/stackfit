@@ -1,0 +1,53 @@
+---
+description: Keep GUIDE.md (diagrams + file map) in step with the code
+alwaysApply: true
+---
+
+# Keep GUIDE.md current
+
+`GUIDE.md` in the project root is the owner's map of the program: diagrams of
+how the phone app, server, and website fit together, plus a one-line
+description of every file. It is hand-written, so it only stays true if every
+change that touches structure also touches the guide. Do that in the same
+task, before finishing. Do not leave it as a suggestion.
+
+## When to update
+
+| You did this | Update this in GUIDE.md |
+|--------------|-------------------------|
+| Added, renamed, moved, or deleted a file in `lib/`, `server/`, `website/`, or `test/` | Section 7 "File map": add, rename, or remove its line |
+| Added a screen, provider, or service in the app | Section 2 diagram: add the node and its arrows |
+| Added or changed a server route (`/v1/...`) or a page URL | Section 1 and Section 6 diagrams |
+| Changed how sync, merge, or sharing works | Section 3, 4, or 5 (sequence / flowchart + rule table) |
+| Introduced a new word that appears in several files (a new model, store, or concept) | Section 8 "Words used in the code" |
+| Changed how to run or test something | Section 9 |
+
+Small edits inside an existing file (bug fix, wording, styling) do not need a
+guide change unless the file's one-line description is no longer true.
+
+## How to write the line
+
+One line per file, plain language, written for a person who does not code
+every day. Say what the file is *for*, not what it imports.
+
+```
+# ❌ BAD
+plan_card.dart   StatelessWidget that renders a WorkoutPlan
+
+# ✅ GOOD
+plan_card.dart   One plan in the Plan Library list
+```
+
+Keep the existing order inside each folder block and match the column
+alignment of neighbouring lines.
+
+## Diagrams
+
+Diagrams are Mermaid. Keep them at folder / big-file level; do not add every
+helper. Avoid `;` inside sequence-diagram text (it splits statements) and use
+`<br/>` for line breaks in labels. If you add a diagram, it must parse.
+
+## Finishing
+
+Before you end a task that added or removed files, re-read Section 7 and
+confirm each new path is listed and each removed path is gone.

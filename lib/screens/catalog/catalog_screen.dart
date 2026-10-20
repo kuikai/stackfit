@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme.dart';
 import '../../models/models.dart';
 import '../../widgets/empty_state.dart';
 
@@ -28,13 +29,11 @@ class _CatalogScreenState extends State<CatalogScreen> {
     final results = _filteredExercises();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Exercise catalog'),
-      ),
+      appBar: AppBar(title: const Text('Exercise catalog')),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            padding: context.pageGutter(top: 8, bottom: 8),
             child: TextField(
               controller: _searchController,
               textInputAction: TextInputAction.search,
@@ -79,8 +78,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
                       selected: _selectedCategory == category,
                       onSelected: (_) {
                         setState(() {
-                          _selectedCategory =
-                              _selectedCategory == category ? null : category;
+                          _selectedCategory = _selectedCategory == category
+                              ? null
+                              : category;
                         });
                       },
                     ),
@@ -97,7 +97,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     icon: Icons.search_off_rounded,
                   )
                 : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    padding: context.pageGutter(bottom: 24),
                     itemCount: results.length,
                     separatorBuilder: (_, _) => const Divider(height: 1),
                     itemBuilder: (context, index) {
