@@ -17,7 +17,7 @@ Features:
 - Built-in offline Exercise Catalog
 - Rest timer that can be skipped (but alarms if not skipped)
 - Free: max 3 custom workouts
-- Pro: $1.99 one-time unlock → unlimited workouts + full history + duplicate
+- Pro: $1.99 one-time unlock → unlimited workouts + full history + duplicate + plan library (start / add)
 - Offline-first
 - Clean, minimal Material 3 UI
 - Light + Dark mode
@@ -60,7 +60,8 @@ Located in `lib/models/`:
 - `ExerciseType` (enum: timer, sets)
 - `Exercise` (supports both timer and sets, reps optional)
 - `Workout`
-- `CatalogExercise` + `ExerciseCatalog` (27 common exercises)
+- `CatalogExercise` + `ExerciseCatalog` (built-in exercises across Strength, Bodyweight, Core, Cardio, Kettlebell, Running, Swimming, Cycling, Rowing, Boxing, Mobility)
+- `WorkoutPlan` + `PlanDay` + `PlanLibrary` (built-in read-only plans in `lib/models/plans/`; `PlanWorkoutBuilder` in `services/` turns a day into a `Workout` with fresh ids)
 - `CompletedSession` (history)
 
 Import with:

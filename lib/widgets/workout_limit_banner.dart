@@ -26,7 +26,7 @@ class WorkoutLimitBanner extends ConsumerWidget {
       color: atLimit
           ? colorScheme.errorContainer.withValues(alpha: 0.65)
           : colorScheme.primary.withValues(alpha: 0.12),
-      borderRadius: BorderRadius.circular(AppTheme.radius),
+      borderRadius: context.skinLook.cornerRadius,
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 48),
         child: Padding(

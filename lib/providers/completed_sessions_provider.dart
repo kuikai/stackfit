@@ -23,6 +23,13 @@ final visibleCompletedSessionsProvider = Provider<List<CompletedSession>>((ref) 
   return sessions.take(AppConstants.freeHistoryLimit).toList();
 });
 
+/// Sessions of one workout (newest first), within the same free-tier cap.
+final sessionsForWorkoutProvider =
+    Provider.family<List<CompletedSession>, String>((ref, workoutId) {
+  final sessions = ref.watch(visibleCompletedSessionsProvider);
+  return sessions.where((s) => s.workoutId == workoutId).toList();
+});
+
 class CompletedSessionsNotifier
     extends StateNotifier<List<CompletedSession>> {
   CompletedSessionsNotifier(this._storage)
@@ -47,6 +54,12 @@ class CompletedSessionsNotifier
 
   Future<void> clearAll() async {
     state = const [];
+    await _persist();
+  }
+
+  /// Replaces history from an account sync. Same session ids stay unique.
+  Future<void> replaceAll(List<CompletedSession> sessions) async {
+    state = _sorted(sessions);
     await _persist();
   }
 }

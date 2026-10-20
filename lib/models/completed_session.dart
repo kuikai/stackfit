@@ -1,3 +1,5 @@
+import 'set_log.dart';
+
 class CompletedSession {
   final String id;
   final String workoutId;
@@ -6,6 +8,10 @@ class CompletedSession {
   final int durationSeconds;
   final int totalExercises;
 
+  /// Reps logged per set during the session. Empty for timer-only workouts
+  /// and for sessions saved before logging existed.
+  final List<SetLog> setLogs;
+
   const CompletedSession({
     required this.id,
     required this.workoutId,
@@ -13,7 +19,30 @@ class CompletedSession {
     required this.completedAt,
     required this.durationSeconds,
     required this.totalExercises,
+    this.setLogs = const [],
   });
+
+  bool get hasSetLogs => setLogs.isNotEmpty;
+
+  /// Total reps across every logged set.
+  int get totalRepsLogged {
+    var total = 0;
+    for (final log in setLogs) {
+      total += log.reps;
+    }
+    return total;
+  }
+
+  /// Sum of reps × kg over weighted sets; 0 when nothing was weighted.
+  double get totalVolumeKg {
+    var total = 0.0;
+    for (final log in setLogs) {
+      if (log.hasWeight) {
+        total += log.reps * log.weightKg!;
+      }
+    }
+    return total;
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -23,6 +52,8 @@ class CompletedSession {
       'completedAt': completedAt.toIso8601String(),
       'durationSeconds': durationSeconds,
       'totalExercises': totalExercises,
+      if (setLogs.isNotEmpty)
+        'setLogs': setLogs.map((log) => log.toJson()).toList(),
     };
   }
 
@@ -34,6 +65,7 @@ class CompletedSession {
       completedAt: DateTime.parse(json['completedAt'] as String),
       durationSeconds: json['durationSeconds'] as int,
       totalExercises: json['totalExercises'] as int,
+      setLogs: SetLog.listFromJson(json['setLogs']),
     );
   }
 

@@ -109,6 +109,60 @@ class WorkoutSessionController extends ChangeNotifier {
   /// True when current rest follows the last set of a sets exercise.
   bool _restAfterLastSet = false;
 
+  final List<SetLog> _setLogs = [];
+
+  /// Reps logged so far, in the order sets were completed.
+  List<SetLog> get setLogs => List.unmodifiable(_setLogs);
+
+  /// The set just completed, while its rest is running. Null otherwise.
+  SetLog? get restingSetLog {
+    if (state.phase != SessionPhase.rest || _setLogs.isEmpty) {
+      return null;
+    }
+    if (state.currentExercise?.type != ExerciseType.sets) {
+      return null;
+    }
+    return _setLogs.last;
+  }
+
+  /// Changes the reps recorded for the set that just finished.
+  void updateLastSetReps(int reps) {
+    if (_setLogs.isEmpty || reps < 0) {
+      return;
+    }
+    _setLogs[_setLogs.length - 1] = _setLogs.last.copyWith(reps: reps);
+    notifyListeners();
+  }
+
+  /// Changes reps and/or weight for any logged set of an exercise.
+  void updateSetLog(
+    String exerciseId,
+    int setNumber, {
+    int? reps,
+    double? weightKg,
+  }) {
+    if ((reps != null && reps < 0) || (weightKg != null && weightKg < 0)) {
+      return;
+    }
+    for (var i = 0; i < _setLogs.length; i++) {
+      final log = _setLogs[i];
+      if (log.exerciseId == exerciseId && log.setNumber == setNumber) {
+        _setLogs[i] = log.copyWith(reps: reps, weightKg: weightKg);
+        notifyListeners();
+        return;
+      }
+    }
+  }
+
+  /// Logs for the exercise currently on screen, oldest first.
+  List<SetLog> get currentExerciseLogs {
+    final exercise = state.currentExercise;
+    if (exercise == null) {
+      return const [];
+    }
+    return _setLogs.where((log) => log.exerciseId == exercise.id).toList();
+  }
+
   void disposeController() {
     _ticker?.cancel();
     _ticker = null;
@@ -145,6 +199,7 @@ class WorkoutSessionController extends ChangeNotifier {
     }
     _stopTicker();
     _restAfterLastSet = false;
+    _setLogs.clear();
     state = WorkoutSessionState(
       workout: state.workout,
       exerciseIndex: 0,
@@ -177,7 +232,8 @@ class WorkoutSessionController extends ChangeNotifier {
     }
   }
 
-  void completeSet() {
+  /// Marks the current set done. [repsDone] defaults to the planned reps.
+  void completeSet({int? repsDone, double? weightKg}) {
     if (state.phase != SessionPhase.setReady || state.isComplete) {
       return;
     }
@@ -185,6 +241,16 @@ class WorkoutSessionController extends ChangeNotifier {
     if (exercise == null || exercise.type != ExerciseType.sets) {
       return;
     }
+
+    _setLogs.add(
+      SetLog(
+        exerciseId: exercise.id,
+        exerciseName: exercise.name,
+        setNumber: state.setNumber,
+        reps: repsDone ?? exercise.reps ?? 0,
+        weightKg: weightKg,
+      ),
+    );
 
     final totalSets = exercise.sets ?? 1;
     final isLastSet = state.setIndex >= totalSets - 1;

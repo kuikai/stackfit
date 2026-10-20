@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/constants.dart';
 import 'core/theme.dart';
+import 'providers/account_provider.dart';
 import 'providers/app_providers.dart';
 import 'providers/settings_provider.dart';
 import 'screens/home/home_screen.dart';
@@ -22,12 +23,38 @@ Future<void> main() async {
   );
 }
 
-class StackFitApp extends ConsumerWidget {
+class StackFitApp extends ConsumerStatefulWidget {
   const StackFitApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StackFitApp> createState() => _StackFitAppState();
+}
+
+class _StackFitAppState extends ConsumerState<StackFitApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.read(accountProvider.notifier).syncIfSignedIn();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
+    ref.watch(accountProvider);
 
     return MaterialApp(
       title: AppConstants.appName,
