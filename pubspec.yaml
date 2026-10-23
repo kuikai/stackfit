@@ -50,6 +50,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -98,3 +99,18 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Home-screen icon. Source picture is assets/icon/app_icon.png.
+# After replacing that picture, run: dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: ic_launcher
+  ios: true
+  image_path: assets/icon/app_icon.png
+  remove_alpha_ios: true
+  background_color_ios: "#0A0A0A"
+  adaptive_icon_background: "#0A0A0A"
+  adaptive_icon_foreground: assets/icon/app_icon.png
+  windows:
+    generate: true
+    image_path: assets/icon/app_icon.png
+    icon_size: 256
