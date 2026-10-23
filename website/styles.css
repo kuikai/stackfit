@@ -161,6 +161,25 @@ a.ghost { display: inline-block; }
   background: #fff;
 }
 
+.circuit-box {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 16px 16px;
+  margin: 12px 0;
+  background: #f3faf6;
+}
+
+.circuit-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.circuit-head h3 { margin-right: auto; }
+
+.circuit-box .exercise { background: #fff; }
+
 .card h3, .exercise h3 { margin: 0; }
 
 .meta { color: var(--muted); margin: 6px 0 0; }

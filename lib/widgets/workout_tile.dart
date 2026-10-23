@@ -35,9 +35,13 @@ class WorkoutTile extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final look = context.skinLook;
     final exerciseCount = workout.exercises.length;
+    final circuitCount = workout.circuitCount;
     final durationLabel = AppUtils.formatDurationFriendly(
       workout.estimatedDurationSeconds,
     );
+    final circuitLabel = circuitCount == 0
+        ? ''
+        : ' · $circuitCount circuit${circuitCount == 1 ? '' : 's'}';
 
     final row = InkWell(
       borderRadius: look.cornerRadius,
@@ -75,6 +79,7 @@ class WorkoutTile extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     '$exerciseCount exercise${exerciseCount == 1 ? '' : 's'}'
+                    '$circuitLabel'
                     ' · ~$durationLabel',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onSurface.withValues(alpha: 0.55),

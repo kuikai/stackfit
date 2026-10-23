@@ -8,13 +8,14 @@ import '../services/storage_service.dart';
 import 'app_providers.dart';
 import 'pro_provider.dart';
 
-final workoutsProvider =
-    StateNotifierProvider<WorkoutsNotifier, List<Workout>>((ref) {
-  return WorkoutsNotifier(
-    ref.watch(storageServiceProvider),
-    ref.watch(accountStorageProvider),
-  );
-});
+final workoutsProvider = StateNotifierProvider<WorkoutsNotifier, List<Workout>>(
+  (ref) {
+    return WorkoutsNotifier(
+      ref.watch(storageServiceProvider),
+      ref.watch(accountStorageProvider),
+    );
+  },
+);
 
 /// Whether the user can create another workout (Pro or under free limit).
 final canCreateWorkoutProvider = Provider<bool>((ref) {
@@ -28,7 +29,7 @@ final canCreateWorkoutProvider = Provider<bool>((ref) {
 
 class WorkoutsNotifier extends StateNotifier<List<Workout>> {
   WorkoutsNotifier(this._storage, this._accountStorage)
-      : super(_storage.loadWorkouts());
+    : super(_storage.loadWorkouts());
 
   final StorageService _storage;
   final AccountStorage _accountStorage;
@@ -84,9 +85,9 @@ class WorkoutsNotifier extends StateNotifier<List<Workout>> {
       name: '${source.name} (copy)',
       createdAt: now,
       updatedAt: now,
-      exercises: source.exercises
-          .map((exercise) => exercise.copyWith(id: AppUtils.newId()))
-          .toList(),
+      blocks: [
+        for (final block in source.blocks) block.withFreshIds(AppUtils.newId),
+      ],
     );
     await addWorkout(copy);
     return copy;

@@ -97,7 +97,7 @@ flowchart TB
   end
 
   subgraph Models["models/ · the data shapes"]
-    M[Workout · Exercise · CompletedSession<br/>AccountSnapshot · WorkoutPlan]
+    M[Workout · Exercise · Circuit<br/>CompletedSession · AccountSnapshot · WorkoutPlan]
   end
 
   Home --> WP
@@ -278,9 +278,10 @@ models/                           Data shapes. Every one has toJson / fromJson.
   models.dart                     One import that re-exports all models
   exercise_type.dart              enum: timer or sets
   exercise.dart                   One exercise: name + work/rest/rounds, or sets/reps/rest
-  workout.dart                    A named list of exercises, optional Home section, createdAt / updatedAt
+  circuit.dart                    A circuit: exercises that play in order, then repeat
+  workout.dart                    A named list of exercises and circuits, optional Home section, createdAt / updatedAt
   completed_session.dart          One history row: workout name, when, how long, how many exercises
-  set_log.dart                    Reps and kg for one set, saved on a finished session
+  set_log.dart                    Reps and kg for one set, saved on a finished session, with the circuit round
   catalog_exercise.dart           The built-in offline exercise catalog (27 exercises)
   app_settings.dart               Theme mode + skin
   account_snapshot.dart           The snapshot: workouts + deletions + sessions + appearance. What syncs.
@@ -306,7 +307,11 @@ providers/                        Riverpod state. Screens read from here.
 
 services/                         Does the work the providers ask for.
   storage_service.dart            Reads and writes workouts, history, Pro, settings to the phone
-  workout_session_controller.dart Runs a workout: countdowns, set prompts, rest, skip, pause, stop
+  workout_session_state.dart      Where the timer is: block, round, exercise, work/rest/set, seconds left, paused
+  session_set_log.dart            Reps and kg typed in while a workout is still running
+  station_exit.dart               Rest between circuit stations and between rounds
+  workout_session_controller.dart Pause, skip, reset, and Done. Asks the phase file to advance
+  workout_session_phases.dart     What happens when work ends, rest ends, a circuit loops, or the clock ticks
   sound_service.dart              Beeps and haptics on phase changes
   plan_workout_builder.dart       Turns a plan day into a workout; multi-day plans share a section
   account/
@@ -317,10 +322,12 @@ services/                         Does the work the providers ask for.
 screens/                          One folder per screen.
   home/home_screen.dart           Workout list grouped into sections, + button, Plans / History / Settings
   home/section_dialogs.dart       Name a section, move workouts in, pick which days to group
-  workout_editor/workout_editor_screen.dart   Create or edit a workout, reorder and delete exercises, optional section
+  workout_editor/workout_editor_screen.dart   Create or edit a workout, including a circuit box, reorder and delete, optional section
+  workout_editor/workout_editor_actions.dart  Add an exercise or a circuit, and edit the stations inside it
   exercise_editor/exercise_editor_screen.dart Create or edit one exercise (timer or sets)
   catalog/catalog_screen.dart     Searchable exercise catalog to pick from
   active_timer/active_timer_screen.dart       The big timer. Uses workout_session_controller.
+  active_timer/timer_controls.dart            Done, skip rest, pause, skip, reset, and stop
   active_timer/active_timer_card.dart         WORK / REST / SET countdown card
   active_timer/workout_complete_screen.dart   "Done" screen; writes the history session
   history/history_screen.dart     Completed sessions across every workout
@@ -335,6 +342,7 @@ widgets/                          Reusable pieces used by several screens.
   workout_section_card.dart       A named folder of days on Home, like Bro Split
   workout_limit_banner.dart       "2 of 3 workouts" banner for Free users
   exercise_editor_tile.dart       One exercise row inside the workout editor
+  workout_block_list.dart         The editor list: loose exercises and circuit boxes
   plan_card.dart                  One plan in the Plan Library
   plan_library_tile.dart          Home row that opens the Plan Library
   number_stepper.dart             Minus / number / plus control for reps and kg
@@ -377,10 +385,12 @@ styles.css                        Styling
 js/
   main.js                         Start here. Wires buttons, picks a view from the URL, draws workouts (grouped by section) + history
   api.js                          fetch() calls to the server. Same endpoints as account_api_client.dart
-  snapshot.js                     Empty snapshot, merge rules, id and date helpers
+  snapshot.js                     Empty snapshot, merge rules, circuit blocks, id and date helpers
   editor.js                       Workout editor form: open, read the draft, validate
+  editor_blocks.js                Exercise cards and circuit boxes in the workout editor
   session.js                      "Log a session" form
-  workout_run.js                  Run a workout in the browser (work/rest countdown, sets)
+  workout_run.js                  Run a workout in the browser, including circuits
+  workout_run_view.js             The on-screen clock, phase name, and beep while a workout runs
   tabata.js                       The /tabata page: classic 20/10 × 8 timer, savable when signed in
   sharing.js                      Share buttons, the public /s/… page, "Add to my account", paste-a-routine
 ```
@@ -403,6 +413,7 @@ snapshot_merge_test.dart          Merge rules
 website_snapshot_test.dart        Phone can read a snapshot the website wrote
 plan_library_test.dart            Plans have unique ids, and Home sections group plan days
 set_log_test.dart                 Set logging, kg, and history JSON
+circuit_session_test.dart         Circuits loop, then the rest of the workout continues
 skin_look_test.dart               Each skin's corners, spacing, and typeface
 ```
 
@@ -423,6 +434,7 @@ skin_look_test.dart               Each skin's corners, spacing, and typeface
 | **Token** (account) | A secret string proving you are signed in. Sent as `Authorization: Bearer …`. |
 | **Token** (share) | The random part of a share link, `/s/<token>`. Not secret, just hard to guess. |
 | **Section** | A named folder on Home that groups workouts (for example Bro Split → Chest, Back). Stored on each workout. |
+| **Circuit** | A box in a workout. The exercises inside play in order, then the box repeats. Exercises outside the box run once. |
 | **Pro skin** | A fun theme, such as anime, listed under Pro skins. Everyday skins stay available without Pro. |
 | **Unmoved data** | Workouts made on the phone before signing in, waiting for "Move to my account". |
 | **Origin** | Whether the phone's data came from the device or from the account. Decides if "move" is offered. |

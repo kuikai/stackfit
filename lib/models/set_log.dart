@@ -8,12 +8,16 @@ class SetLog {
   /// Load used, in kilograms. Null for bodyweight or when not entered.
   final double? weightKg;
 
+  /// Circuit round this set belongs to. 1 for a normal exercise.
+  final int round;
+
   const SetLog({
     required this.exerciseId,
     required this.exerciseName,
     required this.setNumber,
     required this.reps,
     this.weightKg,
+    this.round = 1,
   });
 
   bool get hasWeight => weightKg != null && weightKg! > 0;
@@ -25,6 +29,7 @@ class SetLog {
       setNumber: setNumber,
       reps: reps ?? this.reps,
       weightKg: clearWeight ? null : (weightKg ?? this.weightKg),
+      round: round,
     );
   }
 
@@ -56,6 +61,7 @@ class SetLog {
       'setNumber': setNumber,
       'reps': reps,
       if (weightKg != null) 'weightKg': weightKg,
+      if (round > 1) 'round': round,
     };
   }
 
@@ -66,6 +72,7 @@ class SetLog {
       setNumber: (json['setNumber'] as num?)?.toInt() ?? 1,
       reps: (json['reps'] as num?)?.toInt() ?? 0,
       weightKg: (json['weightKg'] as num?)?.toDouble(),
+      round: (json['round'] as num?)?.toInt() ?? 1,
     );
   }
 

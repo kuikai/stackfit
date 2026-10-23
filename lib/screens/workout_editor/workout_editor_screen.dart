@@ -6,9 +6,8 @@ import '../../core/utils.dart';
 import '../../models/models.dart';
 import '../../providers/workouts_provider.dart';
 import '../../widgets/empty_state.dart';
-import '../../widgets/exercise_editor_tile.dart';
-import '../catalog/catalog_screen.dart';
-import '../exercise_editor/exercise_editor_screen.dart';
+import '../../widgets/workout_block_list.dart';
+import 'workout_editor_actions.dart';
 
 class WorkoutEditorScreen extends ConsumerStatefulWidget {
   const WorkoutEditorScreen({super.key, this.workoutId, this.initialSection});
@@ -29,7 +28,7 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
   late final TextEditingController _sectionController;
   late String _workoutId;
   late DateTime _createdAt;
-  late List<Exercise> _exercises;
+  late List<WorkoutBlock> _blocks;
   late bool _isNew;
   bool _saving = false;
 
@@ -44,7 +43,7 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
     _isNew = existing == null;
     _workoutId = existing?.id ?? AppUtils.newId();
     _createdAt = existing?.createdAt ?? DateTime.now();
-    _exercises = [...(existing?.exercises ?? const <Exercise>[])];
+    _blocks = [...(existing?.blocks ?? const <WorkoutBlock>[])];
     _nameController = TextEditingController(text: existing?.name ?? '');
     _sectionController = TextEditingController(
       text: existing?.section ?? widget.initialSection ?? '',
@@ -100,32 +99,27 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
-          if (_exercises.isEmpty)
+          if (_blocks.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 32),
               child: EmptyState(
                 title: 'No exercises yet',
-                message: 'Add from the catalog or create a custom exercise.',
+                message:
+                    'Add an exercise, or a circuit that repeats a group of them.',
                 icon: Icons.playlist_add_rounded,
               ),
             )
           else
-            ReorderableListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              buildDefaultDragHandles: false,
-              itemCount: _exercises.length,
-              onReorderItem: _onReorder,
-              itemBuilder: (context, index) {
-                final exercise = _exercises[index];
-                return ExerciseEditorTile(
-                  key: ValueKey(exercise.id),
-                  exercise: exercise,
-                  index: index,
-                  onEdit: () => _editExercise(index),
-                  onDelete: () => _removeExercise(index),
-                );
-              },
+            WorkoutBlockList(
+              blocks: _blocks,
+              onReorder: _onReorder,
+              onEditExercise: _editExercise,
+              onDeleteBlock: _removeBlock,
+              onCircuitChanged: _updateCircuit,
+              onAddStation: _addStation,
+              onEditStation: _editStation,
+              onDeleteStation: _deleteStation,
+              onMoveStation: _moveStation,
             ),
         ],
       ),
@@ -162,118 +156,149 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
 
   void _onReorder(int oldIndex, int newIndex) {
     setState(() {
-      final item = _exercises.removeAt(oldIndex);
-      _exercises.insert(newIndex, item);
+      final item = _blocks.removeAt(oldIndex);
+      _blocks.insert(newIndex, item);
     });
   }
 
   Future<void> _showAddOptions() async {
-    final choice = await showModalBottomSheet<_AddChoice>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.menu_book_outlined),
-                title: const Text('From catalog'),
-                subtitle: const Text('Browse common exercises'),
-                onTap: () => Navigator.pop(context, _AddChoice.catalog),
-              ),
-              ListTile(
-                leading: const Icon(Icons.edit_outlined),
-                title: const Text('Custom exercise'),
-                subtitle: const Text('Timer or sets from scratch'),
-                onTap: () => Navigator.pop(context, _AddChoice.custom),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
-      },
-    );
-
+    final choice = await askWhatToAdd(context);
     if (!mounted || choice == null) {
       return;
     }
-
-    if (choice == _AddChoice.catalog) {
-      await _addFromCatalog();
-    } else {
-      await _addCustom();
-    }
-  }
-
-  Future<void> _addFromCatalog() async {
-    final catalogItem = await Navigator.of(context).push<CatalogExercise>(
-      MaterialPageRoute(builder: (_) => const CatalogScreen()),
-    );
-    if (!mounted || catalogItem == null) {
+    if (choice == WorkoutAddChoice.circuit) {
+      setState(() => _blocks = [..._blocks, CircuitBlock(newCircuit())]);
       return;
     }
-
-    final exercise = await Navigator.of(context).push<Exercise>(
-      MaterialPageRoute(
-        builder: (_) => ExerciseEditorScreen(initialName: catalogItem.name),
-      ),
+    final exercise = await pickExercise(
+      context,
+      fromCatalog: choice == WorkoutAddChoice.catalog,
     );
     if (!mounted || exercise == null) {
       return;
     }
-
-    setState(() => _exercises = [..._exercises, exercise]);
-  }
-
-  Future<void> _addCustom() async {
-    final exercise = await Navigator.of(context).push<Exercise>(
-      MaterialPageRoute(builder: (_) => const ExerciseEditorScreen()),
-    );
-    if (!mounted || exercise == null) {
-      return;
-    }
-    setState(() => _exercises = [..._exercises, exercise]);
+    setState(() => _blocks = [..._blocks, ExerciseBlock(exercise)]);
   }
 
   Future<void> _editExercise(int index) async {
-    final updated = await Navigator.of(context).push<Exercise>(
-      MaterialPageRoute(
-        builder: (_) => ExerciseEditorScreen(initial: _exercises[index]),
-      ),
+    final block = _blocks[index];
+    if (block is! ExerciseBlock) {
+      return;
+    }
+    final updated = await pickExercise(
+      context,
+      fromCatalog: false,
+      initial: block.exercise,
     );
     if (!mounted || updated == null) {
       return;
     }
     setState(() {
-      _exercises = [
-        for (var i = 0; i < _exercises.length; i++)
-          if (i == index) updated else _exercises[i],
+      _blocks = [
+        for (var i = 0; i < _blocks.length; i++)
+          if (i == index) ExerciseBlock(updated) else _blocks[i],
       ];
     });
   }
 
-  void _removeExercise(int index) {
+  void _removeBlock(int index) {
     setState(() {
-      _exercises = [
-        for (var i = 0; i < _exercises.length; i++)
-          if (i != index) _exercises[i],
+      _blocks = [
+        for (var i = 0; i < _blocks.length; i++)
+          if (i != index) _blocks[i],
       ];
+    });
+  }
+
+  void _updateCircuit(String circuitId, Circuit circuit) {
+    setState(() => _blocks = mapCircuit(_blocks, circuitId, (_) => circuit));
+  }
+
+  Future<void> _addStation(String circuitId) async {
+    final fromCatalog = await askStationSource(context);
+    if (!mounted || fromCatalog == null) {
+      return;
+    }
+    final exercise = await pickExercise(
+      context,
+      fromCatalog: fromCatalog,
+      inCircuit: true,
+    );
+    if (!mounted || exercise == null) {
+      return;
+    }
+    setState(() {
+      _blocks = mapCircuit(_blocks, circuitId, (circuit) {
+        return circuit.copyWith(exercises: [...circuit.exercises, exercise]);
+      });
+    });
+  }
+
+  Future<void> _editStation(String circuitId, int stationIndex) async {
+    final circuit = circuitById(_blocks, circuitId);
+    if (circuit == null || stationIndex >= circuit.exercises.length) {
+      return;
+    }
+    final updated = await pickExercise(
+      context,
+      fromCatalog: false,
+      initial: circuit.exercises[stationIndex],
+      inCircuit: true,
+    );
+    if (!mounted || updated == null) {
+      return;
+    }
+    setState(() {
+      _blocks = mapCircuit(_blocks, circuitId, (current) {
+        final stations = [...current.exercises];
+        stations[stationIndex] = updated;
+        return current.copyWith(exercises: stations);
+      });
+    });
+  }
+
+  void _deleteStation(String circuitId, int stationIndex) {
+    setState(() {
+      _blocks = mapCircuit(_blocks, circuitId, (circuit) {
+        return circuit.copyWith(
+          exercises: [
+            for (var i = 0; i < circuit.exercises.length; i++)
+              if (i != stationIndex) circuit.exercises[i],
+          ],
+        );
+      });
+    });
+  }
+
+  void _moveStation(String circuitId, int stationIndex, int direction) {
+    setState(() {
+      _blocks = mapCircuit(_blocks, circuitId, (circuit) {
+        final next = stationIndex + direction;
+        if (next < 0 || next >= circuit.exercises.length) {
+          return circuit;
+        }
+        final stations = [...circuit.exercises];
+        final station = stations.removeAt(stationIndex);
+        stations.insert(next, station);
+        return circuit.copyWith(exercises: stations);
+      });
     });
   }
 
   Future<void> _save() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Enter a workout name')));
+      _snack('Enter a workout name');
       return;
     }
-    if (_exercises.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Add at least one exercise')),
-      );
+    if (!_blocks.any((block) => block.exercises.isNotEmpty)) {
+      _snack('Add at least one exercise');
+      return;
+    }
+    if (_blocks.any(
+      (block) => block is CircuitBlock && block.exercises.isEmpty,
+    )) {
+      _snack('Add at least one exercise to the circuit');
       return;
     }
 
@@ -281,7 +306,7 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
     final workout = Workout(
       id: _workoutId,
       name: name,
-      exercises: List<Exercise>.unmodifiable(_exercises),
+      blocks: List<WorkoutBlock>.unmodifiable(_blocks),
       createdAt: _createdAt,
       updatedAt: DateTime.now(),
       section: Workout.normalizeSection(_sectionController.text),
@@ -299,6 +324,10 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
     }
     Navigator.of(context).pop(workout);
   }
-}
 
-enum _AddChoice { catalog, custom }
+  void _snack(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+}

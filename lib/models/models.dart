@@ -2,6 +2,7 @@
 export 'account_snapshot.dart';
 export 'app_settings.dart';
 export 'catalog_exercise.dart';
+export 'circuit.dart';
 export 'completed_session.dart';
 export 'exercise.dart';
 export 'exercise_type.dart';

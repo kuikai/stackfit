@@ -7,10 +7,18 @@ import '../../models/models.dart';
 
 /// Create or edit a single exercise (timer or sets).
 class ExerciseEditorScreen extends StatefulWidget {
-  const ExerciseEditorScreen({super.key, this.initial, this.initialName});
+  const ExerciseEditorScreen({
+    super.key,
+    this.initial,
+    this.initialName,
+    this.inCircuit = false,
+  });
 
   final Exercise? initial;
   final String? initialName;
+
+  /// A station inside a circuit defaults to one pass per round.
+  final bool inCircuit;
 
   @override
   State<ExerciseEditorScreen> createState() => _ExerciseEditorScreenState();
@@ -30,20 +38,24 @@ class _ExerciseEditorScreenState extends State<ExerciseEditorScreen> {
     super.initState();
     final initial = widget.initial;
     _id = initial?.id ?? AppUtils.newId();
-    _type = initial?.type ?? ExerciseType.sets;
+    final creatingStation = widget.inCircuit && initial == null;
+    final defaultType = initial?.type ?? ExerciseType.sets;
+    _type = defaultType;
     _nameController = TextEditingController(
       text: initial?.name ?? widget.initialName ?? '',
     );
     _workController = TextEditingController(
-      text: '${initial?.workSeconds ?? 45}',
+      text: '${initial?.workSeconds ?? 40}',
     );
     _restController = TextEditingController(
       text:
-          '${initial?.restSeconds ?? (_type == ExerciseType.timer ? 15 : 60)}',
+          '${initial?.restSeconds ?? (creatingStation || defaultType == ExerciseType.timer ? 15 : 60)}',
     );
-    _setsController = TextEditingController(text: '${initial?.sets ?? 3}');
+    _setsController = TextEditingController(
+      text: '${initial?.sets ?? (creatingStation ? 1 : 3)}',
+    );
     _repsController = TextEditingController(
-      text: initial?.reps?.toString() ?? '8',
+      text: initial?.reps?.toString() ?? (creatingStation ? '10' : '8'),
     );
   }
 
@@ -110,11 +122,28 @@ class _ExerciseEditorScreenState extends State<ExerciseEditorScreen> {
           if (_type == ExerciseType.timer) ...[
             _numberField(controller: _workController, label: 'Work (seconds)'),
             const SizedBox(height: 12),
-            _numberField(controller: _restController, label: 'Rest (seconds)'),
+            _numberField(
+              controller: _restController,
+              label: widget.inCircuit
+                  ? 'Rest before next station (seconds)'
+                  : 'Rest (seconds)',
+            ),
             const SizedBox(height: 12),
-            _numberField(controller: _setsController, label: 'Sets / rounds'),
+            _numberField(
+              controller: _setsController,
+              label: 'Sets / rounds',
+              helperText: widget.inCircuit
+                  ? '1 runs this station once per round.'
+                  : null,
+            ),
           ] else ...[
-            _numberField(controller: _setsController, label: 'Sets'),
+            _numberField(
+              controller: _setsController,
+              label: 'Sets',
+              helperText: widget.inCircuit
+                  ? '1 runs this station once per round.'
+                  : null,
+            ),
             const SizedBox(height: 12),
             _numberField(
               controller: _repsController,
@@ -124,7 +153,9 @@ class _ExerciseEditorScreenState extends State<ExerciseEditorScreen> {
             const SizedBox(height: 12),
             _numberField(
               controller: _restController,
-              label: 'Rest between sets (seconds)',
+              label: widget.inCircuit
+                  ? 'Rest before next station (seconds)'
+                  : 'Rest between sets (seconds)',
             ),
           ],
         ],
@@ -146,6 +177,7 @@ class _ExerciseEditorScreenState extends State<ExerciseEditorScreen> {
     required TextEditingController controller,
     required String label,
     bool required = true,
+    String? helperText,
   }) {
     return TextField(
       controller: controller,
@@ -153,7 +185,8 @@ class _ExerciseEditorScreenState extends State<ExerciseEditorScreen> {
       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
       decoration: InputDecoration(
         labelText: label,
-        helperText: required ? null : 'Leave empty if not needed',
+        helperText:
+            helperText ?? (required ? null : 'Leave empty if not needed'),
       ),
     );
   }
