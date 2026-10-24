@@ -360,7 +360,7 @@ widgets/                          Reusable pieces used by several screens.
   workout_block_list.dart         The editor list: loose exercises and circuit boxes
   plan_card.dart                  One plan in the Plan Library
   plan_library_tile.dart          Home row that opens the Plan Library
-  number_stepper.dart             Minus / number / plus control for reps and kg
+  number_stepper.dart             Minus / number / plus; type the number in place
   set_tracker.dart                Per-set log panel during a workout
   set_log_list.dart               Finished sets grouped by exercise
   session_tile.dart               One history row (date, duration, reps × kg)

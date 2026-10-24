@@ -277,6 +277,7 @@ class _SetEditor extends StatelessWidget {
         NumberStepper(
           label: 'Reps',
           value: reps.toDouble(),
+          max: 999,
           onChanged: onRepsChanged,
         ),
         NumberStepper(
@@ -285,6 +286,7 @@ class _SetEditor extends StatelessWidget {
           value: weightKg,
           step: 2.5,
           decimals: 1,
+          max: 999,
           onChanged: onWeightChanged,
         ),
       ],

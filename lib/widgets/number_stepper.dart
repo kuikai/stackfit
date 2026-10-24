@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Compact minus / value / plus control. Tap the value to type it.
-class NumberStepper extends StatelessWidget {
+/// Compact minus / value / plus control. The number is typed in place.
+class NumberStepper extends StatefulWidget {
   const NumberStepper({
     super.key,
     required this.value,
@@ -11,6 +11,8 @@ class NumberStepper extends StatelessWidget {
     this.step = 1,
     this.unit,
     this.decimals = 0,
+    this.min = 0,
+    this.max,
   });
 
   final double value;
@@ -19,26 +21,137 @@ class NumberStepper extends StatelessWidget {
   final double step;
   final String? unit;
 
-  /// Decimal places allowed when typing (0 for reps, 1 for kg).
+  /// Decimal places kept when the field is committed (0 for reps, 1 for kg).
   final int decimals;
 
-  String get _display {
-    if (decimals == 0 || value == value.roundToDouble()) {
+  /// Lowest value minus can reach.
+  final num min;
+
+  /// Highest value plus can reach. Omitted means no cap.
+  final num? max;
+
+  @override
+  State<NumberStepper> createState() => _NumberStepperState();
+}
+
+class _NumberStepperState extends State<NumberStepper> {
+  late final TextEditingController _controller;
+  late final FocusNode _focus;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: _format(widget.value));
+    _focus = FocusNode();
+    _focus.addListener(_onFocusChange);
+  }
+
+  @override
+  void didUpdateWidget(NumberStepper oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_focus.hasFocus) return;
+    final formatted = _format(widget.value);
+    if (_controller.text != formatted) {
+      _controller.text = formatted;
+    }
+  }
+
+  @override
+  void dispose() {
+    _focus.removeListener(_onFocusChange);
+    _focus.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  bool get _canDecrease => widget.value > widget.min;
+
+  bool get _canIncrease {
+    final max = widget.max;
+    return max == null || widget.value < max;
+  }
+
+  void _onFocusChange() {
+    if (!_focus.hasFocus) {
+      _commit();
+      return;
+    }
+    // Select after the tap places the cursor, so the next key replaces it.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_focus.hasFocus) return;
+      _controller.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _controller.text.length,
+      );
+    });
+  }
+
+  /// Steps from the number in the field, not a stale parent value.
+  ///
+  /// The focus listener is detached first so tapping plus does not commit
+  /// the draft and then add the step a second time.
+  void _step(double delta) {
+    _focus.removeListener(_onFocusChange);
+    _focus.unfocus();
+    _focus.addListener(_onFocusChange);
+    final base = _parse(_controller.text) ?? widget.value;
+    _write(_bounded(base + delta));
+  }
+
+  void _commit() {
+    final parsed = _parse(_controller.text);
+    if (parsed == null) {
+      _controller.text = _format(widget.value);
+      return;
+    }
+    _write(_bounded(parsed));
+  }
+
+  void _write(double next) {
+    final formatted = _format(next);
+    if (_controller.text != formatted) {
+      _controller.text = formatted;
+    }
+    if (next != widget.value) {
+      widget.onChanged(next);
+    }
+  }
+
+  double _bounded(double value) {
+    var next = double.parse(value.toStringAsFixed(widget.decimals));
+    final min = widget.min.toDouble();
+    if (next < min) next = min;
+    final max = widget.max?.toDouble();
+    if (max != null && next > max) next = max;
+    return next;
+  }
+
+  String _format(double value) {
+    if (widget.decimals == 0 || value == value.roundToDouble()) {
       return value.toInt().toString();
     }
-    return value.toStringAsFixed(decimals);
+    return value.toStringAsFixed(widget.decimals);
+  }
+
+  double? _parse(String raw) {
+    final text = raw.trim().replaceAll(',', '.');
+    if (text.isEmpty || text == '.') return null;
+    return double.tryParse(text);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final caption = widget.unit == null
+        ? widget.label
+        : '${widget.label} (${widget.unit})';
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          unit == null ? label : '$label ($unit)',
+          caption,
           style: theme.textTheme.labelMedium?.copyWith(
             color: colorScheme.onSurface.withValues(alpha: 0.6),
             fontWeight: FontWeight.w600,
@@ -51,30 +164,13 @@ class NumberStepper extends StatelessWidget {
             _StepButton(
               icon: Icons.remove_rounded,
               tooltip: 'Less',
-              onPressed:
-                  value - step >= 0 ? () => onChanged(value - step) : null,
+              onPressed: _canDecrease ? () => _step(-widget.step) : null,
             ),
-            InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: () => _typeValue(context),
-              child: SizedBox(
-                width: 64,
-                height: 40,
-                child: Center(
-                  child: Text(
-                    _display,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            _valueField(theme),
             _StepButton(
               icon: Icons.add_rounded,
               tooltip: 'More',
-              onPressed: () => onChanged(value + step),
+              onPressed: _canIncrease ? () => _step(widget.step) : null,
             ),
           ],
         ),
@@ -82,53 +178,96 @@ class NumberStepper extends StatelessWidget {
     );
   }
 
-  Future<void> _typeValue(BuildContext context) async {
-    final controller = TextEditingController(text: _display);
-    final result = await showDialog<double>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(unit == null ? label : '$label ($unit)'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            keyboardType: TextInputType.numberWithOptions(
-              decimal: decimals > 0,
-            ),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(
-                decimals > 0 ? RegExp(r'[0-9.,]') : RegExp(r'[0-9]'),
-              ),
-            ],
-            onSubmitted: (_) => Navigator.of(context).pop(_parse(controller)),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(_parse(controller)),
-              child: const Text('OK'),
-            ),
-          ],
-        );
-      },
+  Widget _valueField(ThemeData theme) {
+    return SizedBox(
+      width: _fieldWidth,
+      height: 40,
+      child: TextField(
+        controller: _controller,
+        focusNode: _focus,
+        expands: true,
+        maxLines: null,
+        textAlign: TextAlign.center,
+        textAlignVertical: TextAlignVertical.center,
+        keyboardType: TextInputType.numberWithOptions(
+          decimal: widget.decimals > 0,
+        ),
+        textInputAction: TextInputAction.done,
+        autocorrect: false,
+        enableSuggestions: false,
+        style: theme.textTheme.titleLarge?.copyWith(
+          fontWeight: FontWeight.w800,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
+        cursorColor: theme.colorScheme.primary,
+        decoration: _fieldDecoration,
+        inputFormatters: [_NumberInputFormatter(decimals: widget.decimals)],
+        onSubmitted: (_) => _focus.unfocus(),
+      ),
     );
-    controller.dispose();
-    if (result != null) {
-      onChanged(result);
-    }
+  }
+}
+
+/// Fits a value like 999.5 between the minus and plus buttons.
+const _fieldWidth = 76.0;
+
+const _fieldDecoration = InputDecoration(
+  filled: false,
+  isCollapsed: true,
+  isDense: true,
+  contentPadding: EdgeInsets.zero,
+  border: InputBorder.none,
+  enabledBorder: InputBorder.none,
+  focusedBorder: InputBorder.none,
+  disabledBorder: InputBorder.none,
+  errorBorder: InputBorder.none,
+  focusedErrorBorder: InputBorder.none,
+);
+
+/// Digits only, plus one decimal point when [decimals] is above 0.
+class _NumberInputFormatter extends TextInputFormatter {
+  const _NumberInputFormatter({required this.decimals});
+
+  final int decimals;
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = _sanitize(newValue.text);
+    if (text == newValue.text) return newValue;
+    final offset = newValue.selection.extentOffset.clamp(0, text.length);
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: offset),
+    );
   }
 
-  double? _parse(TextEditingController controller) {
-    final text = controller.text.trim().replaceAll(',', '.');
-    final parsed = double.tryParse(text);
-    if (parsed == null || parsed < 0) {
-      return null;
+  String _sanitize(String raw) {
+    final buffer = StringBuffer();
+    var sawSeparator = false;
+    var fractionDigits = 0;
+    for (final char in raw.split('')) {
+      final isSeparator = char == ',' || char == '.';
+      if (isSeparator && decimals > 0 && !sawSeparator) {
+        sawSeparator = true;
+        buffer.write('.');
+        continue;
+      }
+      if (isSeparator || !_isDigit(char)) continue;
+      if (sawSeparator && fractionDigits >= decimals) continue;
+      if (sawSeparator) fractionDigits++;
+      buffer.write(char);
     }
-    return decimals == 0 ? parsed.roundToDouble() : parsed;
+    return buffer.toString();
   }
+}
+
+bool _isDigit(String char) {
+  if (char.length != 1) return false;
+  final code = char.codeUnitAt(0);
+  return code >= 48 && code <= 57;
 }
 
 class _StepButton extends StatelessWidget {

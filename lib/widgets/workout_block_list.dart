@@ -116,6 +116,8 @@ class _CircuitCard extends StatelessWidget {
                   child: NumberStepper(
                     label: 'Rounds',
                     value: circuit.rounds.toDouble(),
+                    min: 1,
+                    max: 99,
                     onChanged: (value) => onChanged(
                       circuit.copyWith(
                         rounds: value.round().clamp(1, 99).toInt(),
@@ -128,6 +130,7 @@ class _CircuitCard extends StatelessWidget {
                     label: 'Rest between',
                     unit: 's',
                     value: circuit.restBetweenRoundsSeconds.toDouble(),
+                    max: 600,
                     onChanged: (value) => onChanged(
                       circuit.copyWith(
                         restBetweenRoundsSeconds: value
