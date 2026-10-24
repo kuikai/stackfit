@@ -6,6 +6,7 @@ import '../core/skins.dart';
 import '../core/theme_mode_codec.dart';
 import '../models/account_snapshot.dart';
 import '../models/app_settings.dart';
+import '../models/catalog_exercise.dart';
 import '../models/completed_session.dart';
 import '../models/workout.dart';
 import '../services/account/account_api_client.dart';
@@ -13,6 +14,7 @@ import '../services/account/account_storage.dart';
 import '../services/account/snapshot_merge.dart';
 import 'app_providers.dart';
 import 'completed_sessions_provider.dart';
+import 'custom_catalog_provider.dart';
 import 'settings_provider.dart';
 import 'workouts_provider.dart';
 
@@ -81,6 +83,9 @@ final accountProvider =
   ref.listen<AppSettings>(settingsProvider, (previous, next) {
     notifier.onLocalDataChanged();
   });
+  ref.listen<List<CatalogExercise>>(customCatalogProvider, (previous, next) {
+    notifier.onLocalDataChanged();
+  });
   return notifier;
 });
 
@@ -90,6 +95,7 @@ AccountSnapshot _readSnapshot(Ref ref, AccountStorage storage) {
     workouts: ref.read(workoutsProvider),
     deletedWorkouts: storage.loadDeletions(),
     sessions: ref.read(completedSessionsProvider),
+    customExercises: ref.read(customCatalogProvider),
     themeMode: themeModeToStorage(settings.themeMode),
     skin: settings.skin.name,
     appearanceUpdatedAt: storage.loadAppearanceUpdatedAt(),
@@ -104,7 +110,12 @@ Future<void> _writeSnapshot(Ref ref, AccountSnapshot snapshot) async {
   await ref
       .read(completedSessionsProvider.notifier)
       .replaceAll(snapshot.sessions);
-  await ref.read(settingsProvider.notifier).applyFromAccount(
+  await ref
+      .read(customCatalogProvider.notifier)
+      .replaceAll(snapshot.customExercises);
+  await ref
+      .read(settingsProvider.notifier)
+      .applyFromAccount(
         themeMode: themeModeFromStorage(snapshot.themeMode),
         skin: AppSkin.fromStorage(snapshot.skin),
       );

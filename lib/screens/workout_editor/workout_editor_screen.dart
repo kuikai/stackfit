@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../core/utils.dart';
 import '../../models/models.dart';
+import '../../providers/custom_catalog_provider.dart';
 import '../../providers/workouts_provider.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/workout_block_list.dart';
@@ -170,14 +171,22 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
       setState(() => _blocks = [..._blocks, CircuitBlock(newCircuit())]);
       return;
     }
-    final exercise = await pickExercise(
-      context,
-      fromCatalog: choice == WorkoutAddChoice.catalog,
-    );
+    final fromCatalog = choice == WorkoutAddChoice.catalog;
+    final exercise = await pickExercise(context, fromCatalog: fromCatalog);
     if (!mounted || exercise == null) {
       return;
     }
+    if (!fromCatalog) {
+      await _rememberCustomExercise(exercise);
+    }
+    if (!mounted) {
+      return;
+    }
     setState(() => _blocks = [..._blocks, ExerciseBlock(exercise)]);
+  }
+
+  Future<void> _rememberCustomExercise(Exercise exercise) {
+    return ref.read(customCatalogProvider.notifier).remember(exercise);
   }
 
   Future<void> _editExercise(int index) async {
@@ -225,6 +234,12 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
       inCircuit: true,
     );
     if (!mounted || exercise == null) {
+      return;
+    }
+    if (!fromCatalog) {
+      await _rememberCustomExercise(exercise);
+    }
+    if (!mounted) {
       return;
     }
     setState(() {

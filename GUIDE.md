@@ -74,6 +74,7 @@ flowchart TB
   subgraph Screens["screens/ · what the user sees"]
     Home[home_screen]
     Editor[workout_editor_screen]
+    Catalog[catalog_screen]
     Timer[active_timer_screen]
     History[history_screen]
     Settings[settings_screen]
@@ -83,6 +84,7 @@ flowchart TB
 
   subgraph Providers["providers/ · the app's memory (Riverpod)"]
     WP[workoutsProvider<br/>list of workouts]
+    CCP[customCatalogProvider<br/>exercises you added]
     CP[completedSessionsProvider<br/>history]
     SP[settingsProvider<br/>theme + skin]
     PP[isProProvider<br/>Free or Pro]
@@ -102,6 +104,8 @@ flowchart TB
 
   Home --> WP
   Editor --> WP
+  Editor --> CCP
+  Catalog --> CCP
   Timer --> Session --> CP
   History --> CP
   Settings --> SP
@@ -110,6 +114,7 @@ flowchart TB
   Account --> AP
 
   WP --> Store
+  CCP --> Store
   CP --> Store
   SP --> Store
   PP --> Store
@@ -118,14 +123,15 @@ flowchart TB
   AP -. "watches" .-> WP
   AP -. "watches" .-> CP
   AP -. "watches" .-> SP
+  AP -. "watches" .-> CCP
 
   Providers --> Models
   Services --> Models
 ```
 
-The dotted lines are the key idea for sync: `accountProvider` watches the three
-data providers. Whenever a workout, a session, or the theme changes, it uploads.
-Screens never talk to the server directly.
+The dotted lines are the key idea for sync: `accountProvider` watches the
+workout list, history, theme, and custom exercises. Whenever one of those
+changes, it uploads. Screens never talk to the server directly.
 
 ---
 
@@ -190,6 +196,7 @@ in `website/js/snapshot.js`:
 |------|------|
 | Workouts | newer `updatedAt` wins; a deletion wins if it is as new as the edit |
 | History | union by id, so the same session is never stored twice |
+| Custom exercises | union by name, ignoring case; the local copy is kept when both have it |
 | Theme + skin | newer `appearanceUpdatedAt` wins |
 | Pro | not in the snapshot at all; it stays a store purchase on the phone |
 
@@ -288,9 +295,10 @@ models/                           Data shapes. Every one has toJson / fromJson.
   workout.dart                    A named list of exercises and circuits, optional Home section, createdAt / updatedAt
   completed_session.dart          One history row: workout name, when, how long, how many exercises
   set_log.dart                    Reps and kg for one set, saved on a finished session, with the circuit round
-  catalog_exercise.dart           The built-in offline exercise catalog (27 exercises)
+  catalog_exercise.dart           One catalog row, the built-in list, and search
+  custom_catalog.dart             Adds an exercise you made under Custom, or updates that name
   app_settings.dart               Theme mode + skin
-  account_snapshot.dart           The snapshot: workouts + deletions + sessions + appearance. What syncs.
+  account_snapshot.dart           The snapshot: workouts, deletions, sessions, custom exercises, appearance. What syncs.
   workout_plan.dart               A read-only built-in plan and its days
   plans/
     plan_library.dart             Lists every built-in plan, by category, with search
@@ -306,13 +314,14 @@ models/                           Data shapes. Every one has toJson / fromJson.
 providers/                        Riverpod state. Screens read from here.
   app_providers.dart              Wires SharedPreferences, StorageService, AccountStorage, AccountApiClient
   workouts_provider.dart          The workout list + add/edit/delete/duplicate + sections + the free-limit check
+  custom_catalog_provider.dart    Exercises you added, listed in the catalog under Custom
   completed_sessions_provider.dart  History list, newest first, free cap of 10, plus per-workout history
   settings_provider.dart          Theme and skin
   pro_provider.dart               Free or Pro flag
   account_provider.dart           Signed in? Saving? Runs the whole sync loop from section 3 and 4.
 
 services/                         Does the work the providers ask for.
-  storage_service.dart            Reads and writes workouts, history, Pro, settings to the phone
+  storage_service.dart            Reads and writes workouts, history, custom exercises, Pro, and settings on the phone
   workout_session_state.dart      Where the timer is: block, round, exercise, work/rest/set, seconds left, paused
   session_set_log.dart            Reps and kg typed in while a workout is still running
   station_exit.dart               Rest between circuit stations and between rounds
@@ -331,7 +340,7 @@ screens/                          One folder per screen.
   workout_editor/workout_editor_screen.dart   Create or edit a workout, including a circuit box, reorder and delete, optional section
   workout_editor/workout_editor_actions.dart  Add an exercise or a circuit, and edit the stations inside it
   exercise_editor/exercise_editor_screen.dart Create or edit one exercise (timer or sets)
-  catalog/catalog_screen.dart     Searchable exercise catalog to pick from
+  catalog/catalog_screen.dart     Searchable catalog: built-in exercises plus ones you added
   active_timer/active_timer_screen.dart       The big timer. Uses workout_session_controller.
   active_timer/timer_controls.dart            Done, skip rest, pause, skip, reset, and stop
   active_timer/active_timer_card.dart         WORK / REST / SET countdown card
@@ -391,7 +400,7 @@ styles.css                        Styling
 js/
   main.js                         Start here. Wires buttons, picks a view from the URL, draws workouts (grouped by section) + history
   api.js                          fetch() calls to the server. Same endpoints as account_api_client.dart
-  snapshot.js                     Empty snapshot, merge rules, circuit blocks, id and date helpers
+  snapshot.js                     Empty snapshot, merge rules (including custom exercises), circuit blocks, id and date helpers
   editor.js                       Workout editor form: open, read the draft, validate
   editor_blocks.js                Exercise cards and circuit boxes in the workout editor
   session.js                      "Log a session" form
@@ -416,6 +425,7 @@ themes/dumbbell/                  Dumbbell art. Settings uses icons/banner-home.
 ```
 widget_test.dart                  Home screen renders
 snapshot_merge_test.dart          Merge rules
+custom_catalog_test.dart          A custom exercise joins the catalog, and sync keeps one copy of each name
 website_snapshot_test.dart        Phone can read a snapshot the website wrote
 plan_library_test.dart            Plans have unique ids, and Home sections group plan days
 set_log_test.dart                 Set logging, kg, and history JSON
@@ -429,7 +439,8 @@ skin_look_test.dart               Each skin's corners, spacing, and typeface
 
 | Word | Means |
 |------|-------|
-| **Snapshot** | Everything on one account in one JSON object: workouts, deleted workout ids, sessions, theme, skin. |
+| **Snapshot** | Everything on one account in one JSON object: workouts, deleted workout ids, sessions, custom exercises, theme, skin. |
+| **Custom exercise** | An exercise you typed yourself, including its timer or sets. Listed in the catalog under Custom. |
 | **Session** (history) | One finished workout: `CompletedSession`. |
 | **Session** (account) | Who is signed in: `AccountSession` (email + token). Different thing, same word. |
 | **Revision** | A counter the server bumps on every save. Used to spot two devices saving at once. |

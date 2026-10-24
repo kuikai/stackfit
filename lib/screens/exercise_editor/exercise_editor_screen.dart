@@ -11,11 +11,15 @@ class ExerciseEditorScreen extends StatefulWidget {
     super.key,
     this.initial,
     this.initialName,
+    this.preset,
     this.inCircuit = false,
   });
 
   final Exercise? initial;
   final String? initialName;
+
+  /// Fills a new exercise from a catalog entry you added earlier.
+  final Exercise? preset;
 
   /// A station inside a circuit defaults to one pass per round.
   final bool inCircuit;
@@ -37,25 +41,24 @@ class _ExerciseEditorScreenState extends State<ExerciseEditorScreen> {
   void initState() {
     super.initState();
     final initial = widget.initial;
+    final seed = initial ?? widget.preset;
     _id = initial?.id ?? AppUtils.newId();
-    final creatingStation = widget.inCircuit && initial == null;
-    final defaultType = initial?.type ?? ExerciseType.sets;
+    final creatingStation = widget.inCircuit && seed == null;
+    final defaultType = seed?.type ?? ExerciseType.sets;
     _type = defaultType;
     _nameController = TextEditingController(
-      text: initial?.name ?? widget.initialName ?? '',
+      text: seed?.name ?? widget.initialName ?? '',
     );
-    _workController = TextEditingController(
-      text: '${initial?.workSeconds ?? 40}',
-    );
+    _workController = TextEditingController(text: '${seed?.workSeconds ?? 40}');
     _restController = TextEditingController(
       text:
-          '${initial?.restSeconds ?? (creatingStation || defaultType == ExerciseType.timer ? 15 : 60)}',
+          '${seed?.restSeconds ?? (creatingStation || defaultType == ExerciseType.timer ? 15 : 60)}',
     );
     _setsController = TextEditingController(
-      text: '${initial?.sets ?? (creatingStation ? 1 : 3)}',
+      text: '${seed?.sets ?? (creatingStation ? 1 : 3)}',
     );
     _repsController = TextEditingController(
-      text: initial?.reps?.toString() ?? (creatingStation ? '10' : '8'),
+      text: seed?.reps?.toString() ?? (creatingStation ? '10' : '8'),
     );
   }
 

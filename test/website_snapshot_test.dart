@@ -47,6 +47,18 @@ void main() {
       'themeMode': 'system',
       'skin': 'classic',
       'appearanceUpdatedAt': '1970-01-01T00:00:00.000Z',
+      'customExercises': [
+        {
+          'id': 'custom-farmer-carry',
+          'name': 'Farmer Carry',
+          'category': 'Custom',
+          'type': 'sets',
+          'workSeconds': null,
+          'restSeconds': 90,
+          'sets': 4,
+          'reps': 6,
+        },
+      ],
     });
 
     expect(snapshot.workouts.single.name, 'Push day');
@@ -54,5 +66,8 @@ void main() {
     expect(snapshot.workouts.single.exercises.last.workSeconds, 45);
     expect(snapshot.sessions.single.durationSeconds, 1500);
     expect(snapshot.themeMode, 'system');
+    expect(snapshot.customExercises.single.name, 'Farmer Carry');
+    expect(snapshot.customExercises.single.sets, 4);
+    expect(snapshot.customExercises.single.preset?.reps, 6);
   });
 }

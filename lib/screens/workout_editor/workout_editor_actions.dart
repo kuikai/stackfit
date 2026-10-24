@@ -20,7 +20,7 @@ Future<WorkoutAddChoice?> askWhatToAdd(BuildContext context) {
             ListTile(
               leading: const Icon(Icons.menu_book_outlined),
               title: const Text('From catalog'),
-              subtitle: const Text('Browse common exercises'),
+              subtitle: const Text('Built-in list, plus exercises you add'),
               onTap: () => Navigator.pop(context, WorkoutAddChoice.catalog),
             ),
             ListTile(
@@ -78,6 +78,7 @@ Future<Exercise?> pickExercise(
   bool inCircuit = false,
 }) async {
   var name = initial?.name;
+  Exercise? preset;
   if (fromCatalog) {
     final catalogItem = await Navigator.of(context).push<CatalogExercise>(
       MaterialPageRoute(builder: (_) => const CatalogScreen()),
@@ -86,6 +87,7 @@ Future<Exercise?> pickExercise(
       return null;
     }
     name = catalogItem.name;
+    preset = catalogItem.preset;
   }
   if (!context.mounted) {
     return null;
@@ -95,6 +97,7 @@ Future<Exercise?> pickExercise(
       builder: (_) => ExerciseEditorScreen(
         initial: initial,
         initialName: initial == null ? name : null,
+        preset: initial == null ? preset : null,
         inCircuit: inCircuit,
       ),
     ),

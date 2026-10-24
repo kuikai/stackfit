@@ -1,4 +1,5 @@
 import '../../models/account_snapshot.dart';
+import '../../models/catalog_exercise.dart';
 import '../../models/completed_session.dart';
 import '../../models/workout.dart';
 
@@ -7,6 +8,8 @@ import '../../models/workout.dart';
 /// Workouts: newer [Workout.updatedAt] wins. A deletion wins when its
 /// timestamp is the same or newer than the workout.
 /// History: sessions are unioned by id, so the same session is stored once.
+/// Custom exercises: union by name, ignoring case. The local copy is kept
+/// when both devices have that name.
 /// Appearance: the newer [AccountSnapshot.appearanceUpdatedAt] wins.
 AccountSnapshot mergeSnapshots(AccountSnapshot local, AccountSnapshot remote) {
   final workouts = _mergeWorkouts(local, remote);
@@ -15,6 +18,10 @@ AccountSnapshot mergeSnapshots(AccountSnapshot local, AccountSnapshot remote) {
     workouts: workouts.workouts,
     deletedWorkouts: workouts.deletions,
     sessions: _mergeSessions(local.sessions, remote.sessions),
+    customExercises: _mergeCustomExercises(
+      local.customExercises,
+      remote.customExercises,
+    ),
     themeMode: appearance.themeMode,
     skin: appearance.skin,
     appearanceUpdatedAt: appearance.appearanceUpdatedAt,
@@ -22,10 +29,7 @@ AccountSnapshot mergeSnapshots(AccountSnapshot local, AccountSnapshot remote) {
 }
 
 class _WorkoutMerge {
-  const _WorkoutMerge({
-    required this.workouts,
-    required this.deletions,
-  });
+  const _WorkoutMerge({required this.workouts, required this.deletions});
 
   final List<Workout> workouts;
   final List<WorkoutDeletion> deletions;
@@ -92,6 +96,23 @@ bool _deletionWins(DateTime? deletedAt, Workout? workout) {
   return !deletedAt.isBefore(workout.updatedAt);
 }
 
+List<CatalogExercise> _mergeCustomExercises(
+  List<CatalogExercise> local,
+  List<CatalogExercise> remote,
+) {
+  final byName = <String, CatalogExercise>{};
+  for (final item in [...local, ...remote]) {
+    final key = item.name.trim().toLowerCase();
+    if (key.isEmpty) {
+      continue;
+    }
+    byName.putIfAbsent(key, () => item);
+  }
+  final merged = byName.values.toList()
+    ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+  return merged;
+}
+
 List<CompletedSession> _mergeSessions(
   List<CompletedSession> local,
   List<CompletedSession> remote,
@@ -105,7 +126,10 @@ List<CompletedSession> _mergeSessions(
   return sessions;
 }
 
-AccountSnapshot _newerAppearance(AccountSnapshot local, AccountSnapshot remote) {
+AccountSnapshot _newerAppearance(
+  AccountSnapshot local,
+  AccountSnapshot remote,
+) {
   if (remote.appearanceUpdatedAt.isBefore(local.appearanceUpdatedAt)) {
     return local;
   }

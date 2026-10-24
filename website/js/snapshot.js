@@ -8,6 +8,7 @@ export function emptySnapshot() {
     workouts: [],
     deletedWorkouts: [],
     sessions: [],
+    customExercises: [],
     themeMode: 'system',
     skin: 'classic',
     appearanceUpdatedAt: '1970-01-01T00:00:00.000Z',
@@ -26,6 +27,9 @@ export function ensureSnapshot(raw) {
       ? snapshot.deletedWorkouts
       : [],
     sessions: Array.isArray(snapshot.sessions) ? snapshot.sessions : [],
+    customExercises: Array.isArray(snapshot.customExercises)
+      ? snapshot.customExercises
+      : [],
     themeMode: snapshot.themeMode || 'system',
     skin: snapshot.skin || 'classic',
     appearanceUpdatedAt:
@@ -41,6 +45,10 @@ export function mergeSnapshots(local, remote) {
     workouts: workouts.workouts,
     deletedWorkouts: workouts.deletions,
     sessions: mergeSessions(local.sessions, remote.sessions),
+    customExercises: mergeCustomExercises(
+      local.customExercises,
+      remote.customExercises,
+    ),
     themeMode: appearance.themeMode,
     skin: appearance.skin,
     appearanceUpdatedAt: appearance.appearanceUpdatedAt,
@@ -212,6 +220,21 @@ function deletionWins(deletedAt, workout) {
     return true;
   }
   return !isBefore(deletedAt, workout.updatedAt);
+}
+
+function mergeCustomExercises(local, remote) {
+  const byName = new Map();
+  for (const item of [...(local || []), ...(remote || [])]) {
+    const name = typeof item?.name === 'string' ? item.name.trim() : '';
+    const key = name.toLowerCase();
+    if (!key || byName.has(key)) {
+      continue;
+    }
+    byName.set(key, item);
+  }
+  return [...byName.values()].sort((left, right) =>
+    left.name.toLowerCase().localeCompare(right.name.toLowerCase()),
+  );
 }
 
 function mergeSessions(local, remote) {
