@@ -81,7 +81,6 @@ class _SetTrackerState extends State<SetTracker> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final totalSets = widget.exercise.sets ?? 1;
-    final planned = widget.exercise.reps;
 
     return Card(
       child: Padding(
@@ -90,26 +89,11 @@ class _SetTrackerState extends State<SetTracker> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Log',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                if (planned != null)
-                  Text(
-                    'Target $planned reps',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(
-                        alpha: 0.55,
-                      ),
-                    ),
-                  ),
-              ],
+            Text(
+              'Log',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 6),
             for (var setNumber = 1; setNumber <= totalSets; setNumber++)
@@ -166,11 +150,7 @@ class _SetTrackerState extends State<SetTracker> {
       );
     }
 
-    return _SetRow(
-      setNumber: setNumber,
-      state: _RowState.upcoming,
-      trailing: _PlannedLabel(reps: widget.exercise.reps),
-    );
+    return _SetRow(setNumber: setNumber, state: _RowState.upcoming);
   }
 }
 
@@ -311,24 +291,6 @@ class _LoggedLabel extends StatelessWidget {
         fontWeight: FontWeight.w700,
         color: theme.colorScheme.primary,
         fontFeatures: const [FontFeature.tabularFigures()],
-      ),
-    );
-  }
-}
-
-class _PlannedLabel extends StatelessWidget {
-  const _PlannedLabel({required this.reps});
-
-  final int? reps;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Text(
-      reps == null ? '—' : '$reps reps',
-      style: theme.textTheme.bodyLarge?.copyWith(
-        fontWeight: FontWeight.w600,
-        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
       ),
     );
   }

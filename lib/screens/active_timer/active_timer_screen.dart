@@ -131,6 +131,7 @@ class _ActiveTimerScreenState extends State<ActiveTimerScreen> {
         exercise?.type == ExerciseType.sets &&
         (state.phase == SessionPhase.setReady ||
             state.phase == SessionPhase.rest);
+    final showTimerCard = state.phase != SessionPhase.setReady;
 
     return Scaffold(
       appBar: AppBar(
@@ -169,7 +170,9 @@ class _ActiveTimerScreenState extends State<ActiveTimerScreen> {
                   const SizedBox(height: 20),
                   Expanded(
                     child: _buildMainArea(
-                      timer: ActiveTimerCard(state: state),
+                      timer: showTimerCard
+                          ? ActiveTimerCard(state: state)
+                          : null,
                       tracker: showTracker && exercise != null
                           ? _buildTracker(exercise, state)
                           : null,
@@ -201,9 +204,12 @@ class _ActiveTimerScreenState extends State<ActiveTimerScreen> {
   }
 
   /// Timer and tracker side by side on wide screens, stacked otherwise.
-  Widget _buildMainArea({required Widget timer, Widget? tracker}) {
+  Widget _buildMainArea({Widget? timer, Widget? tracker}) {
     if (tracker == null) {
-      return timer;
+      return timer ?? const SizedBox.shrink();
+    }
+    if (timer == null) {
+      return SingleChildScrollView(child: tracker);
     }
     return LayoutBuilder(
       builder: (context, constraints) {

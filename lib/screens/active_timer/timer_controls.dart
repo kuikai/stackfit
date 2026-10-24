@@ -79,14 +79,35 @@ class TimerSecondaryControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isSetReady = state.phase == SessionPhase.setReady;
+    if (state.phase == SessionPhase.setReady) {
+      return Row(
+        children: [
+          Expanded(
+            child: TextButton.icon(
+              onPressed: onRestart,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Reset'),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextButton.icon(
+              onPressed: onStop,
+              icon: const Icon(Icons.stop_rounded),
+              label: const Text('Stop'),
+            ),
+          ),
+        ],
+      );
+    }
+
     return Column(
       children: [
         Row(
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: isSetReady ? null : onPause,
+                onPressed: onPause,
                 icon: Icon(
                   state.isPaused
                       ? Icons.play_arrow_rounded

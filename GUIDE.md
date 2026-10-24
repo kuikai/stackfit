@@ -26,7 +26,7 @@ flowchart LR
 
   subgraph Server["🖥 Server · server/"]
     direction TB
-    B1["/v1/auth/*<br/>sign up · sign in · reset"]
+    B1["/v1/auth/* and /v1/account<br/>sign up · sign in · reset · delete"]
     B2["/v1/sync<br/>read + write snapshot"]
     B3["/v1/shares<br/>links"]
     B4[(data/stackfit_accounts.json)]
@@ -247,7 +247,7 @@ flowchart LR
 
 The server (`server/lib/app_handler.dart`) decides: anything under `/v1/` is
 API, `/tabata` and `/s/…` return `index.html`, everything else is a static file
-from `website/`.
+from `website/`. `privacy.html` is the privacy policy, at `/privacy.html`.
 
 ---
 
@@ -273,6 +273,7 @@ analysis_options.yaml House style the phone app is checked against
 
 ```
 icon.png              Home-screen icon picture. Black background, blue dumbbell, 1024×1024
+app-store-header.png  App Store header and search image. Same dumbbell, 5244×2950
 ```
 
 ### `lib/` – phone app
@@ -283,7 +284,9 @@ main.dart                         App entry. Sets up Riverpod, theme, and re-syn
 core/
   constants.dart                  App name, free limits (3 workouts, 10 sessions), server URL
   theme.dart                      Builds light and dark themes from a skin's colours, font, corners, and spacing
-  skins.dart                      Everyday skins plus Pro anime skins, including each anime preview picture
+  skins.dart                      Skin names, and which colours and corners go with each one
+  skin_looks.dart                 Corners, spacing, and fonts for each skin
+  skin_palettes.dart              Light and dark colours for each skin
   theme_mode_codec.dart           Converts ThemeMode <-> the "system/light/dark" text saved on the account
   utils.dart                      Small helpers: new ids, duration formatting
 
@@ -318,7 +321,9 @@ providers/                        Riverpod state. Screens read from here.
   completed_sessions_provider.dart  History list, newest first, free cap of 10, plus per-workout history
   settings_provider.dart          Theme and skin
   pro_provider.dart               Free or Pro flag
-  account_provider.dart           Signed in? Saving? Runs the whole sync loop from section 3 and 4.
+  account_state.dart              Signed in or not, saving/offline/error, and whether old device data is waiting
+  account_provider.dart           Sign up, sign in, reset password, sign out, delete account, and "move my workouts"
+  account_sync.dart               What happens after sign-in, and when a workout, session, theme, or custom exercise changes
 
 services/                         Does the work the providers ask for.
   storage_service.dart            Reads and writes workouts, history, custom exercises, Pro, and settings on the phone
@@ -330,27 +335,30 @@ services/                         Does the work the providers ask for.
   sound_service.dart              Beeps and haptics on phase changes
   plan_workout_builder.dart       Turns a plan day into a workout; multi-day plans share a section
   account/
-    account_api_client.dart       HTTP calls to the server (/v1/auth, /v1/sync, /v1/profile)
+    account_api_client.dart       HTTP calls to the server (/v1/auth, /v1/account, /v1/sync, /v1/profile)
     account_storage.dart          Saves who is signed in, plus sync bookkeeping (deletions, unmoved data)
     snapshot_merge.dart           The merge rules from section 4
 
 screens/                          One folder per screen.
   home/home_screen.dart           Workout list grouped into sections, + button, Plans / History / Settings
+  home/home_actions.dart          Start, create, delete, duplicate, and the section changes from Home
   home/section_dialogs.dart       Name a section, move workouts in, pick which days to group
   workout_editor/workout_editor_screen.dart   Create or edit a workout, including a circuit box, reorder and delete, optional section
   workout_editor/workout_editor_actions.dart  Add an exercise or a circuit, and edit the stations inside it
   exercise_editor/exercise_editor_screen.dart Create or edit one exercise (timer or sets)
   catalog/catalog_screen.dart     Searchable catalog: built-in exercises plus ones you added
   active_timer/active_timer_screen.dart       The big timer. Uses workout_session_controller.
-  active_timer/timer_controls.dart            Done, skip rest, pause, skip, reset, and stop
-  active_timer/active_timer_card.dart         WORK / REST / SET countdown card
+  active_timer/timer_controls.dart            Done, skip rest, pause, skip, reset, and stop. Logging hides pause and skip
+  active_timer/active_timer_card.dart         WORK / REST countdown card
   active_timer/workout_complete_screen.dart   "Done" screen; writes the history session
   history/history_screen.dart     Completed sessions across every workout
   history/workout_history_screen.dart  Past sessions of one workout
   plans/plan_library_screen.dart  Browse built-in plans by category or search
   plans/plan_detail_screen.dart   Days of one plan; Start and Add are Pro
   settings/settings_screen.dart   Theme, everyday skins, Pro skins, Pro, account card
-  account/account_screen.dart     Sign up / sign in / reset password forms
+  account/account_screen.dart     Decides sign up, sign in, and reset. Does not call the server itself
+  account/account_auth_form.dart  The email, password, and reset-code fields
+  account/delete_account_dialog.dart  Password confirm before an account is deleted
 
 widgets/                          Reusable pieces used by several screens.
   workout_tile.dart               One workout row on Home (edit / history / section / duplicate / delete)
@@ -365,8 +373,9 @@ widgets/                          Reusable pieces used by several screens.
   set_log_list.dart               Finished sets grouped by exercise
   session_tile.dart               One history row (date, duration, reps × kg)
   skin_picker.dart                Grid of skins in Settings
+  collapsible_section.dart        A settings card that stays closed until you tap Show
   skin_artwork.dart               Skin picture on Home and behind a workout
-  account_settings_card.dart      The account box in Settings: email, Saved/Saving/Offline, sign out, move data
+  account_settings_card.dart      The account box in Settings: email, Saved/Saving/Offline, sign out, delete account, move data
   empty_state.dart                Centered "nothing here yet" message
 ```
 
@@ -378,16 +387,17 @@ analysis_options.yaml             House style the server is checked against
 bin/server.dart                   Start here. Loads the two JSON files, serves API + website on :8787
 lib/
   app_handler.dart                Decides: /v1/* → API, /tabata and /s/… → index.html, else static file
-  account_handler.dart            The /v1/auth/*, /v1/profile, /v1/sync routes. Validates input.
-  account_store.dart              Users, passwords (hashed), tokens, reset codes, each user's snapshot + revision
+  account_handler.dart            The /v1/auth/*, /v1/account, /v1/profile, /v1/sync routes. Validates input.
+  account_store.dart              Sign up, sign in, tokens, reset codes, delete account, and saving a snapshot
+  account_records.dart            How a user, a reset code, and a snapshot are written in the JSON file
   share_routes.dart               The /v1/shares routes: create, list, read public, disable
-  share_store.dart                Saved share links. Separate file from accounts on purpose.
+  share_store.dart                Saved share links. Removed when that account is deleted.
   password_hash.dart              PBKDF2 hashing and checking
 data/
   stackfit_accounts.json          Everything account_store holds (local dev data)
   stackfit_shares.json            Everything share_store holds
 test/
-  account_server_test.dart        Sign up, sign in, sync, conflicts
+  account_server_test.dart        Sign up, sign in, sync, conflicts, delete account
   share_server_test.dart          Create, open, disable links
   website_server_test.dart        Website is served and does not hide the API
 ```
@@ -396,16 +406,19 @@ test/
 
 ```
 index.html                        All the panels (sign in, library, editor, run, share, tabata). JS shows/hides them.
+privacy.html                      Privacy policy, and how to delete an account. Served at /privacy.html
 styles.css                        Styling
 js/
-  main.js                         Start here. Wires buttons, picks a view from the URL, draws workouts (grouped by section) + history
+  main.js                         Start here. Picks a view from the URL and wires the library buttons
+  auth.js                         Sign in, sign up, reset password, sign out, and delete account
+  library.js                      Draws workouts, grouped into sections, and the history list
+  workout_run_view.js             The on-screen clock, phase name, and beep while a workout runs
   api.js                          fetch() calls to the server. Same endpoints as account_api_client.dart
   snapshot.js                     Empty snapshot, merge rules (including custom exercises), circuit blocks, id and date helpers
   editor.js                       Workout editor form: open, read the draft, validate
   editor_blocks.js                Exercise cards and circuit boxes in the workout editor
   session.js                      "Log a session" form
   workout_run.js                  Run a workout in the browser, including circuits
-  workout_run_view.js             The on-screen clock, phase name, and beep while a workout runs
   tabata.js                       The /tabata page: classic 20/10 × 8 timer, savable when signed in
   sharing.js                      Share buttons, the public /s/… page, "Add to my account", paste-a-routine
 ```
@@ -416,7 +429,7 @@ js/
 themes/README.md                  What the four anime themes are for
 themes/bold-sports/               Bold Sports art. Settings uses icons/banner.jpg
 themes/chibi/                     Chibi art. Settings uses icons/banner.jpg
-themes/cyberpunk/                 Cyberpunk art. Settings uses icons/banner.jpg
+themes/cyberpunk/                 Cyberpunk art. Home uses background.jpg. Settings uses icons/banner.jpg
 themes/dumbbell/                  Dumbbell art. Settings uses icons/banner-home.jpg
 ```
 
@@ -480,4 +493,12 @@ cd server && dart analyze         # server
 
 # rebuild phone and Windows icons after replacing icon/icon.png
 dart run flutter_launcher_icons
+
+# Google Play bundle. Package name is com.dix.stackfit.
+# The upload key is android/key.properties and android/app/upload-keystore.jks.
+# Those files are not in git. Keep a copy. Play rejects a build signed with the debug key.
+flutter build appbundle
+# Upload build/app/outputs/bundle/release/app-release.aab
+# Sign-in appears in that build only when the server address is https:
+# flutter build appbundle --dart-define=STACKFIT_ACCOUNT_URL=https://your-server
 ```
