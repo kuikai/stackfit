@@ -10,8 +10,9 @@ class SkinArtworkBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asset = ref.watch(settingsProvider).skin.previewAsset;
-    if (asset == null) {
+    final skin = ref.watch(settingsProvider).skin;
+    final asset = skin.previewAsset;
+    if (asset == null || skin.backgroundAsset != null) {
       return const SizedBox.shrink();
     }
 
@@ -35,7 +36,8 @@ class SkinArtworkBackdrop extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asset = ref.watch(settingsProvider).skin.previewAsset;
+    final skin = ref.watch(settingsProvider).skin;
+    final asset = skin.backgroundAsset ?? skin.previewAsset;
     if (asset == null) {
       return const SizedBox.shrink();
     }
@@ -44,8 +46,8 @@ class SkinArtworkBackdrop extends ConsumerWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        Image.asset(asset, fit: BoxFit.cover),
-        ColoredBox(color: scrim.withValues(alpha: 0.78)),
+        Image.asset(asset, fit: BoxFit.cover, alignment: Alignment.topCenter),
+        ColoredBox(color: scrim.withValues(alpha: 0.88)),
       ],
     );
   }

@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
 import '../../models/models.dart';
+import '../../providers/custom_catalog_provider.dart';
 import '../../widgets/empty_state.dart';
 
 /// Offline exercise catalog with search and category filters.
-class CatalogScreen extends StatefulWidget {
+class CatalogScreen extends ConsumerStatefulWidget {
   const CatalogScreen({super.key});
 
   @override
-  State<CatalogScreen> createState() => _CatalogScreenState();
+  ConsumerState<CatalogScreen> createState() => _CatalogScreenState();
 }
 
-class _CatalogScreenState extends State<CatalogScreen> {
+class _CatalogScreenState extends ConsumerState<CatalogScreen> {
   final _searchController = TextEditingController();
   String _query = '';
   String? _selectedCategory;
@@ -25,8 +27,13 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final categories = ExerciseCatalog.categories;
-    final results = _filteredExercises();
+    final custom = ref.watch(customCatalogProvider);
+    final categories = ExerciseCatalog.categoriesFor(custom);
+    final results = ExerciseCatalog.search(
+      _query,
+      custom: custom,
+      category: _selectedCategory,
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text('Exercise catalog')),
@@ -115,14 +122,5 @@ class _CatalogScreenState extends State<CatalogScreen> {
         ],
       ),
     );
-  }
-
-  List<CatalogExercise> _filteredExercises() {
-    var list = ExerciseCatalog.search(_query);
-    final category = _selectedCategory;
-    if (category != null) {
-      list = list.where((item) => item.category == category).toList();
-    }
-    return list;
   }
 }

@@ -14,7 +14,9 @@ void main() {
 
   setUp(() async {
     final directory = await Directory.systemTemp.createTemp('stackfit-shares');
-    final website = await Directory.systemTemp.createTemp('stackfit-share-site');
+    final website = await Directory.systemTemp.createTemp(
+      'stackfit-share-site',
+    );
     await File('${website.path}/index.html').writeAsString('<p>StackFit</p>');
     final accounts = AccountStore(File('${directory.path}/accounts.json'));
     final shares = ShareStore(File('${directory.path}/shares.json'));
@@ -85,9 +87,70 @@ void main() {
       token: token,
     );
     expect(disabled.statusCode, 200);
-    final hidden = await client.get(Uri.parse('$baseUrl/v1/shares/$shareToken'));
+    final hidden = await client.get(
+      Uri.parse('$baseUrl/v1/shares/$shareToken'),
+    );
     expect(hidden.statusCode, 404);
     expect(hidden.body, contains('This link is turned off.'));
+  });
+
+  test('a shared circuit keeps its rounds', () async {
+    final client = http.Client();
+    addTearDown(client.close);
+
+    final created = await _post(client, '$baseUrl/v1/auth/signup', {
+      'email': 'mia@example.com',
+      'password': 'password1',
+    });
+    final token = _json(created)['token'] as String;
+    final snapshot = _snapshot();
+    (snapshot['workouts'] as List).add({
+      'id': 'w2',
+      'name': 'Lunch circuit',
+      'blocks': [
+        {
+          'type': 'circuit',
+          'rounds': 4,
+          'restBetweenRoundsSeconds': 45,
+          'exercises': [
+            {
+              'name': 'Burpees',
+              'type': 'timer',
+              'workSeconds': 40,
+              'restSeconds': 15,
+              'sets': 1,
+            },
+          ],
+        },
+      ],
+      'exercises': [
+        {
+          'name': 'Burpees',
+          'type': 'timer',
+          'workSeconds': 40,
+          'restSeconds': 15,
+          'sets': 1,
+        },
+      ],
+    });
+    await _put(client, '$baseUrl/v1/sync', token, {
+      'baseRevision': 0,
+      'snapshot': snapshot,
+    });
+
+    final shared = await _post(client, '$baseUrl/v1/shares', {
+      'kind': 'workout',
+      'workoutId': 'w2',
+    }, token: token);
+    final shareToken = _json(shared)['token'] as String;
+    final page = _json(
+      await client.get(Uri.parse('$baseUrl/v1/shares/$shareToken')),
+    );
+    final block = (page['blocks'] as List).single as Map;
+    expect(block['rounds'], 4);
+    expect(block['restBetweenRoundsSeconds'], 45);
+    expect(page['name'], 'Lunch circuit');
+    expect(page.containsKey('email'), isFalse);
   });
 
   test('a progress link lists only the chosen sessions', () async {
@@ -108,7 +171,9 @@ void main() {
       'sessionIds': ['s1'],
     }, token: token);
     final shareToken = _json(shared)['token'] as String;
-    final page = _json(await client.get(Uri.parse('$baseUrl/v1/shares/$shareToken')));
+    final page = _json(
+      await client.get(Uri.parse('$baseUrl/v1/shares/$shareToken')),
+    );
     final sessions = page['sessions'] as List;
     expect(sessions, hasLength(1));
     expect((sessions.single as Map)['workoutName'], 'Push day');

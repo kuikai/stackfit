@@ -17,6 +17,7 @@ class StorageService {
   static const _isProKey = 'stackfit_is_pro';
   static const _themeModeKey = 'stackfit_theme_mode';
   static const _skinKey = 'stackfit_skin';
+  static const _customExercisesKey = 'stackfit_custom_exercises';
 
   // ── Workouts ──────────────────────────────────────────────────────────────
 
@@ -112,5 +113,31 @@ class StorageService {
 
   Future<void> saveSkin(AppSkin skin) async {
     await _prefs.setString(_skinKey, skin.name);
+  }
+
+  // ── Custom catalog ────────────────────────────────────────────────────────
+
+  List<CatalogExercise> loadCustomExercises() {
+    final raw = _prefs.getString(_customExercisesKey);
+    if (raw == null || raw.isEmpty) {
+      return const [];
+    }
+
+    try {
+      final decoded = jsonDecode(raw) as List<dynamic>;
+      return decoded
+          .map((item) => CatalogExercise.fromJson(item as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      // Saved JSON was unreadable. Start from an empty custom catalog.
+      return const [];
+    }
+  }
+
+  Future<void> saveCustomExercises(List<CatalogExercise> exercises) async {
+    final encoded = jsonEncode(
+      exercises.map((exercise) => exercise.toJson()).toList(),
+    );
+    await _prefs.setString(_customExercisesKey, encoded);
   }
 }

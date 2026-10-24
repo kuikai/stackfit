@@ -30,7 +30,7 @@ class SetLogList extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    group.first.exerciseName,
+                    _groupTitle(group.first),
                     style: theme.textTheme.bodyLarge?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -55,11 +55,21 @@ class SetLogList extends StatelessWidget {
     );
   }
 
+  static String _groupTitle(SetLog log) {
+    if (log.round <= 1) {
+      return log.exerciseName;
+    }
+    return '${log.exerciseName} · round ${log.round}';
+  }
+
   /// Keeps exercise order as performed; one list of sets per exercise.
   static List<List<SetLog>> groupByExercise(List<SetLog> logs) {
     final groups = <List<SetLog>>[];
     for (final log in logs) {
-      if (groups.isNotEmpty && groups.last.first.exerciseId == log.exerciseId) {
+      final previous = groups.isNotEmpty ? groups.last.first : null;
+      if (previous != null &&
+          previous.exerciseId == log.exerciseId &&
+          previous.round == log.round) {
         groups.last.add(log);
       } else {
         groups.add([log]);

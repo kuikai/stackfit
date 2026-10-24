@@ -1,9 +1,11 @@
 import {
-  estimatedDurationSeconds,
-  exerciseLine,
+  estimatedWorkoutSeconds,
   formatDuration,
   formatSessionDate,
   newId,
+  workoutBlocks,
+  workoutLines,
+  workoutStations,
 } from './snapshot.js';
 
 const phoneNote = 'The app shows it the next time it syncs.';
@@ -83,18 +85,31 @@ export function showLocalWorkout(workout, app) {
   document.querySelector('#signed-in').hidden = true;
   document.querySelector('#signed-out').hidden = true;
   document.querySelector('#share-view').hidden = false;
-  fillShareView({ kind: 'workout', name: workout.name, exercises: workout.exercises });
+  fillShareView({
+    kind: 'workout',
+    name: workout.name,
+    exercises: workout.exercises,
+    blocks: workout.blocks,
+  });
 }
 
 export function workoutFromShare(share) {
   const now = new Date().toISOString();
-  return {
+  const blocks = copyShareBlocks(share);
+  const exercises = blocks
+    ? blocks.flatMap((block) => (block.type === 'circuit' ? block.exercises : [block.exercise]))
+    : (share.exercises || []).map(copyExercise);
+  const workout = {
     id: newId(),
     name: share.name,
     createdAt: now,
     updatedAt: now,
-    exercises: (share.exercises || []).map(copyExercise),
+    exercises,
   };
+  if (blocks) {
+    workout.blocks = blocks;
+  }
+  return workout;
 }
 
 export function parseRoutineText(raw) {
@@ -108,28 +123,64 @@ export function parseRoutineText(raw) {
   if (error) {
     return { error };
   }
-  return {
-    workout: {
-      name: String(parsed.name).trim(),
-      exercises: parsed.exercises,
-    },
+  const workout = {
+    name: String(parsed.name).trim(),
+    exercises: parsed.exercises,
   };
+  if (Array.isArray(parsed.blocks) && parsed.blocks.length > 0) {
+    workout.blocks = parsed.blocks;
+  }
+  return { workout };
 }
 
 export function routineError(workout) {
   if (!workout || typeof workout.name !== 'string' || !workout.name.trim()) {
     return 'A routine needs a name.';
   }
-  if (!Array.isArray(workout.exercises) || workout.exercises.length === 0) {
+  const blocks = workoutBlocks(workout);
+  if (workoutStations(workout).length === 0) {
     return 'A routine needs at least one exercise.';
   }
-  for (const exercise of workout.exercises) {
-    const error = exerciseError(exercise);
-    if (error) {
-      return error;
+  for (const block of blocks) {
+    if (block.type === 'circuit') {
+      const rounds = block.rounds;
+      const rest = block.restBetweenRoundsSeconds ?? 0;
+      if (!Number.isInteger(rounds) || rounds < 1) {
+        return 'Circuit rounds must be at least 1.';
+      }
+      if (!Number.isInteger(rest) || rest < 0) {
+        return 'Enter a valid rest between rounds.';
+      }
+      if (!Array.isArray(block.exercises) || block.exercises.length === 0) {
+        return 'A circuit needs at least one exercise.';
+      }
+    }
+    for (const exercise of block.type === 'circuit' ? block.exercises : [block.exercise]) {
+      const error = exerciseError(exercise);
+      if (error) {
+        return error;
+      }
     }
   }
   return '';
+}
+
+function copyShareBlocks(share) {
+  if (!Array.isArray(share.blocks) || share.blocks.length === 0) {
+    return null;
+  }
+  return share.blocks.map((block) => {
+    if (block.type === 'circuit') {
+      return {
+        type: 'circuit',
+        id: newId(),
+        rounds: block.rounds,
+        restBetweenRoundsSeconds: block.restBetweenRoundsSeconds ?? 0,
+        exercises: (block.exercises || []).map(copyExercise),
+      };
+    }
+    return { type: 'exercise', exercise: copyExercise(block.exercise) };
+  });
 }
 
 function tokenIn(value) {
@@ -308,11 +359,11 @@ function fillShareView(payload) {
     }
     return;
   }
-  const count = payload.exercises.length;
-  const duration = formatDuration(estimatedDurationSeconds(payload.exercises));
-  summary.textContent = `${count === 1 ? '1 exercise' : `${count} exercises`} · ${duration}`;
-  for (const exercise of payload.exercises) {
-    body.append(line(exerciseLine(exercise)));
+  const stations = workoutStations(payload);
+  const duration = formatDuration(estimatedWorkoutSeconds(payload));
+  summary.textContent = `${stations.length === 1 ? '1 exercise' : `${stations.length} exercises`} · ${duration}`;
+  for (const text of workoutLines(payload)) {
+    body.append(line(text));
   }
 }
 

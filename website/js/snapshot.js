@@ -8,6 +8,7 @@ export function emptySnapshot() {
     workouts: [],
     deletedWorkouts: [],
     sessions: [],
+    customExercises: [],
     themeMode: 'system',
     skin: 'classic',
     appearanceUpdatedAt: '1970-01-01T00:00:00.000Z',
@@ -26,6 +27,9 @@ export function ensureSnapshot(raw) {
       ? snapshot.deletedWorkouts
       : [],
     sessions: Array.isArray(snapshot.sessions) ? snapshot.sessions : [],
+    customExercises: Array.isArray(snapshot.customExercises)
+      ? snapshot.customExercises
+      : [],
     themeMode: snapshot.themeMode || 'system',
     skin: snapshot.skin || 'classic',
     appearanceUpdatedAt:
@@ -41,6 +45,10 @@ export function mergeSnapshots(local, remote) {
     workouts: workouts.workouts,
     deletedWorkouts: workouts.deletions,
     sessions: mergeSessions(local.sessions, remote.sessions),
+    customExercises: mergeCustomExercises(
+      local.customExercises,
+      remote.customExercises,
+    ),
     themeMode: appearance.themeMode,
     skin: appearance.skin,
     appearanceUpdatedAt: appearance.appearanceUpdatedAt,
@@ -101,6 +109,60 @@ export function exerciseLine(exercise) {
   return `${exercise.name} (${exercise.sets} sets${repsText} / ${exercise.restSeconds}s rest)`;
 }
 
+/// Saved blocks, or one block per exercise when the workout is from before circuits.
+export function workoutBlocks(workout) {
+  if (Array.isArray(workout?.blocks) && workout.blocks.length > 0) {
+    return workout.blocks;
+  }
+  return (workout?.exercises || []).map((exercise) => ({ type: 'exercise', exercise }));
+}
+
+export function blockStations(block) {
+  if (block?.type === 'circuit') {
+    return block.exercises || [];
+  }
+  return block?.exercise ? [block.exercise] : [];
+}
+
+export function workoutStations(workout) {
+  return workoutBlocks(workout).flatMap(blockStations);
+}
+
+export function estimatedWorkoutSeconds(workout) {
+  let total = 0;
+  for (const block of workoutBlocks(workout)) {
+    if (block.type !== 'circuit') {
+      total += estimatedDurationSeconds(blockStations(block));
+      continue;
+    }
+    const rounds = Math.max(1, block.rounds || 1);
+    const between = Math.max(0, block.restBetweenRoundsSeconds || 0);
+    total += estimatedDurationSeconds(block.exercises || []) * rounds;
+    total += between * Math.max(rounds - 1, 0);
+  }
+  return total;
+}
+
+export function workoutLines(workout) {
+  const lines = [];
+  for (const block of workoutBlocks(workout)) {
+    if (block.type === 'circuit') {
+      const rounds = block.rounds || 1;
+      const rest = block.restBetweenRoundsSeconds || 0;
+      const restText = rest > 0 ? ` · ${rest}s between rounds` : '';
+      lines.push(`Circuit · ${rounds} rounds${restText}`);
+      for (const exercise of block.exercises || []) {
+        lines.push(`  ${exerciseLine(exercise)}`);
+      }
+      continue;
+    }
+    if (block.exercise) {
+      lines.push(exerciseLine(block.exercise));
+    }
+  }
+  return lines;
+}
+
 export function dateTimeLocalValue(date) {
   const pad = (value) => String(value).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
@@ -158,6 +220,21 @@ function deletionWins(deletedAt, workout) {
     return true;
   }
   return !isBefore(deletedAt, workout.updatedAt);
+}
+
+function mergeCustomExercises(local, remote) {
+  const byName = new Map();
+  for (const item of [...(local || []), ...(remote || [])]) {
+    const name = typeof item?.name === 'string' ? item.name.trim() : '';
+    const key = name.toLowerCase();
+    if (!key || byName.has(key)) {
+      continue;
+    }
+    byName.set(key, item);
+  }
+  return [...byName.values()].sort((left, right) =>
+    left.name.toLowerCase().localeCompare(right.name.toLowerCase()),
+  );
 }
 
 function mergeSessions(local, remote) {

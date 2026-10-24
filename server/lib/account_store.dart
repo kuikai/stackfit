@@ -448,6 +448,7 @@ Map<String, dynamic> emptySnapshot() {
     'workouts': <dynamic>[],
     'deletedWorkouts': <dynamic>[],
     'sessions': <dynamic>[],
+    'customExercises': <dynamic>[],
     'themeMode': 'system',
     'skin': 'classic',
     'appearanceUpdatedAt': DateTime.utc(1970).toIso8601String(),

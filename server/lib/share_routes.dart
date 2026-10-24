@@ -9,12 +9,22 @@ import 'share_store.dart';
 
 void mountShareRoutes(Router router, AccountStore accounts, ShareStore shares) {
   router
-    ..get('/v1/shares', (Request request) => _listShares(request, accounts, shares))
-    ..post('/v1/shares', (Request request) => _createShare(request, accounts, shares))
-    ..get('/v1/shares/<token>', (Request request, String token) => _readShare(shares, token))
+    ..get(
+      '/v1/shares',
+      (Request request) => _listShares(request, accounts, shares),
+    )
+    ..post(
+      '/v1/shares',
+      (Request request) => _createShare(request, accounts, shares),
+    )
+    ..get(
+      '/v1/shares/<token>',
+      (Request request, String token) => _readShare(shares, token),
+    )
     ..post(
       '/v1/shares/<token>/disable',
-      (Request request, String token) => _disableShare(request, accounts, shares, token),
+      (Request request, String token) =>
+          _disableShare(request, accounts, shares, token),
     );
 }
 
@@ -130,7 +140,10 @@ Future<Response> _shareProgress(
   return _ok(_created(saved));
 }
 
-Map<String, dynamic>? publicWorkout(Map<String, dynamic> snapshot, String workoutId) {
+Map<String, dynamic>? publicWorkout(
+  Map<String, dynamic> snapshot,
+  String workoutId,
+) {
   final workouts = snapshot['workouts'];
   if (workouts is! List) {
     return null;
@@ -171,19 +184,115 @@ List<Map<String, dynamic>> publicSessions(
 
 Map<String, dynamic>? _sanitizeWorkout(Map<String, dynamic> workout) {
   final name = workout['name'];
-  final exercises = workout['exercises'];
-  if (name is! String || name.trim().isEmpty || exercises is! List || exercises.isEmpty) {
+  if (name is! String || name.trim().isEmpty) {
+    return null;
+  }
+  final publicBlocks = _sanitizeBlocks(workout['blocks']);
+  if (publicBlocks == null) {
+    return _sanitizeExerciseList(name.trim(), workout['exercises']);
+  }
+  if (publicBlocks.isEmpty) {
+    return null;
+  }
+  final publicExercises = [
+    for (final block in publicBlocks) ..._stationsOf(block),
+  ];
+  if (publicExercises.isEmpty) {
+    return null;
+  }
+  return {
+    'name': name.trim(),
+    'blocks': publicBlocks,
+    'exercises': publicExercises,
+  };
+}
+
+/// Null when the workout has no circuit blocks. Empty when a block is invalid.
+List<Map<String, dynamic>>? _sanitizeBlocks(Object? raw) {
+  if (raw is! List || raw.isEmpty) {
+    return null;
+  }
+  final blocks = <Map<String, dynamic>>[];
+  for (final item in raw) {
+    if (item is! Map) {
+      return const [];
+    }
+    final block = _sanitizeBlock(Map<String, dynamic>.from(item));
+    if (block == null) {
+      return const [];
+    }
+    blocks.add(block);
+  }
+  return blocks;
+}
+
+Map<String, dynamic>? _sanitizeBlock(Map<String, dynamic> block) {
+  if (block['type'] == 'circuit') {
+    return _sanitizeCircuit(block);
+  }
+  final nested = block['exercise'];
+  if (nested is! Map) {
+    return null;
+  }
+  final exercise = _sanitizeExercise(Map<String, dynamic>.from(nested));
+  if (exercise == null) {
+    return null;
+  }
+  return {'type': 'exercise', 'exercise': exercise};
+}
+
+Map<String, dynamic>? _sanitizeCircuit(Map<String, dynamic> block) {
+  final rounds = block['rounds'];
+  final rest = block['restBetweenRoundsSeconds'] ?? 0;
+  final exercises = block['exercises'];
+  if (rounds is! int || rounds < 1 || rest is! int || rest < 0) {
+    return null;
+  }
+  if (exercises is! List || exercises.isEmpty) {
+    return null;
+  }
+  final stations = <Map<String, dynamic>>[];
+  for (final item in exercises) {
+    if (item is! Map) {
+      return null;
+    }
+    final exercise = _sanitizeExercise(Map<String, dynamic>.from(item));
+    if (exercise == null) {
+      return null;
+    }
+    stations.add(exercise);
+  }
+  return {
+    'type': 'circuit',
+    'rounds': rounds,
+    'restBetweenRoundsSeconds': rest,
+    'exercises': stations,
+  };
+}
+
+List<Map<String, dynamic>> _stationsOf(Map<String, dynamic> block) {
+  if (block['type'] == 'circuit') {
+    return [
+      for (final item in block['exercises'] as List)
+        Map<String, dynamic>.from(item as Map),
+    ];
+  }
+  return [Map<String, dynamic>.from(block['exercise'] as Map)];
+}
+
+Map<String, dynamic>? _sanitizeExerciseList(String name, Object? raw) {
+  if (raw is! List || raw.isEmpty) {
     return null;
   }
   final publicExercises = <Map<String, dynamic>>[];
-  for (final item in exercises.whereType<Map<Object?, Object?>>()) {
+  for (final item in raw.whereType<Map<Object?, Object?>>()) {
     final exercise = _sanitizeExercise(Map<String, dynamic>.from(item));
     if (exercise == null) {
       return null;
     }
     publicExercises.add(exercise);
   }
-  return {'name': name.trim(), 'exercises': publicExercises};
+  return {'name': name, 'exercises': publicExercises};
 }
 
 Map<String, dynamic>? _sanitizeExercise(Map<String, dynamic> exercise) {
@@ -201,11 +310,19 @@ Map<String, dynamic>? _sanitizeExercise(Map<String, dynamic> exercise) {
   return null;
 }
 
-Map<String, dynamic>? _timerExercise(String name, Map<String, dynamic> exercise) {
+Map<String, dynamic>? _timerExercise(
+  String name,
+  Map<String, dynamic> exercise,
+) {
   final work = exercise['workSeconds'];
   final rest = exercise['restSeconds'];
   final sets = exercise['sets'];
-  if (work is! int || work < 1 || rest is! int || rest < 0 || sets is! int || sets < 1) {
+  if (work is! int ||
+      work < 1 ||
+      rest is! int ||
+      rest < 0 ||
+      sets is! int ||
+      sets < 1) {
     return null;
   }
   return {
@@ -218,7 +335,10 @@ Map<String, dynamic>? _timerExercise(String name, Map<String, dynamic> exercise)
   };
 }
 
-Map<String, dynamic>? _setsExercise(String name, Map<String, dynamic> exercise) {
+Map<String, dynamic>? _setsExercise(
+  String name,
+  Map<String, dynamic> exercise,
+) {
   final sets = exercise['sets'];
   final rest = exercise['restSeconds'];
   final reps = exercise['reps'];

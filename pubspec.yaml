@@ -67,6 +67,7 @@ flutter:
     - StackFitWeb/themes/bold-sports/icons/banner.jpg
     - StackFitWeb/themes/chibi/icons/banner.jpg
     - StackFitWeb/themes/cyberpunk/icons/banner.jpg
+    - StackFitWeb/themes/cyberpunk/background.jpg
     - StackFitWeb/themes/dumbbell/icons/banner-home.jpg
 
   # To add assets to your application, add an assets section, like this:

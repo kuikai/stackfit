@@ -1,29 +1,48 @@
+import 'circuit.dart';
 import 'exercise.dart';
 import 'exercise_type.dart';
 
 class Workout {
   final String id;
   final String name;
-  final List<Exercise> exercises;
+
+  /// Exercises and circuits, in the order they are played.
+  final List<WorkoutBlock> blocks;
   final DateTime createdAt;
   final DateTime updatedAt;
 
   /// Optional folder on Home, e.g. "Bro Split". Null means ungrouped.
   final String? section;
 
-  const Workout({
+  Workout({
     required this.id,
     required this.name,
-    required this.exercises,
+    List<Exercise>? exercises,
+    List<WorkoutBlock>? blocks,
     required this.createdAt,
     required this.updatedAt,
     this.section,
-  });
+  }) : blocks =
+           blocks ??
+           [
+             for (final exercise in exercises ?? const <Exercise>[])
+               ExerciseBlock(exercise),
+           ];
+
+  /// Every station, with circuit stations listed once.
+  List<Exercise> get exercises => [
+    for (final block in blocks) ...block.exercises,
+  ];
+
+  bool get hasStations => exercises.isNotEmpty;
+
+  int get circuitCount => blocks.whereType<CircuitBlock>().length;
 
   Workout copyWith({
     String? id,
     String? name,
     List<Exercise>? exercises,
+    List<WorkoutBlock>? blocks,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? section,
@@ -32,24 +51,28 @@ class Workout {
     return Workout(
       id: id ?? this.id,
       name: name ?? this.name,
-      exercises: exercises ?? this.exercises,
+      blocks:
+          blocks ??
+          (exercises == null
+              ? this.blocks
+              : [for (final exercise in exercises) ExerciseBlock(exercise)]),
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       section: clearSection ? null : (section ?? this.section),
     );
   }
 
-  /// Total estimated duration in seconds (rough)
+  /// Total estimated duration in seconds (rough).
   int get estimatedDurationSeconds {
-    int total = 0;
-    for (final e in exercises) {
-      if (e.type == ExerciseType.timer) {
-        final rounds = e.sets ?? 1;
-        total += ((e.workSeconds ?? 0) + (e.restSeconds ?? 0)) * rounds;
+    var total = 0;
+    for (final block in blocks) {
+      if (block.exercises.isEmpty) {
+        continue;
+      }
+      if (block is CircuitBlock) {
+        total += _circuitDuration(block.circuit);
       } else {
-        final sets = e.sets ?? 1;
-        // Assume ~45s per set of work + rest between sets
-        total += (sets * 45) + ((sets - 1) * (e.restSeconds ?? 0));
+        total += _exerciseDuration(block.exercises.first);
       }
     }
     return total;
@@ -59,7 +82,8 @@ class Workout {
     return {
       'id': id,
       'name': name,
-      'exercises': exercises.map((e) => e.toJson()).toList(),
+      'blocks': blocks.map((block) => block.toJson()).toList(),
+      'exercises': exercises.map((exercise) => exercise.toJson()).toList(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       if (section != null) 'section': section,
@@ -70,9 +94,7 @@ class Workout {
     return Workout(
       id: json['id'] as String,
       name: json['name'] as String,
-      exercises: (json['exercises'] as List<dynamic>)
-          .map((e) => Exercise.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      blocks: _blocksFromJson(json),
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
       section: normalizeSection(json['section'] as String?),
@@ -87,6 +109,47 @@ class Workout {
     }
     return value;
   }
+}
+
+List<WorkoutBlock> _blocksFromJson(Map<String, dynamic> json) {
+  final rawBlocks = json['blocks'];
+  if (rawBlocks is List && rawBlocks.isNotEmpty) {
+    return [
+      for (final item in rawBlocks)
+        if (item is Map) WorkoutBlock.fromJson(Map<String, dynamic>.from(item)),
+    ];
+  }
+  final rawExercises = json['exercises'];
+  if (rawExercises is! List) {
+    return const [];
+  }
+  return [
+    for (final item in rawExercises)
+      if (item is Map)
+        ExerciseBlock(Exercise.fromJson(Map<String, dynamic>.from(item))),
+  ];
+}
+
+int _circuitDuration(Circuit circuit) {
+  var once = 0;
+  for (final exercise in circuit.exercises) {
+    once += _exerciseDuration(exercise);
+  }
+  final rounds = circuit.rounds < 1 ? 1 : circuit.rounds;
+  final between = circuit.restBetweenRoundsSeconds < 0
+      ? 0
+      : circuit.restBetweenRoundsSeconds;
+  return once * rounds + between * (rounds - 1);
+}
+
+int _exerciseDuration(Exercise exercise) {
+  if (exercise.type == ExerciseType.timer) {
+    final rounds = exercise.sets ?? 1;
+    return ((exercise.workSeconds ?? 0) + (exercise.restSeconds ?? 0)) * rounds;
+  }
+  final sets = exercise.sets ?? 1;
+  final rest = (sets - 1) * (exercise.restSeconds ?? 0);
+  return (sets * 45) + (rest < 0 ? 0 : rest);
 }
 
 /// One block on Home: either a named section or a single ungrouped workout.

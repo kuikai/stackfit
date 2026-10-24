@@ -45,15 +45,15 @@ void main() {
     expect(cyberpunk.secondary, const Color(0xFFFF2D95));
     expect(
       AppSkins.palette(AppSkin.chibi, Brightness.light).background,
-      isNot(
-        AppSkins.palette(AppSkin.chibi, Brightness.dark).background,
-      ),
+      isNot(AppSkins.palette(AppSkin.chibi, Brightness.dark).background),
     );
     expect(AppSkins.look(AppSkin.chibi).radius, 28);
     expect(AppSkins.look(AppSkin.dumbbell).bodyFont, SkinTypeface.outfit);
     expect(AppSkin.boldSports.previewAsset, contains('bold-sports'));
     expect(AppSkin.chibi.previewAsset, contains('chibi'));
     expect(AppSkin.cyberpunk.previewAsset, contains('cyberpunk'));
+    expect(AppSkin.cyberpunk.backgroundAsset, contains('background.jpg'));
+    expect(AppSkin.classic.backgroundAsset, isNull);
     expect(AppSkin.dumbbell.previewAsset, contains('banner-home'));
     expect(AppSkin.classic.previewAsset, isNull);
   });

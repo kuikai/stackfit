@@ -1,6 +1,6 @@
-import { newId } from './snapshot.js';
+import { newId, workoutBlocks, workoutStations } from './snapshot.js';
+import { playTone, prepareSound, renderRun, showRunPanel } from './workout_run_view.js';
 
-let audio;
 let wakeLock;
 let run;
 let clock;
@@ -14,21 +14,21 @@ export function installWorkoutRun(app) {
 }
 
 export function startWorkout(workout, app) {
-  if (!workout.exercises?.length) {
+  if (!workoutStations(workout).length) {
     app.showBanner('Add an exercise before running this workout.');
     return;
   }
   app.clearBanner();
   stopClock();
   run = {
-    ...enterExercise(blankRun(workout), 0),
+    ...enterBlock(blankRun(workout), 0),
     startedAt: Date.now(),
   };
   prepareSound();
   keepAwake();
   showRunPanel();
   armClock(app);
-  renderRun();
+  renderRun(run);
 }
 
 export function stopWorkout() {
@@ -41,23 +41,20 @@ export function stopWorkout() {
   document.title = 'StackFit';
 }
 
+export function enterBlock(state, blockIndex) {
+  const blocks = workoutBlocks(state.workout);
+  if (blockIndex >= blocks.length) {
+    return doneState(state, blockIndex);
+  }
+  const block = blocks[blockIndex];
+  if (block.type === 'circuit' && !(block.exercises || []).length) {
+    return enterBlock(state, blockIndex + 1);
+  }
+  return openExercise(state, blockIndex, 0, 0);
+}
+
 export function enterExercise(state, index) {
-  const exercises = state.workout.exercises || [];
-  if (index >= exercises.length) {
-    return { ...state, exerciseIndex: index, phase: 'done', remaining: 0, paused: false };
-  }
-  const exercise = exercises[index];
-  const base = {
-    ...state,
-    exerciseIndex: index,
-    setIndex: 0,
-    paused: false,
-    restAfterLastSet: false,
-  };
-  if (exercise.type !== 'timer') {
-    return { ...base, phase: 'set', remaining: 0 };
-  }
-  return enterTimer(base, exercise);
+  return enterBlock(state, index);
 }
 
 export function advanceWork(state) {
@@ -65,62 +62,131 @@ export function advanceWork(state) {
   const rest = exercise?.restSeconds ?? 0;
   const rounds = exercise?.sets ?? 1;
   const lastRound = state.setIndex >= rounds - 1;
-  if (lastRound) {
-    return enterExercise(state, state.exerciseIndex + 1);
+  if (!lastRound) {
+    if (rest > 0) {
+      return restState(state, rest, 'timerRound');
+    }
+    return nextTimerRound(state);
   }
-  if (rest > 0) {
-    return { ...state, phase: 'rest', remaining: rest, paused: false, restAfterLastSet: false };
-  }
-  return nextTimerRound(state);
+  return leaveStation(state, false);
 }
 
 export function completeSet(state) {
   const exercise = currentExercise(state);
   const total = exercise?.sets ?? 1;
   const lastSet = state.setIndex >= total - 1;
-  const rest = exercise?.restSeconds ?? 0;
-  if (rest > 0) {
-    return { ...state, phase: 'rest', remaining: rest, paused: false, restAfterLastSet: lastSet };
-  }
   if (lastSet) {
-    return enterExercise(state, state.exerciseIndex + 1);
+    return leaveStation(state, true);
   }
-  return { ...state, setIndex: state.setIndex + 1, phase: 'set', remaining: 0, paused: false };
+  return beginRest(state, exercise?.restSeconds ?? 0, 'set');
 }
 
 export function finishRest(state) {
-  const exercise = currentExercise(state);
-  if (exercise?.type === 'timer') {
-    return nextTimerRound(state);
-  }
-  if (exercise?.type === 'sets' && !state.restAfterLastSet) {
-    return { ...state, setIndex: state.setIndex + 1, phase: 'set', remaining: 0, paused: false };
-  }
-  return enterExercise(state, state.exerciseIndex + 1);
+  const after = state.afterRest || 'block';
+  return applyAfterRest({ ...state, afterRest: 'block' }, after);
 }
 
 function blankRun(workout) {
   return {
     workout,
+    blockIndex: 0,
+    roundIndex: 0,
     exerciseIndex: 0,
     setIndex: 0,
     phase: 'work',
     remaining: 0,
     paused: false,
-    restAfterLastSet: false,
+    afterRest: 'block',
   };
 }
 
-function enterTimer(state, exercise) {
+function openExercise(state, blockIndex, roundIndex, exerciseIndex) {
+  const next = {
+    ...state,
+    blockIndex,
+    roundIndex,
+    exerciseIndex,
+    setIndex: 0,
+    paused: false,
+  };
+  const exercise = currentExercise(next);
+  if (!exercise) {
+    return enterBlock(next, blockIndex + 1);
+  }
+  if (exercise.type === 'timer') {
+    return armTimer(next, exercise);
+  }
+  return { ...next, phase: 'set', remaining: 0 };
+}
+
+function armTimer(state, exercise) {
   const work = exercise.workSeconds ?? 0;
   const rest = exercise.restSeconds ?? 0;
   if (work > 0) {
     return { ...state, phase: 'work', remaining: work };
   }
   if (rest > 0) {
-    return { ...state, phase: 'rest', remaining: rest };
+    return restState(state, rest, 'timerRound');
   }
-  return enterExercise(state, state.exerciseIndex + 1);
+  return leaveStation(state, false);
+}
+
+function leaveStation(state, restAfterLastSet) {
+  const exit = planStationExit(state, restAfterLastSet);
+  return beginRest(state, exit.restSeconds, exit.destination);
+}
+
+function beginRest(state, seconds, after) {
+  if (seconds <= 0) {
+    return applyAfterRest(state, after);
+  }
+  return restState(state, seconds, after);
+}
+
+function restState(state, seconds, after) {
+  return { ...state, phase: 'rest', remaining: seconds, paused: false, afterRest: after };
+}
+
+function applyAfterRest(state, after) {
+  if (after === 'timerRound') {
+    return nextTimerRound(state);
+  }
+  if (after === 'set') {
+    return { ...state, setIndex: state.setIndex + 1, phase: 'set', remaining: 0, paused: false };
+  }
+  if (after === 'station') {
+    return openExercise(state, state.blockIndex, state.roundIndex, state.exerciseIndex + 1);
+  }
+  if (after === 'round') {
+    return openExercise(state, state.blockIndex, state.roundIndex + 1, 0);
+  }
+  return enterBlock(state, state.blockIndex + 1);
+}
+
+function planStationExit(state, restAfterLastSet) {
+  const block = workoutBlocks(state.workout)[state.blockIndex];
+  const exercise = currentExercise(state);
+  const stationRest = restAfterLastSet ? Math.max(0, exercise?.restSeconds ?? 0) : 0;
+  if (!block || block.type !== 'circuit') {
+    return { destination: 'block', restSeconds: stationRest };
+  }
+  const count = block.exercises?.length ?? 0;
+  const lastStation = state.exerciseIndex >= count - 1;
+  const rounds = Math.max(1, block.rounds || 1);
+  if (!lastStation) {
+    return { destination: 'station', restSeconds: Math.max(0, exercise?.restSeconds ?? 0) };
+  }
+  if (state.roundIndex < rounds - 1) {
+    return {
+      destination: 'round',
+      restSeconds: Math.max(0, block.restBetweenRoundsSeconds || 0),
+    };
+  }
+  return { destination: 'block', restSeconds: stationRest };
+}
+
+function doneState(state, blockIndex) {
+  return { ...state, blockIndex, phase: 'done', remaining: 0, paused: false };
 }
 
 function nextTimerRound(state) {
@@ -129,7 +195,7 @@ function nextTimerRound(state) {
   const nextRound = state.setIndex + 1;
   const total = exercise?.sets ?? 1;
   if (nextRound >= total || work <= 0) {
-    return enterExercise(state, state.exerciseIndex + 1);
+    return leaveStation(state, false);
   }
   return {
     ...state,
@@ -137,12 +203,18 @@ function nextTimerRound(state) {
     phase: 'work',
     remaining: work,
     paused: false,
-    restAfterLastSet: false,
   };
 }
 
 function currentExercise(state) {
-  return state.workout.exercises?.[state.exerciseIndex];
+  const block = workoutBlocks(state.workout)[state.blockIndex];
+  if (!block) {
+    return undefined;
+  }
+  if (block.type === 'circuit') {
+    return block.exercises?.[state.exerciseIndex];
+  }
+  return block.exercise;
 }
 
 function onPrimary(app) {
@@ -181,7 +253,7 @@ function toggleRunPause() {
   if (!run.paused) {
     run.endsAt = Date.now() + run.remaining * 1000;
   }
-  renderRun();
+  renderRun(run);
 }
 
 function onRunKey(event, app) {
@@ -212,7 +284,7 @@ function onClock(app) {
   const left = Math.max(0, Math.ceil((run.endsAt - Date.now()) / 1000));
   if (left !== run.remaining) {
     run.remaining = left;
-    renderRun();
+    renderRun(run);
   }
   if (left > 0) {
     return;
@@ -234,88 +306,8 @@ function applyStep(next, app) {
   if (run.phase === 'work' || run.phase === 'rest') {
     run.endsAt = Date.now() + run.remaining * 1000;
   }
-  renderRun();
+  renderRun(run);
 }
-
-function renderRun() {
-  const exercise = currentExercise(run);
-  const panel = document.querySelector('#workout-run');
-  panel.hidden = false;
-  panel.className = `panel tabata-run ${run.phase}`;
-  document.querySelector('#run-progress').textContent = progressLabel(run);
-  document.querySelector('#run-name').textContent = exercise?.name || run.workout.name;
-  document.querySelector('#run-phase').textContent = phaseLabel(run.phase);
-  document.querySelector('#run-detail').textContent = detailLabel(run, exercise);
-  const clockNode = document.querySelector('#run-clock');
-  clockNode.textContent = run.phase === 'set' ? setLabel(run, exercise) : formatClock(run.remaining);
-  clockNode.className = run.phase === 'set' ? 'tabata-clock set-prompt' : 'tabata-clock';
-  renderControls();
-  if (run.phase === 'work' || run.phase === 'rest') {
-    document.title = `${formatClock(run.remaining)} ${phaseLabel(run.phase)}`;
-  }
-}
-
-function renderControls() {
-  const primary = document.querySelector('#run-primary');
-  const pause = document.querySelector('#run-pause');
-  primary.hidden = run.phase === 'work';
-  primary.textContent = run.phase === 'rest' ? 'Skip rest' : 'Done';
-  pause.hidden = run.phase === 'set';
-  pause.textContent = run.paused ? 'Resume' : 'Pause';
-}
-
-function progressLabel(state) {
-  const total = state.workout.exercises.length;
-  const number = Math.min(state.exerciseIndex + 1, total);
-  return `Exercise ${number} of ${total}`;
-}
-
-function phaseLabel(phase) {
-  if (phase === 'rest') {
-    return 'Rest';
-  }
-  if (phase === 'set') {
-    return 'Set';
-  }
-  return 'Work';
-}
-
-function detailLabel(state, exercise) {
-  if (!exercise) {
-    return '';
-  }
-  if (state.phase === 'set') {
-    return exercise.reps ? `${exercise.reps} reps` : '';
-  }
-  const total = exercise.sets ?? 1;
-  if (total > 1) {
-    return `Set ${state.setIndex + 1} of ${total}`;
-  }
-  return '';
-}
-
-function setLabel(state, exercise) {
-  const total = exercise?.sets ?? 1;
-  return `Set ${state.setIndex + 1} of ${total}`;
-}
-
-function formatClock(totalSeconds) {
-  const safe = Math.max(0, totalSeconds);
-  const minutes = Math.floor(safe / 60);
-  const seconds = safe % 60;
-  return `${minutes}:${String(seconds).padStart(2, '0')}`;
-}
-
-function showRunPanel() {
-  document.querySelector('#library').hidden = true;
-  document.querySelector('#receive').hidden = true;
-  document.querySelector('#share-link-box').hidden = true;
-  document.querySelector('#progress-picker').hidden = true;
-  document.querySelector('#editor').hidden = true;
-  document.querySelector('#session-editor').hidden = true;
-  document.querySelector('#workout-run').hidden = false;
-}
-
 async function finishWorkout(app) {
   if (!run || run.phase !== 'done' || run.saving) {
     return;
@@ -342,7 +334,7 @@ async function logSession(app, finished) {
     workoutName: finished.workout.name,
     completedAt: new Date().toISOString(),
     durationSeconds: elapsed,
-    totalExercises: finished.workout.exercises.length,
+    totalExercises: workoutStations(finished.workout).length,
   });
   await app.persist(snapshot, 'Saved. The app shows this session the next time it syncs.');
 }
@@ -353,29 +345,6 @@ function stopClock() {
   wakeLock?.release?.().catch(() => {});
   wakeLock = null;
 }
-
-function prepareSound() {
-  const Context = window.AudioContext || window.webkitAudioContext;
-  if (!Context || audio) {
-    return;
-  }
-  audio = new Context();
-}
-
-function playTone(frequency) {
-  if (!audio) {
-    return;
-  }
-  const tone = audio.createOscillator();
-  const gain = audio.createGain();
-  tone.frequency.value = frequency;
-  gain.gain.value = 0.04;
-  tone.connect(gain);
-  gain.connect(audio.destination);
-  tone.start();
-  tone.stop(audio.currentTime + 0.12);
-}
-
 async function keepAwake() {
   try {
     wakeLock = await navigator.wakeLock?.request('screen');
