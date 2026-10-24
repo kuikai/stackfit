@@ -262,11 +262,10 @@ analysis_options.yaml House style the phone app is checked against
   keep-code-sharp.mdc      Tells the AI agent to keep screens, providers, services, and models in their own layers
 ```
 
-### `assets/` – source art
+### `icon/` – home-screen picture
 
 ```
-icon/
-  app_icon.png            Home-screen icon picture. Black background, blue dumbbell, 1024×1024
+icon.png              Home-screen icon picture. Black background, blue dumbbell, 1024×1024
 ```
 
 ### `lib/` – phone app
@@ -468,6 +467,6 @@ cd server && dart test            # server
 flutter analyze                   # phone app
 cd server && dart analyze         # server
 
-# rebuild phone and Windows icons after replacing assets/icon/app_icon.png
+# rebuild phone and Windows icons after replacing icon/icon.png
 dart run flutter_launcher_icons
 ```
