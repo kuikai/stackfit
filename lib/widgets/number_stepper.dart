@@ -107,6 +107,19 @@ class _NumberStepperState extends State<NumberStepper> {
     _write(_bounded(parsed));
   }
 
+  /// Keeps the parent in sync while the keyboard is still open.
+  ///
+  /// On a phone, tapping Done does not take focus away from the field, so a
+  /// save that waits for focus loss would log the old number.
+  void _publishDraft(String raw) {
+    final parsed = _parse(raw);
+    if (parsed == null) return;
+    final next = _bounded(parsed);
+    if (next != widget.value) {
+      widget.onChanged(next);
+    }
+  }
+
   void _write(double next) {
     final formatted = _format(next);
     if (_controller.text != formatted) {
@@ -185,8 +198,6 @@ class _NumberStepperState extends State<NumberStepper> {
       child: TextField(
         controller: _controller,
         focusNode: _focus,
-        expands: true,
-        maxLines: null,
         textAlign: TextAlign.center,
         textAlignVertical: TextAlignVertical.center,
         keyboardType: TextInputType.numberWithOptions(
@@ -197,12 +208,15 @@ class _NumberStepperState extends State<NumberStepper> {
         enableSuggestions: false,
         style: theme.textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.w800,
-          fontFeatures: const [FontFeature.tabularFigures()],
+          color: theme.colorScheme.onSurface,
+          height: 1,
         ),
         cursorColor: theme.colorScheme.primary,
         decoration: _fieldDecoration,
         inputFormatters: [_NumberInputFormatter(decimals: widget.decimals)],
+        onChanged: _publishDraft,
         onSubmitted: (_) => _focus.unfocus(),
+        onTapOutside: (_) => _focus.unfocus(),
       ),
     );
   }

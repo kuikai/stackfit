@@ -49,6 +49,16 @@ void main() {
     expect(value.value, 0);
   });
 
+  testWidgets('typing saves before the field closes', (tester) async {
+    final value = await _pump(tester, value: 8, max: 999);
+
+    await tester.enterText(find.byType(TextField), '12');
+    await tester.pump();
+
+    expect(value.value, 12);
+    expect(find.text('12'), findsOneWidget);
+  });
+
   testWidgets('a typed value is clamped into 0 to 999', (tester) async {
     final value = await _pump(tester, value: 12, max: 999);
 
