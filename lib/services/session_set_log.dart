@@ -12,6 +12,12 @@ class SessionSetLog {
 
   void clear() => _logs.clear();
 
+  void replaceAll(List<SetLog> logs) {
+    _logs
+      ..clear()
+      ..addAll(logs);
+  }
+
   void add(SetLog log) => _logs.add(log);
 
   /// Returns false when there is no finished set, or [reps] is negative.

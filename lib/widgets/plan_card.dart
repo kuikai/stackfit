@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/theme.dart';
 import '../core/utils.dart';
 import '../models/models.dart';
+import 'skin_panel.dart';
 
 /// One built-in plan in the Plan Library list.
 class PlanCard extends StatelessWidget {
@@ -22,7 +23,7 @@ class PlanCard extends StatelessWidget {
       plan.averageDayDurationSeconds,
     );
 
-    return Card(
+    return SkinPanel(
       margin: EdgeInsets.only(bottom: look.listGap),
       child: InkWell(
         borderRadius: look.cornerRadius,

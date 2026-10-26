@@ -12,57 +12,20 @@ import '../models/workout.dart';
 import '../services/account/account_api_client.dart';
 import '../services/account/account_storage.dart';
 import '../services/account/snapshot_merge.dart';
+import 'account_state.dart';
 import 'app_providers.dart';
 import 'completed_sessions_provider.dart';
 import 'custom_catalog_provider.dart';
 import 'settings_provider.dart';
 import 'workouts_provider.dart';
 
-enum SaveStatus { localOnly, saved, saving, offline, error }
+export 'account_state.dart';
 
-class AccountState {
-  const AccountState({
-    this.session,
-    this.saveStatus = SaveStatus.localOnly,
-    this.errorMessage,
-    this.hasUnmovedDeviceData = false,
-    this.promptMove = false,
-    this.busy = false,
-  });
+part 'account_sync.dart';
 
-  final AccountSession? session;
-  final SaveStatus saveStatus;
-  final String? errorMessage;
-  final bool hasUnmovedDeviceData;
-  final bool promptMove;
-  final bool busy;
-
-  bool get isSignedIn => session != null;
-
-  AccountState copyWith({
-    AccountSession? session,
-    bool clearSession = false,
-    SaveStatus? saveStatus,
-    String? errorMessage,
-    bool clearError = false,
-    bool? hasUnmovedDeviceData,
-    bool? promptMove,
-    bool? busy,
-  }) {
-    return AccountState(
-      session: clearSession ? null : (session ?? this.session),
-      saveStatus: saveStatus ?? this.saveStatus,
-      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-      hasUnmovedDeviceData:
-          hasUnmovedDeviceData ?? this.hasUnmovedDeviceData,
-      promptMove: promptMove ?? this.promptMove,
-      busy: busy ?? this.busy,
-    );
-  }
-}
-
-final accountProvider =
-    StateNotifierProvider<AccountNotifier, AccountState>((ref) {
+final accountProvider = StateNotifierProvider<AccountNotifier, AccountState>((
+  ref,
+) {
   final storage = ref.watch(accountStorageProvider);
   final notifier = AccountNotifier(
     storage: storage,
@@ -121,7 +84,7 @@ Future<void> _writeSnapshot(Ref ref, AccountSnapshot snapshot) async {
       );
 }
 
-class AccountNotifier extends StateNotifier<AccountState> {
+class AccountNotifier extends StateNotifier<AccountState> with AccountSync {
   AccountNotifier({
     required this._storage,
     required this._api,
@@ -140,13 +103,20 @@ class AccountNotifier extends StateNotifier<AccountState> {
     Future.microtask(syncIfSignedIn);
   }
 
+  @override
   final AccountStorage _storage;
+  @override
   final AccountApiClient _api;
+  @override
   final AccountSnapshot Function() _readSnapshot;
+  @override
   final Future<void> Function(AccountSnapshot snapshot) _writeSnapshot;
 
+  @override
   bool _applying = false;
+  @override
   bool _pushQueued = false;
+  @override
   bool _pushRunning = false;
 
   void onLocalDataChanged() {
@@ -189,10 +159,7 @@ class AccountNotifier extends StateNotifier<AccountState> {
     );
   }
 
-  Future<String?> signIn({
-    required String email,
-    required String password,
-  }) {
+  Future<String?> signIn({required String email, required String password}) {
     return _openSession(
       () => _api.signIn(email: email.trim(), password: password),
     );
@@ -210,6 +177,50 @@ class AccountNotifier extends StateNotifier<AccountState> {
     } catch (_) {
       // Local sign-out already finished. The server token can expire unused.
     }
+  }
+
+  /// Deletes the account on the server. Workouts already on this phone stay.
+  Future<String?> deleteAccount(String password) async {
+    final token = state.session?.token;
+    if (token == null) {
+      return 'Sign in first.';
+    }
+    try {
+      await _api.deleteAccount(token: token, password: password);
+    } on AccountApiException catch (error) {
+      return error.message;
+    }
+    state = const AccountState();
+    await _storage.clearSession();
+    return null;
+  }
+
+  /// Asks the server to print a reset code. Null means the request was accepted.
+  Future<String?> requestPasswordReset(String email) async {
+    try {
+      await _api.requestPasswordReset(email.trim());
+      return null;
+    } on AccountApiException catch (error) {
+      return error.message;
+    }
+  }
+
+  /// Saves a new password, then signs in with it.
+  Future<String?> resetPassword({
+    required String email,
+    required String code,
+    required String password,
+  }) async {
+    try {
+      await _api.resetPassword(
+        email: email.trim(),
+        code: code,
+        password: password,
+      );
+    } on AccountApiException catch (error) {
+      return error.message;
+    }
+    return signIn(email: email.trim(), password: password);
   }
 
   Future<String?> updateDisplayName(String name) async {
@@ -292,187 +303,5 @@ class AccountNotifier extends StateNotifier<AccountState> {
       state = AccountState(errorMessage: error.message);
       return error.message;
     }
-  }
-
-  Future<void> _reconcile(String token, RemoteAccountData remote) async {
-    _pushRunning = true;
-    try {
-      final local = _readSnapshot();
-      final holdLocal = _storage.loadOrigin() == DataOrigin.device &&
-          local.hasProgress;
-      if (holdLocal) {
-        await _holdDeviceData(token, local, remote);
-        return;
-      }
-      final merged = mergeSnapshots(local, remote.snapshot);
-      if (merged.canonicalJson != local.canonicalJson) {
-        await _applySnapshot(merged);
-      }
-      await _upload(token, merged, remote);
-      await _storage.setOrigin(DataOrigin.account);
-      if (state.session?.token == token) {
-        state = state.copyWith(
-          saveStatus: SaveStatus.saved,
-          clearError: true,
-          hasUnmovedDeviceData: _storage.hasUnmoved,
-        );
-      }
-    } on AccountApiException catch (error) {
-      _syncFailure(token, error, keepUnmoved: _storage.hasUnmoved);
-    } finally {
-      _pushRunning = false;
-      if (_pushQueued) {
-        unawaited(_drainPushes());
-      }
-    }
-  }
-
-  Future<void> _holdDeviceData(
-    String token,
-    AccountSnapshot local,
-    RemoteAccountData remote,
-  ) async {
-    final existing = _storage.loadUnmoved();
-    final pending = existing == null ? local : mergeSnapshots(existing, local);
-    await _storage.saveUnmoved(pending);
-
-    final appearance = mergeSnapshots(local, remote.snapshot);
-    final working = remote.snapshot.copyWith(
-      themeMode: appearance.themeMode,
-      skin: appearance.skin,
-      appearanceUpdatedAt: appearance.appearanceUpdatedAt,
-    );
-    await _applySnapshot(working);
-    await _storage.setOrigin(DataOrigin.account);
-    if (state.session?.token == token) {
-      state = state.copyWith(
-        saveStatus: SaveStatus.saving,
-        hasUnmovedDeviceData: true,
-        promptMove: true,
-      );
-    }
-    await _upload(token, working, remote);
-    if (state.session?.token != token) {
-      return;
-    }
-    state = state.copyWith(
-      saveStatus: SaveStatus.saved,
-      clearError: true,
-      hasUnmovedDeviceData: true,
-      promptMove: true,
-    );
-  }
-
-  Future<void> _drainPushes() async {
-    if (_pushRunning) {
-      return;
-    }
-    _pushRunning = true;
-    try {
-      while (_pushQueued) {
-        _pushQueued = false;
-        await _pushWorkingCopy();
-      }
-    } finally {
-      _pushRunning = false;
-    }
-  }
-
-  Future<void> _pushWorkingCopy() async {
-    final token = state.session?.token;
-    if (token == null) {
-      return;
-    }
-    state = state.copyWith(saveStatus: SaveStatus.saving, clearError: true);
-    try {
-      final remote = await _api.fetchData(token);
-      final merged = mergeSnapshots(_readSnapshot(), remote.snapshot);
-      if (merged.canonicalJson != _readSnapshot().canonicalJson) {
-        await _applySnapshot(merged);
-      }
-      await _upload(token, merged, remote);
-      if (state.session?.token == token) {
-        state = state.copyWith(saveStatus: SaveStatus.saved, clearError: true);
-      }
-    } on AccountApiException catch (error) {
-      _syncFailure(token, error, keepUnmoved: _storage.hasUnmoved);
-    }
-  }
-
-  Future<void> _upload(
-    String token,
-    AccountSnapshot merged,
-    RemoteAccountData remote,
-  ) async {
-    var current = remote;
-    var toSave = merged;
-    for (var attempt = 0; attempt < 3; attempt++) {
-      if (toSave.canonicalJson == current.snapshot.canonicalJson) {
-        _rememberDisplayName(token, current.displayName);
-        return;
-      }
-      try {
-        final saved = await _api.putData(
-          token: token,
-          baseRevision: current.revision,
-          snapshot: toSave,
-        );
-        _rememberDisplayName(token, saved.displayName);
-        return;
-      } on AccountApiException catch (error) {
-        final conflict = error.conflict;
-        if (conflict == null || attempt == 2) {
-          rethrow;
-        }
-        toSave = mergeSnapshots(toSave, conflict.snapshot);
-        await _applySnapshot(toSave);
-        current = conflict;
-      }
-    }
-  }
-
-  Future<void> _applySnapshot(AccountSnapshot snapshot) async {
-    _applying = true;
-    try {
-      await _writeSnapshot(snapshot);
-    } finally {
-      _applying = false;
-    }
-  }
-
-  void _rememberDisplayName(String token, String? displayName) {
-    final session = state.session;
-    if (session == null || session.token != token) {
-      return;
-    }
-    if (session.displayName == displayName) {
-      return;
-    }
-    final next = displayName == null
-        ? session.copyWith(clearDisplayName: true)
-        : session.copyWith(displayName: displayName);
-    state = state.copyWith(session: next);
-    unawaited(_storage.saveSession(next));
-  }
-
-  String? _syncFailure(
-    String token,
-    AccountApiException error, {
-    required bool keepUnmoved,
-  }) {
-    if (state.session?.token != token) {
-      return error.message;
-    }
-    if (error.statusCode == 401) {
-      state = const AccountState(errorMessage: 'Sign in again.');
-      unawaited(_storage.clearSession());
-      return error.message;
-    }
-    state = state.copyWith(
-      saveStatus: error.offline ? SaveStatus.offline : SaveStatus.error,
-      errorMessage: error.message,
-      hasUnmovedDeviceData: keepUnmoved,
-    );
-    return error.message;
   }
 }

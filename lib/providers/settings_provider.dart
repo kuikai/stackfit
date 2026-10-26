@@ -7,8 +7,9 @@ import '../services/account/account_storage.dart';
 import '../services/storage_service.dart';
 import 'app_providers.dart';
 
-final settingsProvider =
-    StateNotifierProvider<SettingsNotifier, AppSettings>((ref) {
+final settingsProvider = StateNotifierProvider<SettingsNotifier, AppSettings>((
+  ref,
+) {
   return SettingsNotifier(
     ref.watch(storageServiceProvider),
     ref.watch(accountStorageProvider),
@@ -17,7 +18,7 @@ final settingsProvider =
 
 class SettingsNotifier extends StateNotifier<AppSettings> {
   SettingsNotifier(this._storage, this._accountStorage)
-      : super(_storage.loadSettings());
+    : super(_storage.loadSettings());
 
   final StorageService _storage;
   final AccountStorage _accountStorage;

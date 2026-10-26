@@ -101,13 +101,15 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
           ),
           const SizedBox(height: 8),
           if (_blocks.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 32),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
               child: EmptyState(
                 title: 'No exercises yet',
                 message:
                     'Add an exercise, or a circuit that repeats a group of them.',
                 icon: Icons.playlist_add_rounded,
+                iconLabel: 'Add exercise',
+                onIconPressed: _showAddOptions,
               ),
             )
           else

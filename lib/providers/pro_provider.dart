@@ -9,9 +9,7 @@ final isProProvider = StateNotifierProvider<IsProNotifier, bool>((ref) {
 
 class IsProNotifier extends StateNotifier<bool> {
   IsProNotifier(this._storage)
-      : super(
-          const bool.fromEnvironment('UNLOCK_PRO') || _storage.loadIsPro(),
-        );
+    : super(const bool.fromEnvironment('UNLOCK_PRO') || _storage.loadIsPro());
 
   final StorageService _storage;
 

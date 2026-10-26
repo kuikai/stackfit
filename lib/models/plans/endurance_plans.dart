@@ -42,8 +42,11 @@ class EndurancePlans {
         name: '1000m',
         exercises: [
           PlanExercises.sets('Warm-up 200m easy', sets: 1, rest: 30),
-          PlanExercises.sets('Drill 50m (25 drill + 25 swim)',
-              sets: 4, rest: 30),
+          PlanExercises.sets(
+            'Drill 50m (25 drill + 25 swim)',
+            sets: 4,
+            rest: 30,
+          ),
           PlanExercises.sets('Freestyle 100m moderate', sets: 3, rest: 60),
           PlanExercises.sets('Pull 50m', sets: 4, rest: 30),
           PlanExercises.sets('Cool-down 100m easy', sets: 1, rest: 0),
@@ -53,8 +56,11 @@ class EndurancePlans {
         name: '1500m',
         exercises: [
           PlanExercises.sets('Warm-up 300m easy', sets: 1, rest: 30),
-          PlanExercises.sets('Drill 50m (25 drill + 25 swim)',
-              sets: 4, rest: 20),
+          PlanExercises.sets(
+            'Drill 50m (25 drill + 25 swim)',
+            sets: 4,
+            rest: 20,
+          ),
           PlanExercises.sets('Freestyle 200m moderate', sets: 2, rest: 45),
           PlanExercises.sets('Freestyle 50m strong', sets: 4, rest: 30),
           PlanExercises.sets('Pull 200m easy', sets: 1, rest: 30),
@@ -80,8 +86,12 @@ class EndurancePlans {
         name: 'Sweet Spot 30 min',
         exercises: [
           PlanExercises.block('Easy Spin', 10),
-          PlanExercises.timer('Sweet Spot (then easy spin)',
-              work: 180, rest: 180, rounds: 4),
+          PlanExercises.timer(
+            'Sweet Spot (then easy spin)',
+            work: 180,
+            rest: 180,
+            rounds: 4,
+          ),
           PlanExercises.block('Easy Spin', 10),
         ],
       ),
@@ -89,8 +99,12 @@ class EndurancePlans {
         name: 'Sweet Spot 3x10',
         exercises: [
           PlanExercises.block('Easy Spin', 10),
-          PlanExercises.timer('Sweet Spot (then easy spin)',
-              work: 600, rest: 300, rounds: 3),
+          PlanExercises.timer(
+            'Sweet Spot (then easy spin)',
+            work: 600,
+            rest: 300,
+            rounds: 3,
+          ),
           PlanExercises.block('Easy Spin', 5),
         ],
       ),
@@ -98,8 +112,12 @@ class EndurancePlans {
         name: 'Norwegian 4x4',
         exercises: [
           PlanExercises.block('Easy Spin', 10),
-          PlanExercises.timer('VO2 Interval (then easy spin)',
-              work: 240, rest: 180, rounds: 4),
+          PlanExercises.timer(
+            'VO2 Interval (then easy spin)',
+            work: 240,
+            rest: 180,
+            rounds: 4,
+          ),
           PlanExercises.block('Easy Spin', 5),
         ],
       ),
@@ -121,8 +139,12 @@ class EndurancePlans {
         name: '20-min Intervals',
         exercises: [
           PlanExercises.block('Easy Row', 3),
-          PlanExercises.timer('Hard Row (then easy)',
-              work: 20, rest: 40, rounds: 8),
+          PlanExercises.timer(
+            'Hard Row (then easy)',
+            work: 20,
+            rest: 40,
+            rounds: 8,
+          ),
           PlanExercises.block('Steady Row', 5),
           PlanExercises.block('Easy Row', 4),
         ],
@@ -131,8 +153,12 @@ class EndurancePlans {
         name: '30-min Intervals',
         exercises: [
           PlanExercises.block('Easy Row', 3),
-          PlanExercises.timer('Hard Row (then easy)',
-              work: 60, rest: 60, rounds: 10),
+          PlanExercises.timer(
+            'Hard Row (then easy)',
+            work: 60,
+            rest: 60,
+            rounds: 10,
+          ),
           PlanExercises.block('Steady Row', 5),
           PlanExercises.block('Easy Row', 2),
         ],

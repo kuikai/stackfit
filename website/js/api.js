@@ -17,6 +17,13 @@ export class AccountApi {
     await this.#send('POST', '/v1/auth/signout', { token });
   }
 
+  async deleteAccount(token, password) {
+    await this.#send('DELETE', '/v1/account', {
+      token,
+      body: { password },
+    });
+  }
+
   async requestReset(email) {
     return this.#send('POST', '/v1/auth/request-reset', {
       body: { email },

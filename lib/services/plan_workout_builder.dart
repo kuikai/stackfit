@@ -53,12 +53,8 @@ class PlanWorkoutBuilder {
     final timestamp = now ?? DateTime.now();
     return plan.days
         .map(
-          (day) => buildWorkoutFromPlanDay(
-            plan,
-            day,
-            newId: newId,
-            now: timestamp,
-          ),
+          (day) =>
+              buildWorkoutFromPlanDay(plan, day, newId: newId, now: timestamp),
         )
         .toList(growable: false);
   }

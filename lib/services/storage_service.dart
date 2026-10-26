@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/skins.dart';
 import '../models/models.dart';
 
-/// Local persistence for workouts, history, Pro status, and settings.
+/// Local persistence for workouts, history, unfinished runs, Pro, and settings.
 class StorageService {
   StorageService(this._prefs);
 
@@ -14,6 +14,7 @@ class StorageService {
 
   static const _workoutsKey = 'stackfit_workouts';
   static const _sessionsKey = 'stackfit_completed_sessions';
+  static const _inProgressKey = 'stackfit_in_progress';
   static const _isProKey = 'stackfit_is_pro';
   static const _themeModeKey = 'stackfit_theme_mode';
   static const _skinKey = 'stackfit_skin';
@@ -33,6 +34,7 @@ class StorageService {
           .map((item) => Workout.fromJson(item as Map<String, dynamic>))
           .toList();
     } catch (_) {
+      // Saved JSON was unreadable. Start from an empty list.
       return const [];
     }
   }
@@ -60,6 +62,7 @@ class StorageService {
           )
           .toList();
     } catch (_) {
+      // Saved JSON was unreadable. Start from an empty history.
       return const [];
     }
   }
@@ -69,6 +72,28 @@ class StorageService {
       sessions.map((session) => session.toJson()).toList(),
     );
     await _prefs.setString(_sessionsKey, encoded);
+  }
+
+  // ── Unfinished workouts ───────────────────────────────────────────────────
+
+  List<InProgressWorkout> loadInProgress() {
+    final raw = _prefs.getString(_inProgressKey);
+    if (raw == null || raw.isEmpty) {
+      return const [];
+    }
+
+    try {
+      final decoded = jsonDecode(raw) as List<dynamic>;
+      return _runsFromJson(decoded);
+    } catch (_) {
+      // Saved JSON was unreadable. Start with no unfinished workouts.
+      return const [];
+    }
+  }
+
+  Future<void> saveInProgress(List<InProgressWorkout> runs) async {
+    final encoded = jsonEncode(runs.map((run) => run.toJson()).toList());
+    await _prefs.setString(_inProgressKey, encoded);
   }
 
   // ── Pro status ────────────────────────────────────────────────────────────
@@ -82,10 +107,7 @@ class StorageService {
   // ── Appearance ────────────────────────────────────────────────────────────
 
   AppSettings loadSettings() {
-    return AppSettings(
-      themeMode: loadThemeMode(),
-      skin: loadSkin(),
-    );
+    return AppSettings(themeMode: loadThemeMode(), skin: loadSkin());
   }
 
   ThemeMode loadThemeMode() {
@@ -140,4 +162,19 @@ class StorageService {
     );
     await _prefs.setString(_customExercisesKey, encoded);
   }
+}
+
+List<InProgressWorkout> _runsFromJson(List<dynamic> decoded) {
+  final runs = <InProgressWorkout>[];
+  for (final item in decoded) {
+    if (item is! Map) {
+      continue;
+    }
+    try {
+      runs.add(InProgressWorkout.fromJson(Map<String, dynamic>.from(item)));
+    } catch (_) {
+      // One unreadable run is skipped so the others can still be continued.
+    }
+  }
+  return runs;
 }

@@ -6,10 +6,7 @@ class PlanDay {
   final String name;
   final List<Exercise> exercises;
 
-  const PlanDay({
-    required this.name,
-    required this.exercises,
-  });
+  const PlanDay({required this.name, required this.exercises});
 
   /// Rough duration, using the same estimate as a saved workout.
   int get estimatedDurationSeconds {

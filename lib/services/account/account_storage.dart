@@ -69,10 +69,9 @@ class AccountStorage {
       return null;
     }
     try {
-      return AccountSession.fromJson(
-        jsonDecode(raw) as Map<String, dynamic>,
-      );
+      return AccountSession.fromJson(jsonDecode(raw) as Map<String, dynamic>);
     } catch (_) {
+      // Saved sign-in was unreadable. Treat this device as signed out.
       return null;
     }
   }
@@ -121,6 +120,7 @@ class AccountStorage {
           )
           .toList();
     } catch (_) {
+      // Saved deletions were unreadable. Keep the workouts that are still here.
       return const [];
     }
   }
@@ -159,6 +159,7 @@ class AccountStorage {
     try {
       return AccountSnapshot.fromJson(jsonDecode(raw) as Map<String, dynamic>);
     } catch (_) {
+      // Saved device copy was unreadable. Nothing is waiting to move.
       return null;
     }
   }

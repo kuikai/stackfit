@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/theme.dart';
 import '../models/models.dart';
+import 'skin_panel.dart';
 
 /// Home entry point to the built-in plan library.
 class PlanLibraryTile extends StatelessWidget {
@@ -17,9 +18,12 @@ class PlanLibraryTile extends StatelessWidget {
     final planCount = PlanLibrary.all.length;
     final categories = PlanLibrary.categories.take(5).join(', ');
 
-    return Card(
+    return SkinPanel(
       margin: EdgeInsets.only(bottom: look.listGap),
-      color: colorScheme.primary.withValues(alpha: 0.12),
+      overPortrait: true,
+      color: look.cardOpacity < 1
+          ? null
+          : colorScheme.primary.withValues(alpha: 0.12),
       child: InkWell(
         borderRadius: look.cornerRadius,
         onTap: onTap,

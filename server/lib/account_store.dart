@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'password_hash.dart';
 
+part 'account_records.dart';
+
 class StoredUser {
   const StoredUser({
     required this.id,
@@ -15,11 +17,7 @@ class StoredUser {
   final String? displayName;
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'email': email,
-      'displayName': displayName,
-    };
+    return {'id': id, 'email': email, 'displayName': displayName};
   }
 }
 
@@ -55,6 +53,7 @@ class AccountStore {
 
   Future<T> _sync<T>(Future<T> Function() action) {
     final result = _queue.then((_) => action());
+    // A failed save must not freeze the saves that come after it.
     _queue = result.then((_) {}, onError: (_) {});
     return result;
   }
@@ -107,10 +106,7 @@ class AccountStore {
     });
   }
 
-  Future<StoredUser> signIn({
-    required String email,
-    required String password,
-  }) {
+  Future<StoredUser> signIn({required String email, required String password}) {
     return _sync(() async {
       final user = _usersById[_userIdByEmail[normalizeEmail(email)]];
       if (user == null || !verifyPassword(password, user.passwordHash)) {
@@ -132,6 +128,25 @@ class AccountStore {
   Future<void> revokeToken(String token) {
     return _sync(() async {
       _userIdByTokenHash.remove(sha256Hex(token));
+      await _writeFile();
+    });
+  }
+
+  /// Removes the account, its sessions, reset codes, and saved snapshot.
+  Future<void> deleteAccount({
+    required String userId,
+    required String password,
+  }) {
+    return _sync(() async {
+      final user = _requireUser(userId);
+      if (!verifyPassword(password, user.passwordHash)) {
+        throw const AccountStoreException('Password is incorrect.');
+      }
+      _usersById.remove(userId);
+      _userIdByEmail.remove(user.email);
+      _userIdByTokenHash.removeWhere((_, id) => id == userId);
+      _resetsByUserId.remove(userId);
+      _dataByUserId.remove(userId);
       await _writeFile();
     });
   }
@@ -167,10 +182,13 @@ class AccountStore {
     return _sync(() async {
       final user = _usersById[_userIdByEmail[normalizeEmail(email)]];
       final reset = user == null ? null : _resetsByUserId[user.id];
-      final expired = reset != null && !reset.expiresAt.isAfter(DateTime.now().toUtc());
+      final expired =
+          reset != null && !reset.expiresAt.isAfter(DateTime.now().toUtc());
       final matches = reset != null && reset.codeHash == sha256Hex(code.trim());
       if (user == null || reset == null || expired || !matches) {
-        throw const AccountStoreException('Reset code is incorrect or expired.');
+        throw const AccountStoreException(
+          'Reset code is incorrect or expired.',
+        );
       }
       _usersById[user.id] = user.copyWith(passwordHash: hashPassword(password));
       _resetsByUserId.remove(user.id);
@@ -197,7 +215,8 @@ class AccountStore {
   Future<StoredData> readData(String userId) {
     return _sync(() async {
       final user = _requireUser(userId);
-      final data = _dataByUserId[userId] ??
+      final data =
+          _dataByUserId[userId] ??
           _DataRecord(revision: 0, snapshot: emptySnapshot());
       return StoredData(
         revision: data.revision,
@@ -214,7 +233,8 @@ class AccountStore {
   }) {
     return _sync(() async {
       final user = _requireUser(userId);
-      final current = _dataByUserId[userId] ??
+      final current =
+          _dataByUserId[userId] ??
           _DataRecord(revision: 0, snapshot: emptySnapshot());
       if (current.revision != baseRevision) {
         throw RevisionConflict(
@@ -258,70 +278,6 @@ class AccountStore {
     return value % 1000000;
   }
 
-  void _readUsers(Object? raw) {
-    if (raw is! List<dynamic>) {
-      return;
-    }
-    for (final item in raw.whereType<Map<Object?, Object?>>()) {
-      final user = _UserRecord.fromJson(Map<String, dynamic>.from(item));
-      _usersById[user.id] = user;
-      _userIdByEmail[user.email] = user.id;
-    }
-  }
-
-  void _readTokens(Object? raw) {
-    if (raw is! List<dynamic>) {
-      return;
-    }
-    for (final item in raw.whereType<Map<Object?, Object?>>()) {
-      final json = Map<String, dynamic>.from(item);
-      final hash = json['tokenHash'] as String?;
-      final userId = json['userId'] as String?;
-      if (hash != null && userId != null) {
-        _userIdByTokenHash[hash] = userId;
-      }
-    }
-  }
-
-  void _readResets(Object? raw) {
-    if (raw is! List<dynamic>) {
-      return;
-    }
-    for (final item in raw.whereType<Map<Object?, Object?>>()) {
-      final json = Map<String, dynamic>.from(item);
-      final userId = json['userId'] as String?;
-      final codeHash = json['codeHash'] as String?;
-      final expires = DateTime.tryParse(json['expiresAt'] as String? ?? '');
-      if (userId != null && codeHash != null && expires != null) {
-        _resetsByUserId[userId] = _ResetRecord(
-          codeHash: codeHash,
-          expiresAt: expires,
-        );
-      }
-    }
-  }
-
-  void _readData(Object? raw) {
-    if (raw is! Map<Object?, Object?>) {
-      return;
-    }
-    for (final entry in raw.entries) {
-      final key = entry.key;
-      final value = entry.value;
-      if (key is! String || value is! Map<Object?, Object?>) {
-        continue;
-      }
-      final json = Map<String, dynamic>.from(value);
-      final snapshot = json['snapshot'];
-      _dataByUserId[key] = _DataRecord(
-        revision: json['revision'] as int? ?? 0,
-        snapshot: snapshot is Map<Object?, Object?>
-            ? Map<String, dynamic>.from(snapshot)
-            : emptySnapshot(),
-      );
-    }
-  }
-
   Future<void> _writeFile() async {
     final payload = {
       'users': _usersById.values.map((user) => user.toJson()).toList(),
@@ -346,111 +302,8 @@ class AccountStore {
       },
     };
     await _file.parent.create(recursive: true);
-    await _file.writeAsString(const JsonEncoder.withIndent('  ').convert(payload));
-  }
-}
-
-class AccountStoreException implements Exception {
-  const AccountStoreException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => message;
-}
-
-class _UserRecord {
-  const _UserRecord({
-    required this.id,
-    required this.email,
-    required this.passwordHash,
-    required this.displayName,
-    required this.createdAt,
-  });
-
-  final String id;
-  final String email;
-  final String passwordHash;
-  final String? displayName;
-  final DateTime createdAt;
-
-  _UserRecord copyWith({
-    String? passwordHash,
-    String? displayName,
-    bool clearDisplayName = false,
-  }) {
-    return _UserRecord(
-      id: id,
-      email: email,
-      passwordHash: passwordHash ?? this.passwordHash,
-      displayName: clearDisplayName ? null : (displayName ?? this.displayName),
-      createdAt: createdAt,
+    await _file.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(payload),
     );
   }
-
-  StoredUser view() {
-    return StoredUser(id: id, email: email, displayName: displayName);
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'email': email,
-      'passwordHash': passwordHash,
-      'displayName': displayName,
-      'createdAt': createdAt.toIso8601String(),
-    };
-  }
-
-  factory _UserRecord.fromJson(Map<String, dynamic> json) {
-    return _UserRecord(
-      id: json['id'] as String,
-      email: json['email'] as String,
-      passwordHash: json['passwordHash'] as String,
-      displayName: cleanDisplayName(json['displayName'] as String?),
-      createdAt: DateTime.parse(json['createdAt'] as String),
-    );
-  }
-}
-
-class _ResetRecord {
-  const _ResetRecord({
-    required this.codeHash,
-    required this.expiresAt,
-  });
-
-  final String codeHash;
-  final DateTime expiresAt;
-}
-
-class _DataRecord {
-  const _DataRecord({
-    required this.revision,
-    required this.snapshot,
-  });
-
-  final int revision;
-  final Map<String, dynamic> snapshot;
-}
-
-String normalizeEmail(String email) => email.trim().toLowerCase();
-
-String? cleanDisplayName(String? value) {
-  final trimmed = value?.trim();
-  if (trimmed == null || trimmed.isEmpty) {
-    return null;
-  }
-  return trimmed;
-}
-
-Map<String, dynamic> emptySnapshot() {
-  return {
-    'workouts': <dynamic>[],
-    'deletedWorkouts': <dynamic>[],
-    'sessions': <dynamic>[],
-    'customExercises': <dynamic>[],
-    'themeMode': 'system',
-    'skin': 'classic',
-    'appearanceUpdatedAt': DateTime.utc(1970).toIso8601String(),
-  };
 }

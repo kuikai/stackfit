@@ -4,7 +4,7 @@ import '../../core/utils.dart';
 import '../../models/models.dart';
 import '../../services/workout_session_controller.dart';
 
-/// The big WORK / REST / SET card with the countdown or set prompt.
+/// The big WORK / REST countdown. Rest sits on the background. Work stays in a card.
 class ActiveTimerCard extends StatelessWidget {
   const ActiveTimerCard({super.key, required this.state});
 
@@ -28,88 +28,107 @@ class ActiveTimerCard extends StatelessWidget {
       _ => colorScheme.primary,
     };
 
-    final showRound = exercise?.type == ExerciseType.timer &&
+    final showRound =
+        exercise?.type == ExerciseType.timer &&
         state.totalSets > 1 &&
         (state.phase == SessionPhase.work || state.phase == SessionPhase.rest);
     final showSetRest =
         exercise?.type == ExerciseType.sets && state.phase == SessionPhase.rest;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: phaseColor.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                phaseLabel,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: phaseColor,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 2.4,
-                ),
+    final countdown = Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: phaseColor.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              phaseLabel,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: phaseColor,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 2.4,
               ),
             ),
-            if (showRound || showSetRest) ...[
-              const SizedBox(height: 10),
-              Text(
-                showRound
-                    ? 'Set ${state.setNumber} of ${state.totalSets}'
-                    : 'Next: set ${_nextSetLabel()}',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.55),
-                  fontWeight: FontWeight.w600,
-                ),
+          ),
+          if (showRound || showSetRest) ...[
+            const SizedBox(height: 6),
+            Text(
+              showRound
+                  ? 'Set ${state.setNumber} of ${state.totalSets}'
+                  : _restCaption(),
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: colorScheme.onSurface.withValues(alpha: 0.55),
+                fontWeight: FontWeight.w600,
               ),
-            ],
-            const Spacer(),
-            if (state.phase == SessionPhase.setReady && exercise != null)
-              _SetPrompt(
-                setNumber: state.setNumber,
-                totalSets: state.totalSets,
-                reps: exercise.reps,
-              )
-            else
-              Text(
-                AppUtils.formatDuration(state.remainingSeconds),
-                style: theme.textTheme.displayLarge?.copyWith(
-                  fontSize: 96,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -3,
-                  height: 1,
-                  color: colorScheme.onSurface,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            if (state.isPaused) ...[
-              const SizedBox(height: 14),
-              Text(
-                'PAUSED',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: colorScheme.error,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.6,
-                ),
-              ),
-            ],
-            const Spacer(),
+            ),
           ],
-        ),
+          const SizedBox(height: 4),
+          Expanded(child: _clock(context, exercise)),
+        ],
+      ),
+    );
+
+    if (state.phase == SessionPhase.rest) {
+      return countdown;
+    }
+    return Card(child: countdown);
+  }
+
+  /// Big time, shrunk to the space under the phase label so it never overflows.
+  Widget _clock(BuildContext context, Exercise? exercise) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final face = state.phase == SessionPhase.setReady && exercise != null
+        ? _SetPrompt(
+            setNumber: state.setNumber,
+            totalSets: state.totalSets,
+            reps: exercise.reps,
+          )
+        : Text(
+            AppUtils.formatDuration(state.remainingSeconds),
+            style: theme.textTheme.displayLarge?.copyWith(
+              fontSize: 96,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -3,
+              height: 1,
+              color: colorScheme.onSurface,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          );
+
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          face,
+          if (state.isPaused) ...[
+            const SizedBox(height: 8),
+            Text(
+              'PAUSED',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: colorScheme.error,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.6,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
 
-  /// During rest after a set, the set coming up (or "done" after the last).
-  String _nextSetLabel() {
+  /// During rest after a set, the set coming up, or that the exercise is done.
+  String _restCaption() {
     final next = state.setNumber + 1;
     if (next > state.totalSets) {
-      return '${state.totalSets} of ${state.totalSets} done';
+      return 'All ${state.totalSets} sets done';
     }
-    return '$next of ${state.totalSets}';
+    return 'Next: set $next of ${state.totalSets}';
   }
 }
 

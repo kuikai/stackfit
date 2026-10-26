@@ -65,10 +65,32 @@ flutter:
 
   assets:
     - StackFitWeb/themes/bold-sports/icons/banner.jpg
+    - StackFitWeb/themes/bold-sports/icons/icon.jpg
     - StackFitWeb/themes/chibi/icons/banner.jpg
+    - StackFitWeb/themes/chibi/icons/icon.jpg
     - StackFitWeb/themes/cyberpunk/icons/banner.jpg
+    - StackFitWeb/themes/cyberpunk/icons/icon.jpg
     - StackFitWeb/themes/cyberpunk/background.jpg
+    - StackFitWeb/themes/cyberpunk/girl-standing.jpg
+    - StackFitWeb/themes/cyberpunk/girl-cutout.png
+    - StackFitWeb/themes/cyberpunk/mascots/mascot-chibi.png
+    - StackFitWeb/themes/cyberpunk/mascots/mascot-chibi-sit.png
+    - StackFitWeb/themes/cyberpunk/mascots/mascot-chibi-rest.png
+    - StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-1.png
+    - StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-2.png
+    - StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-3.png
+    - StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-4.png
+    - StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-5.png
+    - StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-6.png
+    - StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-7.png
+    - StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-8.png
+    - StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-9.png
+    - StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-10.png
+    - StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-11.png
+    - StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-12.png
+    - StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-13.png
     - StackFitWeb/themes/dumbbell/icons/banner-home.jpg
+    - StackFitWeb/themes/dumbbell/icons/icon-companion.jpg
 
   # To add assets to your application, add an assets section, like this:
   # assets:

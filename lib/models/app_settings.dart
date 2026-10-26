@@ -12,10 +12,7 @@ class AppSettings {
   final ThemeMode themeMode;
   final AppSkin skin;
 
-  AppSettings copyWith({
-    ThemeMode? themeMode,
-    AppSkin? skin,
-  }) {
+  AppSettings copyWith({ThemeMode? themeMode, AppSkin? skin}) {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
       skin: skin ?? this.skin,

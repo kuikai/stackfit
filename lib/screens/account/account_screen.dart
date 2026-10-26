@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/theme.dart';
 import '../../providers/account_provider.dart';
-import '../../providers/app_providers.dart';
+import 'account_auth_form.dart';
 
 class AccountScreen extends ConsumerStatefulWidget {
   const AccountScreen({super.key, this.startOnCreate = false});
@@ -40,99 +39,22 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final creating = widget.startOnCreate && !_resetting;
     return Scaffold(
       appBar: AppBar(title: Text(_title(creating))),
-      body: ListView(
-        padding: context.pageGutter(top: 8, bottom: 32),
-        children: [
-          Text(_intro(creating), style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 16),
-          TextField(
-            key: const Key('account-email'),
-            controller: _emailController,
-            keyboardType: TextInputType.emailAddress,
-            autofillHints: const [AutofillHints.email],
-            decoration: const InputDecoration(labelText: 'Email'),
-          ),
-          if (creating) ...[
-            const SizedBox(height: 12),
-            TextField(
-              controller: _nameController,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Display name (optional)',
-              ),
-            ),
-          ],
-          if (_resetting) ...[
-            const SizedBox(height: 12),
-            TextField(
-              key: const Key('reset-code'),
-              controller: _codeController,
-              decoration: const InputDecoration(labelText: 'Reset code'),
-            ),
-          ],
-          const SizedBox(height: 12),
-          TextField(
-            key: const Key('account-password'),
-            controller: _passwordController,
-            obscureText: true,
-            decoration: InputDecoration(
-              labelText: _resetting ? 'New password' : 'Password',
-            ),
-          ),
-          if (creating || _resetting) ...[
-            const SizedBox(height: 12),
-            TextField(
-              controller: _confirmController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Confirm password'),
-            ),
-          ],
-          if (_error != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              _error!,
-              key: const Key('account-error'),
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          ],
-          const SizedBox(height: 20),
-          if (_resetting) ...[
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: _submitting ? null : _sendResetCode,
-                child: Text(_submitting ? 'Please wait…' : 'Send reset code'),
-              ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                key: const Key('account-submit'),
-                onPressed: _submitting ? null : _setNewPassword,
-                child: const Text('Set new password'),
-              ),
-            ),
-          ] else
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                key: const Key('account-submit'),
-                onPressed: _submitting ? null : () => _submit(creating),
-                child: Text(
-                  _submitting ? 'Please wait…' : _submitLabel(creating),
-                ),
-              ),
-            ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton(
-              onPressed: _submitting ? null : _toggleReset,
-              child: Text(_resetting ? 'Back to sign in' : 'Forgot password?'),
-            ),
-          ),
-        ],
+      body: AccountAuthForm(
+        creating: creating,
+        resetting: _resetting,
+        submitting: _submitting,
+        intro: _intro(creating),
+        submitLabel: _submitLabel(creating),
+        emailController: _emailController,
+        passwordController: _passwordController,
+        confirmController: _confirmController,
+        nameController: _nameController,
+        codeController: _codeController,
+        error: _error,
+        onSendResetCode: _sendResetCode,
+        onSetNewPassword: _setNewPassword,
+        onSubmit: () => _submit(creating),
+        onToggleReset: _toggleReset,
       ),
     );
   }
@@ -170,27 +92,18 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       _submitting = true;
       _error = null;
     });
-    try {
-      await ref
-          .read(accountApiProvider)
-          .requestPasswordReset(_emailController.text.trim());
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _submitting = false;
-        _error =
-            'If that account exists, read the reset code in the server window.';
-      });
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _submitting = false;
-        _error = error.toString();
-      });
+    final error = await ref
+        .read(accountProvider.notifier)
+        .requestPasswordReset(_emailController.text.trim());
+    if (!mounted) {
+      return;
     }
+    setState(() {
+      _submitting = false;
+      _error =
+          error ??
+          'If that account exists, read the reset code in the server window.';
+    });
   }
 
   Future<void> _setNewPassword() async {
@@ -300,23 +213,13 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     if (passwordError != null) {
       return passwordError;
     }
-    try {
-      await ref
-          .read(accountApiProvider)
-          .resetPassword(
-            email: _emailController.text.trim(),
-            code: code,
-            password: _passwordController.text,
-          );
-      return ref
-          .read(accountProvider.notifier)
-          .signIn(
-            email: _emailController.text.trim(),
-            password: _passwordController.text,
-          );
-    } catch (error) {
-      return error.toString();
-    }
+    return ref
+        .read(accountProvider.notifier)
+        .resetPassword(
+          email: _emailController.text.trim(),
+          code: code,
+          password: _passwordController.text,
+        );
   }
 }
 

@@ -86,6 +86,7 @@ flowchart TB
     WP[workoutsProvider<br/>list of workouts]
     CCP[customCatalogProvider<br/>exercises you added]
     CP[completedSessionsProvider<br/>history]
+    IP[inProgressProvider<br/>unfinished run]
     SP[settingsProvider<br/>theme + skin]
     PP[isProProvider<br/>Free or Pro]
     AP[accountProvider<br/>signed in? saved?]
@@ -107,6 +108,8 @@ flowchart TB
   Editor --> CCP
   Catalog --> CCP
   Timer --> Session --> CP
+  Timer --> IP
+  Home --> IP
   History --> CP
   Settings --> SP
   Settings --> AP
@@ -116,6 +119,7 @@ flowchart TB
   WP --> Store
   CCP --> Store
   CP --> Store
+  IP --> Store
   SP --> Store
   PP --> Store
   AP --> Sync
@@ -132,6 +136,9 @@ flowchart TB
 The dotted lines are the key idea for sync: `accountProvider` watches the
 workout list, history, theme, and custom exercises. Whenever one of those
 changes, it uploads. Screens never talk to the server directly.
+
+An unfinished workout is saved by `inProgressProvider` on the phone only. It
+is not part of the account snapshot. Reset, or Start over on Home, clears it.
 
 ---
 
@@ -297,6 +304,7 @@ models/                           Data shapes. Every one has toJson / fromJson.
   circuit.dart                    A circuit: exercises that play in order, then repeat
   workout.dart                    A named list of exercises and circuits, optional Home section, createdAt / updatedAt
   completed_session.dart          One history row: workout name, when, how long, how many exercises
+  in_progress_workout.dart        A run you left early: place, logged sets, and time, on the phone only
   set_log.dart                    Reps and kg for one set, saved on a finished session, with the circuit round
   catalog_exercise.dart           One catalog row, the built-in list, and search
   custom_catalog.dart             Adds an exercise you made under Custom, or updates that name
@@ -319,6 +327,7 @@ providers/                        Riverpod state. Screens read from here.
   workouts_provider.dart          The workout list + add/edit/delete/duplicate + sections + the free-limit check
   custom_catalog_provider.dart    Exercises you added, listed in the catalog under Custom
   completed_sessions_provider.dart  History list, newest first, free cap of 10, plus per-workout history
+  in_progress_provider.dart       Unfinished workouts on the phone. Not uploaded with the account
   settings_provider.dart          Theme and skin
   pro_provider.dart               Free or Pro flag
   account_state.dart              Signed in or not, saving/offline/error, and whether old device data is waiting
@@ -326,11 +335,11 @@ providers/                        Riverpod state. Screens read from here.
   account_sync.dart               What happens after sign-in, and when a workout, session, theme, or custom exercise changes
 
 services/                         Does the work the providers ask for.
-  storage_service.dart            Reads and writes workouts, history, custom exercises, Pro, and settings on the phone
+  storage_service.dart            Reads and writes workouts, history, unfinished runs, custom exercises, Pro, and settings
   workout_session_state.dart      Where the timer is: block, round, exercise, work/rest/set, seconds left, paused
   session_set_log.dart            Reps and kg typed in while a workout is still running
   station_exit.dart               Rest between circuit stations and between rounds
-  workout_session_controller.dart Pause, skip, reset, and Done. Asks the phase file to advance
+  workout_session_controller.dart Pause, skip, reset, and Done. Can continue a saved place
   workout_session_phases.dart     What happens when work ends, rest ends, a circuit loops, or the clock ticks
   sound_service.dart              Beeps and haptics on phase changes
   plan_workout_builder.dart       Turns a plan day into a workout; multi-day plans share a section
@@ -340,28 +349,28 @@ services/                         Does the work the providers ask for.
     snapshot_merge.dart           The merge rules from section 4
 
 screens/                          One folder per screen.
-  home/home_screen.dart           Workout list grouped into sections, + button, Plans / History / Settings
-  home/home_actions.dart          Start, create, delete, duplicate, and the section changes from Home
+  home/home_screen.dart           Workout list grouped into sections, continue rows, + button, Plans / History / Settings
+  home/home_actions.dart          Start or continue, start over, create, delete, duplicate, and section changes
   home/section_dialogs.dart       Name a section, move workouts in, pick which days to group
   workout_editor/workout_editor_screen.dart   Create or edit a workout, including a circuit box, reorder and delete, optional section
   workout_editor/workout_editor_actions.dart  Add an exercise or a circuit, and edit the stations inside it
   exercise_editor/exercise_editor_screen.dart Create or edit one exercise (timer or sets)
   catalog/catalog_screen.dart     Searchable catalog: built-in exercises plus ones you added
-  active_timer/active_timer_screen.dart       The big timer. Uses workout_session_controller.
+  active_timer/active_timer_screen.dart       The big timer. Saves an unfinished run and can continue it.
   active_timer/timer_controls.dart            Done, skip rest, pause, skip, reset, and stop. Logging hides pause and skip
-  active_timer/active_timer_card.dart         WORK / REST countdown card
-  active_timer/workout_complete_screen.dart   "Done" screen; writes the history session
+  active_timer/active_timer_card.dart         WORK countdown card. REST countdown sits on the background
+  active_timer/workout_complete_screen.dart   Done screen. Saves the session. Cyberpunk puts the night gym behind her run.
   history/history_screen.dart     Completed sessions across every workout
   history/workout_history_screen.dart  Past sessions of one workout
   plans/plan_library_screen.dart  Browse built-in plans by category or search
-  plans/plan_detail_screen.dart   Days of one plan; Start and Add are Pro
+  plans/plan_detail_screen.dart   Days of one plan. Start continues an unfinished day. Add is Pro
   settings/settings_screen.dart   Theme, everyday skins, Pro skins, Pro, account card
   account/account_screen.dart     Decides sign up, sign in, and reset. Does not call the server itself
   account/account_auth_form.dart  The email, password, and reset-code fields
   account/delete_account_dialog.dart  Password confirm before an account is deleted
 
 widgets/                          Reusable pieces used by several screens.
-  workout_tile.dart               One workout row on Home (edit / history / section / duplicate / delete)
+  workout_tile.dart               One workout row on Home. Shows In progress, with Start over when a run is saved
   workout_section_card.dart       A named folder of days on Home, like Bro Split
   workout_limit_banner.dart       "2 of 3 workouts" banner for Free users
   exercise_editor_tile.dart       One exercise row inside the workout editor
@@ -374,7 +383,9 @@ widgets/                          Reusable pieces used by several screens.
   session_tile.dart               One history row (date, duration, reps × kg)
   skin_picker.dart                Grid of skins in Settings
   collapsible_section.dart        A settings card that stays closed until you tap Show
-  skin_artwork.dart               Skin picture on Home and behind a workout
+  skin_artwork.dart               Big girl on Home, night gym behind every dark Cyberpunk screen, chibi mascot
+  chibi_run.dart                  Chibi run cycle that crosses the workout-complete screen
+  skin_panel.dart                 Holder: solid on everyday skins, Home-style glass on Cyberpunk
   account_settings_card.dart      The account box in Settings: email, Saved/Saving/Offline, sign out, delete account, move data
   empty_state.dart                Centered "nothing here yet" message
 ```
@@ -429,7 +440,7 @@ js/
 themes/README.md                  What the four anime themes are for
 themes/bold-sports/               Bold Sports art. Settings uses icons/banner.jpg
 themes/chibi/                     Chibi art. Settings uses icons/banner.jpg
-themes/cyberpunk/                 Cyberpunk art. Home uses background.jpg. Settings uses icons/banner.jpg
+themes/cyberpunk/                 Cyberpunk art. Home is girl-standing.jpg. The night gym in background.jpg sits behind every other dark screen. Home mascot is mascots/mascot-chibi.png. She sits on Done, rests on Skip rest, and the run frames in mascots/animation/running/ cross workout complete.
 themes/dumbbell/                  Dumbbell art. Settings uses icons/banner-home.jpg
 ```
 
@@ -442,7 +453,9 @@ custom_catalog_test.dart          A custom exercise joins the catalog, and sync 
 website_snapshot_test.dart        Phone can read a snapshot the website wrote
 plan_library_test.dart            Plans have unique ids, and Home sections group plan days
 set_log_test.dart                 Set logging, kg, and history JSON
+set_log_list_test.dart            Workout summary wraps a long reps and kg line
 circuit_session_test.dart         Circuits loop, then the rest of the workout continues
+in_progress_workout_test.dart     Closing a workout keeps the place, sets, and time for next time
 skin_look_test.dart               Each skin's corners, spacing, and typeface
 ```
 
@@ -455,6 +468,7 @@ skin_look_test.dart               Each skin's corners, spacing, and typeface
 | **Snapshot** | Everything on one account in one JSON object: workouts, deleted workout ids, sessions, custom exercises, theme, skin. |
 | **Custom exercise** | An exercise you typed yourself, including its timer or sets. Listed in the catalog under Custom. |
 | **Session** (history) | One finished workout: `CompletedSession`. |
+| **In-progress workout** | A run you left before it finished. Stored on the phone only, so you can continue. Reset or Start over clears it. |
 | **Session** (account) | Who is signed in: `AccountSession` (email + token). Different thing, same word. |
 | **Revision** | A counter the server bumps on every save. Used to spot two devices saving at once. |
 | **Provider** | A Riverpod object that holds state and tells screens when it changes. |

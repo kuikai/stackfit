@@ -97,6 +97,7 @@ class WorkoutSessionState {
     SessionPhase? phase,
     int? remainingSeconds,
     bool? isPaused,
+    DateTime? startedAt,
   }) {
     return WorkoutSessionState(
       workout: workout,
@@ -107,7 +108,7 @@ class WorkoutSessionState {
       phase: phase ?? this.phase,
       remainingSeconds: remainingSeconds ?? this.remainingSeconds,
       isPaused: isPaused ?? this.isPaused,
-      startedAt: startedAt,
+      startedAt: startedAt ?? this.startedAt,
     );
   }
 }

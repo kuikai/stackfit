@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:stackfit_server/account_handler.dart';
 import 'package:stackfit_server/account_store.dart';
+import 'package:stackfit_server/share_store.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -13,13 +14,18 @@ void main() {
   String? resetCode;
 
   setUp(() async {
-    final directory = await Directory.systemTemp.createTemp('stackfit-accounts');
+    final directory = await Directory.systemTemp.createTemp(
+      'stackfit-accounts',
+    );
     final store = AccountStore(File('${directory.path}/accounts.json'));
     await store.load();
+    final shares = ShareStore(File('${directory.path}/shares.json'));
+    await shares.load();
     resetCode = null;
     server = await shelf_io.serve(
       createAccountHandler(
         store,
+        shares: shares,
         onResetCode: (email, code) => resetCode = code,
       ),
       InternetAddress.loopbackIPv4,
@@ -118,6 +124,57 @@ void main() {
     });
     expect(signedIn.statusCode, 200);
   });
+
+  test('deleting an account removes its workouts and share links', () async {
+    final client = http.Client();
+    addTearDown(client.close);
+    final token = await _token(client, baseUrl, 'mia@example.com');
+    final other = await _token(client, baseUrl, 'other@example.com');
+    await _put(client, '$baseUrl/v1/sync', token, {
+      'baseRevision': 0,
+      'snapshot': _workoutSnapshot(),
+    });
+    final shared = await _postAuth(client, '$baseUrl/v1/shares', {
+      'kind': 'workout',
+      'workoutId': 'w1',
+    }, token);
+    expect(shared.statusCode, 200);
+    final shareToken = _json(shared)['token'] as String;
+
+    final wrong = await _delete(client, baseUrl, token, {'password': 'nope'});
+    expect(wrong.statusCode, 401);
+    final stillShared = await client.get(
+      Uri.parse('$baseUrl/v1/shares/$shareToken'),
+    );
+    expect(stillShared.statusCode, 200);
+
+    final deleted = await _delete(client, baseUrl, token, {
+      'password': 'password1',
+    });
+    expect(deleted.statusCode, 200);
+    final gone = await client.get(
+      Uri.parse('$baseUrl/v1/sync'),
+      headers: {'authorization': 'Bearer $token'},
+    );
+    expect(gone.statusCode, 401);
+    final page = await client.get(Uri.parse('$baseUrl/v1/shares/$shareToken'));
+    expect(page.statusCode, 404);
+    final signedIn = await _post(client, '$baseUrl/v1/auth/signin', {
+      'email': 'mia@example.com',
+      'password': 'password1',
+    });
+    expect(signedIn.statusCode, 401);
+    final again = await _post(client, '$baseUrl/v1/auth/signup', {
+      'email': 'mia@example.com',
+      'password': 'password1',
+    });
+    expect(again.statusCode, 200);
+    final otherData = await client.get(
+      Uri.parse('$baseUrl/v1/sync'),
+      headers: {'authorization': 'Bearer $other'},
+    );
+    expect(otherData.statusCode, 200);
+  });
 }
 
 Future<http.Response> _post(
@@ -150,4 +207,70 @@ Future<http.Response> _put(
 
 Map<String, dynamic> _json(http.Response response) {
   return jsonDecode(response.body) as Map<String, dynamic>;
+}
+
+Future<String> _token(http.Client client, String baseUrl, String email) async {
+  final created = await _post(client, '$baseUrl/v1/auth/signup', {
+    'email': email,
+    'password': 'password1',
+  });
+  expect(created.statusCode, 200);
+  return _json(created)['token'] as String;
+}
+
+Future<http.Response> _postAuth(
+  http.Client client,
+  String url,
+  Map<String, dynamic> body,
+  String token,
+) {
+  return client.post(
+    Uri.parse(url),
+    headers: {
+      'content-type': 'application/json',
+      'authorization': 'Bearer $token',
+    },
+    body: jsonEncode(body),
+  );
+}
+
+Future<http.Response> _delete(
+  http.Client client,
+  String baseUrl,
+  String token,
+  Map<String, dynamic> body,
+) {
+  return client.delete(
+    Uri.parse('$baseUrl/v1/account'),
+    headers: {
+      'content-type': 'application/json',
+      'authorization': 'Bearer $token',
+    },
+    body: jsonEncode(body),
+  );
+}
+
+Map<String, dynamic> _workoutSnapshot() {
+  return {
+    'workouts': [
+      {
+        'id': 'w1',
+        'name': 'Push day',
+        'exercises': [
+          {
+            'name': 'Bench press',
+            'type': 'sets',
+            'sets': 4,
+            'reps': 8,
+            'restSeconds': 90,
+          },
+        ],
+      },
+    ],
+    'deletedWorkouts': <dynamic>[],
+    'sessions': <dynamic>[],
+    'themeMode': 'system',
+    'skin': 'classic',
+    'appearanceUpdatedAt': '1970-01-01T00:00:00.000Z',
+  };
 }

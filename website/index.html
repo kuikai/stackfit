@@ -17,8 +17,10 @@
       </div>
       <div class="toolbar-actions">
         <a class="ghost" href="/tabata">Tabata</a>
+        <a class="ghost" href="/privacy.html">Privacy</a>
         <div id="account-bar" hidden>
         <span id="account-email"></span>
+        <button id="delete-account" class="ghost" type="button">Delete account</button>
         <button id="sign-out" class="ghost" type="button">Sign out</button>
         </div>
       </div>
@@ -271,6 +273,23 @@
         </form>
       </section>
     </main>
+
+    <div id="delete-account-panel" class="delete-dialog" hidden>
+      <section class="panel">
+        <h2>Delete account</h2>
+        <p class="lede">This permanently deletes the account, the workouts and history stored on it, and its share links. Workouts already on a phone stay on that phone.</p>
+        <p id="delete-error" class="form-error" hidden></p>
+        <form id="delete-account-form">
+          <label class="field">Password
+            <input id="delete-password" name="password" type="password" autocomplete="current-password" required>
+          </label>
+          <div class="button-row">
+            <button class="danger" type="submit">Delete account</button>
+            <button id="cancel-delete" class="ghost" type="button">Cancel</button>
+          </div>
+        </form>
+      </section>
+    </div>
 
     <script type="module" src="/js/main.js"></script>
   </body>

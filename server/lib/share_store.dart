@@ -126,6 +126,17 @@ class ShareStore {
     });
   }
 
+  Future<void> deleteOwned(String ownerId) {
+    return _sync(() async {
+      final before = _byToken.length;
+      _byToken.removeWhere((_, share) => share.ownerId == ownerId);
+      if (_byToken.length == before) {
+        return;
+      }
+      await _writeFile();
+    });
+  }
+
   Future<StoredShare> _save({
     required String ownerId,
     required String kind,
@@ -253,7 +264,10 @@ class _ShareRecord {
     if (token is! String || ownerId is! String || kind is! String) {
       return null;
     }
-    if (sourceId is! String || title is! String || body is! Map || updatedAt == null) {
+    if (sourceId is! String ||
+        title is! String ||
+        body is! Map ||
+        updatedAt == null) {
       return null;
     }
     return _ShareRecord(

@@ -71,10 +71,63 @@ enum AppSkin {
     _ => null,
   };
 
-  /// Full-screen plate. When set, Home skips the banner and paints this behind the list.
+  /// Empty night gym behind Workout Plans and the timer.
   String? get backgroundAsset => switch (this) {
     AppSkin.cyberpunk => 'StackFitWeb/themes/cyberpunk/background.jpg',
     _ => null,
+  };
+
+  /// Full Home picture. The girl and her gym are one scene.
+  String? get heroAsset => switch (this) {
+    AppSkin.cyberpunk => 'StackFitWeb/themes/cyberpunk/girl-standing.jpg',
+    _ => null,
+  };
+
+  /// What Home paints. The big picture wins over the empty gym.
+  String? get homePlateAsset => heroAsset ?? backgroundAsset;
+
+  /// Cheering chibi. Home corner and, for Cyberpunk, not the sitting pose.
+  String? get mascotAsset => switch (this) {
+    AppSkin.boldSports => 'StackFitWeb/themes/bold-sports/icons/icon.jpg',
+    AppSkin.chibi => 'StackFitWeb/themes/chibi/icons/icon.jpg',
+    AppSkin.cyberpunk =>
+      'StackFitWeb/themes/cyberpunk/mascots/mascot-chibi.png',
+    AppSkin.dumbbell => 'StackFitWeb/themes/dumbbell/icons/icon-companion.jpg',
+    _ => null,
+  };
+
+  /// Chibi perched on the Done / Next Set button.
+  String? get mascotSeatAsset => switch (this) {
+    AppSkin.cyberpunk =>
+      'StackFitWeb/themes/cyberpunk/mascots/mascot-chibi-sit.png',
+    _ => null,
+  };
+
+  /// Chibi lying on the Skip rest bar.
+  String? get mascotRestAsset => switch (this) {
+    AppSkin.cyberpunk =>
+      'StackFitWeb/themes/cyberpunk/mascots/mascot-chibi-rest.png',
+    _ => null,
+  };
+
+  /// Run-cycle frames. Empty unless this skin has a runner.
+  List<String> get mascotRunFrames => switch (this) {
+    AppSkin.cyberpunk => const [
+      'StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-1.png',
+      'StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-2.png',
+      'StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-3.png',
+      'StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-4.png',
+      'StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-5.png',
+      'StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-6.png',
+      'StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-7.png',
+      'StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-8.png',
+      'StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-9.png',
+      'StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-10.png',
+      'StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-11.png',
+      'StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-12.png',
+      'StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-13.png',
+    ],
+    _ => const [],
   };
 
   static AppSkin fromStorage(String? value) {
@@ -107,6 +160,7 @@ class SkinLook extends ThemeExtension<SkinLook> {
     required this.listGap,
     required this.buttonPaddingHorizontal,
     required this.buttonPaddingVertical,
+    this.cardOpacity = 1,
   });
 
   final SkinTypeface bodyFont;
@@ -117,6 +171,30 @@ class SkinLook extends ThemeExtension<SkinLook> {
   final double listGap;
   final double buttonPaddingHorizontal;
   final double buttonPaddingVertical;
+  final double cardOpacity;
+
+  /// Solid skins use the surface colour. Glass skins use the same frost as
+  /// the Home holders, so every box matches on Cyberpunk.
+  Color cardFill(ColorScheme colors, {bool overPortrait = false}) {
+    if (cardOpacity >= 1) {
+      return colors.surface;
+    }
+    return colors.surface.withValues(alpha: 0.72);
+  }
+
+  BoxDecoration cardDecoration(
+    ColorScheme colors, {
+    Color? color,
+    bool overPortrait = false,
+  }) {
+    return BoxDecoration(
+      color: color ?? cardFill(colors, overPortrait: overPortrait),
+      borderRadius: cornerRadius,
+      border: cardOpacity < 1
+          ? Border.all(color: colors.primary.withValues(alpha: 0.32))
+          : null,
+    );
+  }
 
   EdgeInsets get buttonPadding => EdgeInsets.symmetric(
     horizontal: buttonPaddingHorizontal,
@@ -146,6 +224,7 @@ class SkinLook extends ThemeExtension<SkinLook> {
     double? listGap,
     double? buttonPaddingHorizontal,
     double? buttonPaddingVertical,
+    double? cardOpacity,
   }) {
     return SkinLook(
       bodyFont: bodyFont ?? this.bodyFont,
@@ -158,6 +237,7 @@ class SkinLook extends ThemeExtension<SkinLook> {
           buttonPaddingHorizontal ?? this.buttonPaddingHorizontal,
       buttonPaddingVertical:
           buttonPaddingVertical ?? this.buttonPaddingVertical,
+      cardOpacity: cardOpacity ?? this.cardOpacity,
     );
   }
 
@@ -184,6 +264,7 @@ class SkinLook extends ThemeExtension<SkinLook> {
         other.buttonPaddingVertical,
         t,
       )!,
+      cardOpacity: lerpDouble(cardOpacity, other.cardOpacity, t)!,
     );
   }
 }

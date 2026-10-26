@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../core/utils.dart';
 import '../../models/models.dart';
+import '../../providers/in_progress_provider.dart';
 import '../../providers/pro_provider.dart';
 import '../../providers/workouts_provider.dart';
 import '../../services/plan_workout_builder.dart';
@@ -122,9 +123,26 @@ class PlanDetailScreen extends ConsumerWidget {
     if (!_requirePro(context, ref)) {
       return;
     }
-    final workout = PlanWorkoutBuilder.buildWorkoutFromPlanDay(plan, day);
+    final origin = InProgressWorkout.planOrigin(plan.id, day.name);
+    final saved = ref.read(inProgressProvider.notifier).forOrigin(origin);
+    final resume = saved != null && saved.canResume ? saved : null;
+    if (saved != null && resume == null) {
+      await ref.read(inProgressProvider.notifier).discard(saved.workout.id);
+    }
+    final workout =
+        resume?.workout ??
+        PlanWorkoutBuilder.buildWorkoutFromPlanDay(plan, day);
+    if (!context.mounted) {
+      return;
+    }
     await Navigator.of(context).push<void>(
-      MaterialPageRoute(builder: (_) => ActiveTimerScreen(workout: workout)),
+      MaterialPageRoute(
+        builder: (_) => ActiveTimerScreen(
+          workout: workout,
+          progress: resume,
+          origin: origin,
+        ),
+      ),
     );
   }
 

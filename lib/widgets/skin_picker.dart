@@ -24,9 +24,9 @@ class SkinPicker extends StatelessWidget {
       return Text(
         emptyMessage ?? 'Nothing here yet.',
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: Theme.of(context).colorScheme.onSurface.withValues(
-            alpha: 0.62,
-          ),
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: 0.62),
           height: 1.4,
         ),
       );

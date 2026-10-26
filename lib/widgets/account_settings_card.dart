@@ -1,8 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/constants.dart';
 import '../providers/account_provider.dart';
 import '../screens/account/account_screen.dart';
+import '../screens/account/delete_account_dialog.dart';
 
 class AccountSettingsCard extends ConsumerStatefulWidget {
   const AccountSettingsCard({super.key});
@@ -42,6 +45,10 @@ class _AccountSettingsCardState extends ConsumerState<AccountSettingsCard> {
       _nameController.text = name;
     });
 
+    final server = Uri.tryParse(AppConstants.accountServerUrl);
+    final accountsAvailable =
+        !kReleaseMode || (server != null && server.isScheme('https'));
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -52,7 +59,8 @@ class _AccountSettingsCardState extends ConsumerState<AccountSettingsCard> {
                 errorMessage: account.saveStatus == SaveStatus.error
                     ? account.errorMessage
                     : null,
-                showRetry: account.saveStatus == SaveStatus.offline ||
+                showRetry:
+                    account.saveStatus == SaveStatus.offline ||
                     account.saveStatus == SaveStatus.error,
                 showMove: account.hasUnmovedDeviceData,
                 nameController: _nameController,
@@ -62,9 +70,11 @@ class _AccountSettingsCardState extends ConsumerState<AccountSettingsCard> {
                     ref.read(accountProvider.notifier).syncIfSignedIn(),
                 onMove: () => _move(context),
                 onSignOut: () => ref.read(accountProvider.notifier).signOut(),
+                onDelete: () => _deleteAccount(context),
               )
             : _SignedOutAccount(
                 theme: theme,
+                accountsAvailable: accountsAvailable,
                 onCreate: () => _openAccount(context, startOnCreate: true),
                 onSignIn: () => _openAccount(context),
               ),
@@ -90,6 +100,23 @@ class _AccountSettingsCardState extends ConsumerState<AccountSettingsCard> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
   }
 
+  Future<void> _deleteAccount(BuildContext context) async {
+    final password = await showDialog<String>(
+      context: context,
+      builder: (_) => const DeleteAccountDialog(),
+    );
+    if (password == null || !context.mounted) {
+      return;
+    }
+    final error = await ref
+        .read(accountProvider.notifier)
+        .deleteAccount(password);
+    if (!context.mounted || error == null) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+  }
+
   void _openAccount(BuildContext context, {bool startOnCreate = false}) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -102,11 +129,13 @@ class _AccountSettingsCardState extends ConsumerState<AccountSettingsCard> {
 class _SignedOutAccount extends StatelessWidget {
   const _SignedOutAccount({
     required this.theme,
+    required this.accountsAvailable,
     required this.onCreate,
     required this.onSignIn,
   });
 
   final ThemeData theme;
+  final bool accountsAvailable;
   final VoidCallback onCreate;
   final VoidCallback onSignIn;
 
@@ -123,31 +152,35 @@ class _SignedOutAccount extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'An account keeps your workouts and history if you replace this phone. '
-          'Without an account, everything stays on this device.',
+          accountsAvailable
+              ? 'An account keeps your workouts and history if you replace this phone. '
+                    'Without an account, everything stays on this device.'
+              : 'Workouts and history stay on this phone.',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
             height: 1.4,
           ),
         ),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            key: const Key('create-account'),
-            onPressed: onCreate,
-            child: const Text('Create account'),
+        if (accountsAvailable) ...[
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              key: const Key('create-account'),
+              onPressed: onCreate,
+              child: const Text('Create account'),
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton(
-            key: const Key('sign-in'),
-            onPressed: onSignIn,
-            child: const Text('Sign in'),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              key: const Key('sign-in'),
+              onPressed: onSignIn,
+              child: const Text('Sign in'),
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -166,6 +199,7 @@ class _SignedInAccount extends StatelessWidget {
     required this.onRetry,
     required this.onMove,
     required this.onSignOut,
+    required this.onDelete,
   });
 
   final String email;
@@ -179,6 +213,7 @@ class _SignedInAccount extends StatelessWidget {
   final VoidCallback onRetry;
   final VoidCallback onMove;
   final VoidCallback onSignOut;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -254,6 +289,17 @@ class _SignedInAccount extends StatelessWidget {
           child: TextButton(
             onPressed: onSignOut,
             child: const Text('Sign out'),
+          ),
+        ),
+        SizedBox(
+          width: double.infinity,
+          child: TextButton(
+            key: const Key('delete-account'),
+            onPressed: onDelete,
+            style: TextButton.styleFrom(
+              foregroundColor: theme.colorScheme.error,
+            ),
+            child: const Text('Delete account'),
           ),
         ),
       ],

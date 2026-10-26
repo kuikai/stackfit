@@ -4,6 +4,7 @@ export 'app_settings.dart';
 export 'catalog_exercise.dart';
 export 'circuit.dart';
 export 'completed_session.dart';
+export 'in_progress_workout.dart';
 export 'custom_catalog.dart';
 export 'exercise.dart';
 export 'exercise_type.dart';

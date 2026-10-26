@@ -195,6 +195,21 @@ a.ghost { display: inline-block; }
 
 .banner.ok { background: #e7f5ee; color: #0b6b48; }
 
+.delete-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(18, 32, 24, 0.45);
+}
+
+.delete-dialog .panel { width: min(440px, 100%); margin: 0; }
+
+.policy p { line-height: 1.5; margin: 0 0 12px; }
+.form-error { color: var(--danger); margin: 0 0 8px; }
+
 .empty {
   padding: 20px;
   border: 1px dashed var(--line);

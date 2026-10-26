@@ -7,14 +7,16 @@ import 'app_providers.dart';
 import 'pro_provider.dart';
 
 final completedSessionsProvider =
-    StateNotifierProvider<CompletedSessionsNotifier, List<CompletedSession>>(
-  (ref) {
-    return CompletedSessionsNotifier(ref.watch(storageServiceProvider));
-  },
-);
+    StateNotifierProvider<CompletedSessionsNotifier, List<CompletedSession>>((
+      ref,
+    ) {
+      return CompletedSessionsNotifier(ref.watch(storageServiceProvider));
+    });
 
 /// History list respecting the free-tier cap when the user is not Pro.
-final visibleCompletedSessionsProvider = Provider<List<CompletedSession>>((ref) {
+final visibleCompletedSessionsProvider = Provider<List<CompletedSession>>((
+  ref,
+) {
   final sessions = ref.watch(completedSessionsProvider);
   final isPro = ref.watch(isProProvider);
   if (isPro || sessions.length <= AppConstants.freeHistoryLimit) {
@@ -26,14 +28,13 @@ final visibleCompletedSessionsProvider = Provider<List<CompletedSession>>((ref) 
 /// Sessions of one workout (newest first), within the same free-tier cap.
 final sessionsForWorkoutProvider =
     Provider.family<List<CompletedSession>, String>((ref, workoutId) {
-  final sessions = ref.watch(visibleCompletedSessionsProvider);
-  return sessions.where((s) => s.workoutId == workoutId).toList();
-});
+      final sessions = ref.watch(visibleCompletedSessionsProvider);
+      return sessions.where((s) => s.workoutId == workoutId).toList();
+    });
 
-class CompletedSessionsNotifier
-    extends StateNotifier<List<CompletedSession>> {
+class CompletedSessionsNotifier extends StateNotifier<List<CompletedSession>> {
   CompletedSessionsNotifier(this._storage)
-      : super(_sorted(_storage.loadCompletedSessions()));
+    : super(_sorted(_storage.loadCompletedSessions()));
 
   final StorageService _storage;
 

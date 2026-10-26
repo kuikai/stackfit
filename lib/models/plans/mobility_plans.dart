@@ -7,9 +7,7 @@ class MobilityPlans {
 
   static const String category = 'Mobility';
 
-  static final List<WorkoutPlan> all = [
-    mobility,
-  ];
+  static final List<WorkoutPlan> all = [mobility];
 
   // Source: yogaphilippines.com 10-minute yoga, loadmuscle.com 15-minute mobility
   static final WorkoutPlan mobility = WorkoutPlan(
@@ -42,16 +40,32 @@ class MobilityPlans {
       PlanDay(
         name: '15-min Hips and Hamstrings',
         exercises: [
-          PlanExercises.timer("World's Greatest Stretch",
-              work: 30, rest: 15, rounds: 2),
-          PlanExercises.timer('90/90 Hip Stretch',
-              work: 30, rest: 15, rounds: 2),
+          PlanExercises.timer(
+            "World's Greatest Stretch",
+            work: 30,
+            rest: 15,
+            rounds: 2,
+          ),
+          PlanExercises.timer(
+            '90/90 Hip Stretch',
+            work: 30,
+            rest: 15,
+            rounds: 2,
+          ),
           PlanExercises.timer('Pigeon', work: 30, rest: 15, rounds: 2),
-          PlanExercises.timer('Hamstring Stretch',
-              work: 30, rest: 15, rounds: 2),
+          PlanExercises.timer(
+            'Hamstring Stretch',
+            work: 30,
+            rest: 15,
+            rounds: 2,
+          ),
           PlanExercises.timer('Hip Circles', work: 30, rest: 15, rounds: 2),
-          PlanExercises.timer('Kneeling Hip Flexor Stretch',
-              work: 30, rest: 15, rounds: 2),
+          PlanExercises.timer(
+            'Kneeling Hip Flexor Stretch',
+            work: 30,
+            rest: 15,
+            rounds: 2,
+          ),
         ],
       ),
     ],

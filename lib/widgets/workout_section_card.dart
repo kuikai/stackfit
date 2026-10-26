@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/theme.dart';
 import '../core/utils.dart';
 import '../models/models.dart';
+import 'skin_panel.dart';
 import 'workout_tile.dart';
 
 /// A named folder on Home, with its days listed like a Bro Split plan.
@@ -20,6 +21,8 @@ class WorkoutSectionCard extends StatelessWidget {
     required this.onDissolve,
     required this.onAddWorkout,
     this.onDuplicate,
+    this.onStartOver,
+    this.isInProgress,
   });
 
   final String section;
@@ -33,6 +36,15 @@ class WorkoutSectionCard extends StatelessWidget {
   final VoidCallback onDissolve;
   final VoidCallback onAddWorkout;
   final void Function(Workout workout)? onDuplicate;
+  final void Function(Workout workout)? onStartOver;
+  final bool Function(Workout workout)? isInProgress;
+
+  VoidCallback? _startOverFor(Workout workout) {
+    if (onStartOver == null || !(isInProgress?.call(workout) ?? false)) {
+      return null;
+    }
+    return () => onStartOver!(workout);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,10 +59,14 @@ class WorkoutSectionCard extends StatelessWidget {
       count == 0 ? 0 : seconds ~/ count,
     );
 
-    return Card(
-      margin: EdgeInsets.only(bottom: context.skinLook.listGap),
+    final look = context.skinLook;
+    return SkinPanel(
+      margin: EdgeInsets.only(bottom: look.listGap),
+      overPortrait: true,
       child: ExpansionTile(
         initiallyExpanded: true,
+        backgroundColor: Colors.transparent,
+        collapsedBackgroundColor: Colors.transparent,
         tilePadding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
         childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
         shape: const Border(),
@@ -99,6 +115,7 @@ class WorkoutSectionCard extends StatelessWidget {
             WorkoutTile(
               workout: workouts[i],
               embedded: true,
+              inProgress: isInProgress?.call(workouts[i]) ?? false,
               onStart: () => onStart(workouts[i]),
               onEdit: () => onEdit(workouts[i]),
               onHistory: () => onHistory(workouts[i]),
@@ -107,6 +124,7 @@ class WorkoutSectionCard extends StatelessWidget {
               onDuplicate: onDuplicate == null
                   ? null
                   : () => onDuplicate!(workouts[i]),
+              onStartOver: _startOverFor(workouts[i]),
             ),
           ],
         ],

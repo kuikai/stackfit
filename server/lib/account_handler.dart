@@ -11,7 +11,7 @@ const jsonHeaders = {'content-type': 'application/json; charset=utf-8'};
 
 const corsHeaders = {
   'access-control-allow-origin': '*',
-  'access-control-allow-methods': 'GET, POST, PUT, PATCH, OPTIONS',
+  'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
   'access-control-allow-headers': 'content-type, authorization',
 };
 
@@ -29,8 +29,15 @@ Handler createAccountHandler(
       '/v1/auth/request-reset',
       (Request request) => _requestReset(request, store, onResetCode),
     )
-    ..post('/v1/auth/reset', (Request request) => _resetPassword(request, store))
+    ..post(
+      '/v1/auth/reset',
+      (Request request) => _resetPassword(request, store),
+    )
     ..patch('/v1/profile', (Request request) => _updateProfile(request, store))
+    ..delete(
+      '/v1/account',
+      (Request request) => _deleteAccount(request, store, shares),
+    )
     ..get('/v1/sync', (Request request) => _readSync(request, store))
     ..put('/v1/sync', (Request request) => _writeSync(request, store));
   if (shares != null) {
@@ -122,6 +129,33 @@ Future<Response> _signOut(Request request, AccountStore store) async {
   return _ok({'ok': true});
 }
 
+Future<Response> _deleteAccount(
+  Request request,
+  AccountStore store,
+  ShareStore? shares,
+) async {
+  final user = await _authorizedUser(request, store);
+  if (user == null) {
+    return _error(401, 'Sign in again.');
+  }
+  try {
+    final body = await _readJson(request);
+    final password = body['password'];
+    if (password is! String || password.isEmpty) {
+      return _error(400, 'Enter your password to delete the account.');
+    }
+    await store.deleteAccount(userId: user.id, password: password);
+    if (shares != null) {
+      await shares.deleteOwned(user.id);
+    }
+    return _ok({'ok': true});
+  } on AccountStoreException catch (error) {
+    return _error(401, error.message);
+  } on FormatException {
+    return _error(400, 'Send account details as JSON.');
+  }
+}
+
 Future<Response> _requestReset(
   Request request,
   AccountStore store,
@@ -153,7 +187,10 @@ Future<Response> _resetPassword(Request request, AccountStore store) async {
     final password = validPassword(body['password']);
     final code = body['code'];
     if (email == null || password == null || code is! String) {
-      return _error(400, 'Enter the reset code and a new password of at least 8 characters.');
+      return _error(
+        400,
+        'Enter the reset code and a new password of at least 8 characters.',
+      );
     }
     await store.resetPassword(email: email, code: code, password: password);
     return _ok({'ok': true});
@@ -260,11 +297,7 @@ Response _error(int status, String message) {
 }
 
 Response _json(int status, Map<String, dynamic> body) {
-  return Response(
-    status,
-    body: jsonEncode(body),
-    headers: jsonHeaders,
-  );
+  return Response(status, body: jsonEncode(body), headers: jsonHeaders);
 }
 
 String? bearerToken(Request request) {

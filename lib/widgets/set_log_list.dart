@@ -23,31 +23,16 @@ class SetLogList extends StatelessWidget {
         separatorBuilder: (_, _) => const Divider(height: 1),
         itemBuilder: (context, index) {
           final group = groups[index];
-          final reps = SetLog.summarize(group);
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _groupTitle(group.first),
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  reps,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.w700,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-              ],
+          return _SetLogRow(
+            title: _groupTitle(group.first),
+            summary: SetLog.summarize(group),
+            titleStyle: theme.textTheme.bodyLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+            summaryStyle: theme.textTheme.bodyLarge?.copyWith(
+              color: colorScheme.primary,
+              fontWeight: FontWeight.w700,
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
           );
         },
@@ -76,5 +61,47 @@ class SetLogList extends StatelessWidget {
       }
     }
     return groups;
+  }
+}
+
+/// Name on the left, sets on the right. Both sides have a real width, so a
+/// long reps×kg line wraps inside the card instead of spilling out.
+class _SetLogRow extends StatelessWidget {
+  const _SetLogRow({
+    required this.title,
+    required this.summary,
+    required this.titleStyle,
+    required this.summaryStyle,
+  });
+
+  final String title;
+  final String summary;
+  final TextStyle? titleStyle;
+  final TextStyle? summaryStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 4,
+            child: Text(
+              title,
+              style: titleStyle,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 5,
+            child: Text(summary, textAlign: TextAlign.end, style: summaryStyle),
+          ),
+        ],
+      ),
+    );
   }
 }

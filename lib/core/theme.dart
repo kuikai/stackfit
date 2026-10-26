@@ -20,7 +20,11 @@ class AppTheme {
     final palette = AppSkins.palette(skin, brightness);
     final look = AppSkins.look(skin);
     final colorScheme = palette.toColorScheme(brightness);
-    final scaffoldBackground = palette.background;
+    final showGym =
+        brightness == Brightness.dark && skin.backgroundAsset != null;
+    final scaffoldBackground = showGym
+        ? Colors.transparent
+        : palette.background;
     final textTheme = _skinTextTheme(
       look: look,
       brightness: brightness,
@@ -37,6 +41,10 @@ class AppTheme {
       splashFactory: InkRipple.splashFactory,
       appBarTheme: _appBarTheme(scaffoldBackground, colorScheme, textTheme),
       cardTheme: _cardTheme(colorScheme, look, brightness),
+      expansionTileTheme: const ExpansionTileThemeData(
+        backgroundColor: Colors.transparent,
+        collapsedBackgroundColor: Colors.transparent,
+      ),
       filledButtonTheme: _filledButtonTheme(look),
       outlinedButtonTheme: _outlinedButtonTheme(look),
       floatingActionButtonTheme: _fabTheme(colorScheme, look),
@@ -193,11 +201,19 @@ CardThemeData _cardTheme(
   Brightness brightness,
 ) {
   final isDark = brightness == Brightness.dark;
+  final glass = look.cardOpacity < 1;
   return CardThemeData(
-    elevation: isDark ? 0 : 1.5,
-    shadowColor: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
-    shape: RoundedRectangleBorder(borderRadius: look.cornerRadius),
-    color: colorScheme.surface,
+    elevation: glass ? 0 : (isDark ? 0 : 1.5),
+    shadowColor: glass
+        ? Colors.transparent
+        : Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+    shape: RoundedRectangleBorder(
+      borderRadius: look.cornerRadius,
+      side: glass
+          ? BorderSide(color: colorScheme.primary.withValues(alpha: 0.32))
+          : BorderSide.none,
+    ),
+    color: look.cardFill(colorScheme),
     surfaceTintColor: Colors.transparent,
     margin: EdgeInsets.zero,
   );

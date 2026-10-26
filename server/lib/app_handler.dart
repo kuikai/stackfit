@@ -27,10 +27,7 @@ Handler createAppHandler(
   final files = const Pipeline()
       .addMiddleware(_noCache())
       .addHandler(
-        createStaticHandler(
-          directory.path,
-          defaultDocument: 'index.html',
-        ),
+        createStaticHandler(directory.path, defaultDocument: 'index.html'),
       );
   final site = Cascade().add(_sharePage(directory)).add(files).handler;
   return (Request request) {

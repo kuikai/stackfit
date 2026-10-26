@@ -56,16 +56,56 @@ class SetTracker extends StatefulWidget {
 }
 
 class _SetTrackerState extends State<SetTracker> {
-  /// A completed set the user tapped to correct; null means none.
+  /// A completed set the user tapped to correct; null means the set just finished.
   int? _editingSet;
+  final Map<int, GlobalKey> _rowKeys = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleReveal();
+  }
 
   @override
   void didUpdateWidget(covariant SetTracker oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.exercise.id != widget.exercise.id ||
-        oldWidget.activeSetNumber != widget.activeSetNumber) {
+    final exerciseChanged = oldWidget.exercise.id != widget.exercise.id;
+    final setChanged = oldWidget.activeSetNumber != widget.activeSetNumber;
+    if (exerciseChanged || setChanged) {
       _editingSet = null;
     }
+    if (exerciseChanged) {
+      _rowKeys.clear();
+    }
+    if (exerciseChanged ||
+        setChanged ||
+        oldWidget.isResting != widget.isResting) {
+      _scheduleReveal();
+    }
+  }
+
+  GlobalKey _rowKey(int setNumber) {
+    return _rowKeys.putIfAbsent(setNumber, GlobalKey.new);
+  }
+
+  /// Brings the set being logged into view when it sits below the fold.
+  void _scheduleReveal() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      final target = _rowKeys[_controlsSet()]?.currentContext;
+      if (target == null) {
+        return;
+      }
+      Scrollable.ensureVisible(
+        target,
+        alignment: 1,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   SetLog? _logFor(int setNumber) {
@@ -77,17 +117,25 @@ class _SetTrackerState extends State<SetTracker> {
     return null;
   }
 
+  /// The set the steppers are changing. Rest starts on the set just finished.
+  int _controlsSet() {
+    if (!widget.isResting) {
+      return widget.activeSetNumber;
+    }
+    return _editingSet ?? widget.activeSetNumber;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final totalSets = widget.exercise.sets ?? 1;
+    final controls = _controls();
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
               'Log',
@@ -95,9 +143,17 @@ class _SetTrackerState extends State<SetTracker> {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 6),
-            for (var setNumber = 1; setNumber <= totalSets; setNumber++)
-              _buildRow(setNumber),
+            const SizedBox(height: 4),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  for (var setNumber = 1; setNumber <= totalSets; setNumber++)
+                    _buildRow(setNumber),
+                ],
+              ),
+            ),
+            if (controls != null) ...[const SizedBox(height: 6), controls],
           ],
         ),
       ),
@@ -106,51 +162,62 @@ class _SetTrackerState extends State<SetTracker> {
 
   Widget _buildRow(int setNumber) {
     final log = _logFor(setNumber);
-    final isActive = setNumber == widget.activeSetNumber;
-
-    if (isActive && !widget.isResting) {
-      final entry = widget.activeEntry;
-      return _SetRow(
-        setNumber: setNumber,
-        state: _RowState.active,
-        editor: _SetEditor(
-          reps: entry.reps,
-          weightKg: entry.weightKg,
-          onRepsChanged: (value) {
-            widget.onActiveEntryChanged(entry.copyWith(reps: value.toInt()));
-          },
-          onWeightChanged: (value) {
-            widget.onActiveEntryChanged(entry.copyWith(weightKg: value));
-          },
-        ),
-      );
-    }
+    final controlsThisSet = _controlsSet() == setNumber;
+    final key = _rowKey(setNumber);
 
     if (log != null) {
-      final editing =
-          _editingSet == setNumber ||
-          (_editingSet == null && isActive && widget.isResting);
       return _SetRow(
+        key: key,
         setNumber: setNumber,
         state: _RowState.done,
-        onTap: () => setState(() => _editingSet = editing ? -1 : setNumber),
-        trailing: editing ? null : _LoggedLabel(log: log),
-        editor: editing
-            ? _SetEditor(
-                reps: log.reps,
-                weightKg: log.weightKg ?? 0,
-                onRepsChanged: (value) {
-                  widget.onLoggedSetChanged(setNumber, reps: value.toInt());
-                },
-                onWeightChanged: (value) {
-                  widget.onLoggedSetChanged(setNumber, weightKg: value);
-                },
-              )
-            : null,
+        highlighted: controlsThisSet,
+        onTap: () => setState(() => _editingSet = setNumber),
+        trailing: _LoggedLabel(log: log),
       );
     }
 
-    return _SetRow(setNumber: setNumber, state: _RowState.upcoming);
+    if (setNumber == widget.activeSetNumber && !widget.isResting) {
+      return _SetRow(
+        key: key,
+        setNumber: setNumber,
+        state: _RowState.active,
+        highlighted: true,
+      );
+    }
+
+    return _SetRow(key: key, setNumber: setNumber, state: _RowState.upcoming);
+  }
+
+  /// Steppers for the set being entered, kept under the list so they stay visible.
+  Widget? _controls() {
+    if (!widget.isResting) {
+      final entry = widget.activeEntry;
+      return _SetEditor(
+        reps: entry.reps,
+        weightKg: entry.weightKg,
+        onRepsChanged: (value) {
+          widget.onActiveEntryChanged(entry.copyWith(reps: value.toInt()));
+        },
+        onWeightChanged: (value) {
+          widget.onActiveEntryChanged(entry.copyWith(weightKg: value));
+        },
+      );
+    }
+
+    final log = _logFor(_controlsSet());
+    if (log == null) {
+      return null;
+    }
+    return _SetEditor(
+      reps: log.reps,
+      weightKg: log.weightKg ?? 0,
+      onRepsChanged: (value) {
+        widget.onLoggedSetChanged(log.setNumber, reps: value.toInt());
+      },
+      onWeightChanged: (value) {
+        widget.onLoggedSetChanged(log.setNumber, weightKg: value);
+      },
+    );
   }
 }
 
@@ -158,26 +225,25 @@ enum _RowState { done, active, upcoming }
 
 class _SetRow extends StatelessWidget {
   const _SetRow({
+    super.key,
     required this.setNumber,
     required this.state,
+    this.highlighted = false,
     this.trailing,
-    this.editor,
     this.onTap,
   });
 
   final int setNumber;
   final _RowState state;
+  final bool highlighted;
   final Widget? trailing;
-  final Widget? editor;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isActive = state == _RowState.active;
     final isUpcoming = state == _RowState.upcoming;
-    final highlighted = isActive || editor != null;
 
     final icon = switch (state) {
       _RowState.done => Icons.check_circle_rounded,
@@ -200,30 +266,24 @@ class _SetRow extends StatelessWidget {
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Icon(icon, size: 20, color: iconColor),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Set $setNumber',
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          fontWeight: highlighted
-                              ? FontWeight.w800
-                              : FontWeight.w600,
-                          color: isUpcoming
-                              ? colorScheme.onSurface.withValues(alpha: 0.45)
-                              : colorScheme.onSurface,
-                        ),
-                      ),
+                Icon(icon, size: 20, color: iconColor),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Set $setNumber',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: highlighted
+                          ? FontWeight.w800
+                          : FontWeight.w600,
+                      color: isUpcoming
+                          ? colorScheme.onSurface.withValues(alpha: 0.45)
+                          : colorScheme.onSurface,
                     ),
-                    ?trailing,
-                  ],
+                  ),
                 ),
-                if (editor != null) ...[const SizedBox(height: 6), editor!],
+                ?trailing,
               ],
             ),
           ),
@@ -233,7 +293,7 @@ class _SetRow extends StatelessWidget {
   }
 }
 
-/// Reps and kg steppers side by side (wraps on narrow screens).
+/// Reps and kg on one row, small enough for a phone-width window.
 class _SetEditor extends StatelessWidget {
   const _SetEditor({
     required this.reps,
@@ -249,25 +309,30 @@ class _SetEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 16,
-      runSpacing: 8,
-      alignment: WrapAlignment.center,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        NumberStepper(
-          label: 'Reps',
-          value: reps.toDouble(),
-          max: 999,
-          onChanged: onRepsChanged,
+        Expanded(
+          child: NumberStepper(
+            label: 'Reps',
+            value: reps.toDouble(),
+            max: 999,
+            compact: true,
+            onChanged: onRepsChanged,
+          ),
         ),
-        NumberStepper(
-          label: 'Weight',
-          unit: 'kg',
-          value: weightKg,
-          step: 2.5,
-          decimals: 1,
-          max: 999,
-          onChanged: onWeightChanged,
+        const SizedBox(width: 8),
+        Expanded(
+          child: NumberStepper(
+            label: 'Weight',
+            unit: 'kg',
+            value: weightKg,
+            step: 2.5,
+            decimals: 1,
+            max: 999,
+            compact: true,
+            onChanged: onWeightChanged,
+          ),
         ),
       ],
     );

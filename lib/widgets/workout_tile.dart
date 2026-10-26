@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/theme.dart';
 import '../core/utils.dart';
 import '../models/models.dart';
+import 'skin_panel.dart';
 
 /// A single workout row on the Home screen.
 class WorkoutTile extends StatelessWidget {
@@ -15,6 +16,8 @@ class WorkoutTile extends StatelessWidget {
     required this.onHistory,
     this.onDuplicate,
     this.onMoveToSection,
+    this.onStartOver,
+    this.inProgress = false,
     this.embedded = false,
   });
 
@@ -25,6 +28,12 @@ class WorkoutTile extends StatelessWidget {
   final VoidCallback onHistory;
   final VoidCallback? onDuplicate;
   final VoidCallback? onMoveToSection;
+
+  /// Clears a saved run and starts from the first exercise.
+  final VoidCallback? onStartOver;
+
+  /// True when this workout has a saved place to continue.
+  final bool inProgress;
 
   /// True when this row sits inside a section card (no extra Card chrome).
   final bool embedded;
@@ -42,6 +51,10 @@ class WorkoutTile extends StatelessWidget {
     final circuitLabel = circuitCount == 0
         ? ''
         : ' · $circuitCount circuit${circuitCount == 1 ? '' : 's'}';
+    final detail =
+        '$exerciseCount exercise${exerciseCount == 1 ? '' : 's'}'
+        '$circuitLabel'
+        ' · ~$durationLabel';
 
     final row = InkWell(
       borderRadius: look.cornerRadius,
@@ -78,13 +91,13 @@ class WorkoutTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '$exerciseCount exercise${exerciseCount == 1 ? '' : 's'}'
-                    '$circuitLabel'
-                    ' · ~$durationLabel',
+                    inProgress ? 'In progress · $detail' : detail,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onSurface.withValues(alpha: 0.55),
                       fontWeight: FontWeight.w500,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -97,6 +110,8 @@ class WorkoutTile extends StatelessWidget {
                     onEdit();
                   case _WorkoutMenuAction.history:
                     onHistory();
+                  case _WorkoutMenuAction.startOver:
+                    onStartOver?.call();
                   case _WorkoutMenuAction.move:
                     onMoveToSection?.call();
                   case _WorkoutMenuAction.duplicate:
@@ -114,6 +129,11 @@ class WorkoutTile extends StatelessWidget {
                   value: _WorkoutMenuAction.history,
                   child: Text('History'),
                 ),
+                if (onStartOver != null)
+                  const PopupMenuItem(
+                    value: _WorkoutMenuAction.startOver,
+                    child: Text('Start over'),
+                  ),
                 if (onMoveToSection != null)
                   const PopupMenuItem(
                     value: _WorkoutMenuAction.move,
@@ -136,13 +156,17 @@ class WorkoutTile extends StatelessWidget {
     );
 
     if (embedded) {
-      return row;
+      return Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: SkinPanel(overPortrait: true, child: row),
+      );
     }
-    return Card(
+    return SkinPanel(
       margin: EdgeInsets.only(bottom: look.listGap),
+      overPortrait: true,
       child: row,
     );
   }
 }
 
-enum _WorkoutMenuAction { edit, history, move, duplicate, delete }
+enum _WorkoutMenuAction { edit, history, startOver, move, duplicate, delete }

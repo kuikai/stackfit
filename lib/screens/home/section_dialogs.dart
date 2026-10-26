@@ -93,10 +93,7 @@ class _MoveToSectionDialogState extends State<MoveToSectionDialog> {
                 value: MoveToSectionDialog.none,
               ),
               for (final section in widget.sections)
-                RadioListTile<String>(
-                  title: Text(section),
-                  value: section,
-                ),
+                RadioListTile<String>(title: Text(section), value: section),
               const RadioListTile<String>(
                 title: Text('New section'),
                 value: MoveToSectionDialog.createNew,
@@ -121,10 +118,7 @@ class _MoveToSectionDialogState extends State<MoveToSectionDialog> {
               Navigator.of(context).pop(MoveToSectionDialog.cancelled),
           child: const Text('Cancel'),
         ),
-        FilledButton(
-          onPressed: _confirm,
-          child: const Text('Move'),
-        ),
+        FilledButton(onPressed: _confirm, child: const Text('Move')),
       ],
     );
   }

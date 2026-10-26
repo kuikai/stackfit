@@ -8,12 +8,20 @@ class EmptyState extends StatelessWidget {
     required this.message,
     this.icon = Icons.fitness_center_outlined,
     this.action,
+    this.onIconPressed,
+    this.iconLabel,
   });
 
   final String title;
   final String message;
   final IconData icon;
   final Widget? action;
+
+  /// When set, the circle icon opens this action.
+  final VoidCallback? onIconPressed;
+
+  /// Spoken name for the icon button. Falls back to [title].
+  final String? iconLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -26,18 +34,11 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 76,
-              height: 76,
-              decoration: BoxDecoration(
-                color: colorScheme.primary.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                size: 34,
-                color: colorScheme.primary,
-              ),
+            _IconBadge(
+              icon: icon,
+              color: colorScheme.primary,
+              onPressed: onIconPressed,
+              label: iconLabel ?? title,
             ),
             const SizedBox(height: 16),
             Text(
@@ -56,11 +57,52 @@ class EmptyState extends StatelessWidget {
                 height: 1.45,
               ),
             ),
-            if (action != null) ...[
-              const SizedBox(height: 24),
-              action!,
-            ],
+            if (action != null) ...[const SizedBox(height: 24), action!],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _IconBadge extends StatelessWidget {
+  const _IconBadge({
+    required this.icon,
+    required this.color,
+    required this.onPressed,
+    required this.label,
+  });
+
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onPressed;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final badge = Container(
+      width: 76,
+      height: 76,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, size: 34, color: color),
+    );
+    if (onPressed == null) {
+      return badge;
+    }
+
+    return Semantics(
+      button: true,
+      label: label,
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onPressed,
+          child: badge,
         ),
       ),
     );

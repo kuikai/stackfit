@@ -8,6 +8,7 @@ import 'providers/account_provider.dart';
 import 'providers/app_providers.dart';
 import 'providers/settings_provider.dart';
 import 'screens/home/home_screen.dart';
+import 'widgets/skin_artwork.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,9 +16,7 @@ Future<void> main() async {
 
   runApp(
     ProviderScope(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
-      ],
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
       child: const StackFitApp(),
     ),
   );
@@ -61,6 +60,9 @@ class _StackFitAppState extends ConsumerState<StackFitApp>
       theme: AppTheme.light(settings.skin),
       darkTheme: AppTheme.dark(settings.skin),
       themeMode: settings.themeMode,
+      builder: (context, child) {
+        return SkinAppBackground(child: child ?? const SizedBox.shrink());
+      },
       home: const HomeScreen(),
     );
   }

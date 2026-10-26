@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../providers/settings_provider.dart';
 import '../../services/workout_session_controller.dart';
+import '../../widgets/skin_artwork.dart';
+
+/// How far the sitting chibi stands above the Done button.
+const _seatLift = 108.0;
+
+/// How far the resting chibi stands above the Skip rest button.
+const _restLift = 96.0;
 
 /// Done / Skip rest, shown under the countdown.
-class TimerPrimaryAction extends StatelessWidget {
+class TimerPrimaryAction extends ConsumerWidget {
   const TimerPrimaryAction({
     super.key,
     required this.state,
@@ -16,45 +25,83 @@ class TimerPrimaryAction extends StatelessWidget {
   final VoidCallback onSkipRest;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final skin = ref.watch(settingsProvider).skin;
     if (state.phase == SessionPhase.setReady) {
-      return _doneButton(context);
+      final lift = skin.mascotSeatAsset == null ? 0.0 : _seatLift;
+      return _doneButton(context, lift);
     }
     if (state.phase == SessionPhase.rest) {
-      return _skipRestButton();
+      final lift = skin.mascotRestAsset == null ? 0.0 : _restLift;
+      return _skipRestButton(lift);
     }
     return const SizedBox.shrink();
   }
 
-  Widget _doneButton(BuildContext context) {
+  Widget _doneButton(BuildContext context, double mascotLift) {
     final theme = Theme.of(context);
     final onPrimary = theme.colorScheme.onPrimary;
     final label = state.setNumber >= state.totalSets
         ? 'Done'
         : 'Done / Next Set';
-    return SizedBox(
-      width: double.infinity,
-      height: 60,
-      child: FilledButton(
-        onPressed: onCompleteSet,
-        child: Text(
-          label,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w800,
-            color: onPrimary,
-          ),
+    return Padding(
+      padding: EdgeInsets.only(top: mascotLift),
+      child: SizedBox(
+        width: double.infinity,
+        height: 60,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(
+              child: FilledButton(
+                onPressed: onCompleteSet,
+                child: Text(
+                  label,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: onPrimary,
+                  ),
+                ),
+              ),
+            ),
+            if (mascotLift > 0)
+              Positioned(
+                right: 6,
+                top: -mascotLift,
+                child: const SkinMascot(seated: true, size: 148, pinned: false),
+              ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _skipRestButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: FilledButton.tonal(
-        onPressed: onSkipRest,
-        child: const Text('Skip rest'),
+  Widget _skipRestButton(double mascotLift) {
+    return Padding(
+      padding: EdgeInsets.only(top: mascotLift),
+      child: SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(
+              child: FilledButton.tonal(
+                onPressed: onSkipRest,
+                child: const Text('Skip rest'),
+              ),
+            ),
+            if (mascotLift > 0)
+              const Positioned(
+                left: 0,
+                right: 0,
+                top: -_restLift,
+                child: Center(
+                  child: SkinMascot(resting: true, width: 260, pinned: false),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

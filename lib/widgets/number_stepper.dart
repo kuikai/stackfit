@@ -13,6 +13,7 @@ class NumberStepper extends StatefulWidget {
     this.decimals = 0,
     this.min = 0,
     this.max,
+    this.compact = false,
   });
 
   final double value;
@@ -29,6 +30,9 @@ class NumberStepper extends StatefulWidget {
 
   /// Highest value plus can reach. Omitted means no cap.
   final num? max;
+
+  /// Smaller buttons and type, so two steppers fit on one row.
+  final bool compact;
 
   @override
   State<NumberStepper> createState() => _NumberStepperState();
@@ -165,60 +169,85 @@ class _NumberStepperState extends State<NumberStepper> {
       children: [
         Text(
           caption,
-          style: theme.textTheme.labelMedium?.copyWith(
-            color: colorScheme.onSurface.withValues(alpha: 0.6),
-            fontWeight: FontWeight.w600,
-          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style:
+              (widget.compact
+                      ? theme.textTheme.labelSmall
+                      : theme.textTheme.labelMedium)
+                  ?.copyWith(
+                    color: colorScheme.onSurface.withValues(alpha: 0.6),
+                    fontWeight: FontWeight.w600,
+                  ),
         ),
         const SizedBox(height: 4),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _StepButton(
-              icon: Icons.remove_rounded,
-              tooltip: 'Less',
-              onPressed: _canDecrease ? () => _step(-widget.step) : null,
-            ),
-            _valueField(theme),
-            _StepButton(
-              icon: Icons.add_rounded,
-              tooltip: 'More',
-              onPressed: _canIncrease ? () => _step(widget.step) : null,
-            ),
-          ],
-        ),
+        _stepRow(theme),
+      ],
+    );
+  }
+
+  Widget _stepRow(ThemeData theme) {
+    final button = widget.compact ? 32.0 : 40.0;
+    final icon = widget.compact ? 18.0 : 22.0;
+    final less = _StepButton(
+      icon: Icons.remove_rounded,
+      tooltip: 'Less',
+      size: button,
+      iconSize: icon,
+      onPressed: _canDecrease ? () => _step(-widget.step) : null,
+    );
+    final more = _StepButton(
+      icon: Icons.add_rounded,
+      tooltip: 'More',
+      size: button,
+      iconSize: icon,
+      onPressed: _canIncrease ? () => _step(widget.step) : null,
+    );
+    final field = _valueField(theme);
+    if (!widget.compact) {
+      return Row(mainAxisSize: MainAxisSize.min, children: [less, field, more]);
+    }
+    return Row(
+      children: [
+        less,
+        Expanded(child: field),
+        more,
       ],
     );
   }
 
   Widget _valueField(ThemeData theme) {
-    return SizedBox(
-      width: _fieldWidth,
-      height: 40,
-      child: TextField(
-        controller: _controller,
-        focusNode: _focus,
-        textAlign: TextAlign.center,
-        textAlignVertical: TextAlignVertical.center,
-        keyboardType: TextInputType.numberWithOptions(
-          decimal: widget.decimals > 0,
-        ),
-        textInputAction: TextInputAction.done,
-        autocorrect: false,
-        enableSuggestions: false,
-        style: theme.textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w800,
-          color: theme.colorScheme.onSurface,
-          height: 1,
-        ),
-        cursorColor: theme.colorScheme.primary,
-        decoration: _fieldDecoration,
-        inputFormatters: [_NumberInputFormatter(decimals: widget.decimals)],
-        onChanged: _publishDraft,
-        onSubmitted: (_) => _focus.unfocus(),
-        onTapOutside: (_) => _focus.unfocus(),
+    final field = TextField(
+      controller: _controller,
+      focusNode: _focus,
+      textAlign: TextAlign.center,
+      textAlignVertical: TextAlignVertical.center,
+      keyboardType: TextInputType.numberWithOptions(
+        decimal: widget.decimals > 0,
       ),
+      textInputAction: TextInputAction.done,
+      autocorrect: false,
+      enableSuggestions: false,
+      style:
+          (widget.compact
+                  ? theme.textTheme.titleMedium
+                  : theme.textTheme.titleLarge)
+              ?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: theme.colorScheme.onSurface,
+                height: 1,
+              ),
+      cursorColor: theme.colorScheme.primary,
+      decoration: _fieldDecoration,
+      inputFormatters: [_NumberInputFormatter(decimals: widget.decimals)],
+      onChanged: _publishDraft,
+      onSubmitted: (_) => _focus.unfocus(),
+      onTapOutside: (_) => _focus.unfocus(),
     );
+    if (widget.compact) {
+      return SizedBox(height: 32, child: field);
+    }
+    return SizedBox(width: _fieldWidth, height: 40, child: field);
   }
 }
 
@@ -289,22 +318,32 @@ class _StepButton extends StatelessWidget {
     required this.icon,
     required this.tooltip,
     required this.onPressed,
+    this.size = 40,
+    this.iconSize = 22,
   });
 
   final IconData icon;
   final String tooltip;
   final VoidCallback? onPressed;
+  final double size;
+  final double iconSize;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 40,
-      height: 40,
+      width: size,
+      height: size,
       child: IconButton.filledTonal(
         tooltip: tooltip,
         padding: EdgeInsets.zero,
         onPressed: onPressed,
-        icon: Icon(icon, size: 22),
+        icon: Icon(icon, size: iconSize),
+        style: IconButton.styleFrom(
+          minimumSize: Size(size, size),
+          fixedSize: Size(size, size),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          padding: EdgeInsets.zero,
+        ),
       ),
     );
   }

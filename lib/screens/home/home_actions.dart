@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/models.dart';
+import '../../providers/in_progress_provider.dart';
 import '../../providers/workouts_provider.dart';
 import '../active_timer/active_timer_screen.dart';
 import '../history/workout_history_screen.dart';
@@ -9,7 +10,12 @@ import '../plans/plan_library_screen.dart';
 import '../workout_editor/workout_editor_screen.dart';
 import 'section_dialogs.dart';
 
-Future<void> startHomeWorkout(BuildContext context, Workout workout) async {
+Future<void> startHomeWorkout(
+  BuildContext context,
+  WidgetRef ref,
+  Workout workout, {
+  bool fresh = false,
+}) async {
   if (workout.exercises.isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -19,9 +25,60 @@ Future<void> startHomeWorkout(BuildContext context, Workout workout) async {
     return;
   }
 
+  final progress = await _progressForStart(ref, workout, fresh: fresh);
+  if (!context.mounted) {
+    return;
+  }
   await Navigator.of(context).push<void>(
-    MaterialPageRoute(builder: (_) => ActiveTimerScreen(workout: workout)),
+    MaterialPageRoute(
+      builder: (_) => ActiveTimerScreen(workout: workout, progress: progress),
+    ),
   );
+}
+
+/// Opens a plan-day run that is not in the workout list.
+Future<void> openInProgressRun(
+  BuildContext context,
+  WidgetRef ref,
+  InProgressWorkout run, {
+  bool fresh = false,
+}) async {
+  if (fresh) {
+    await ref.read(inProgressProvider.notifier).discard(run.workout.id);
+  }
+  if (!context.mounted) {
+    return;
+  }
+  await Navigator.of(context).push<void>(
+    MaterialPageRoute(
+      builder: (_) => ActiveTimerScreen(
+        workout: run.workout,
+        progress: fresh ? null : run,
+        origin: run.origin,
+      ),
+    ),
+  );
+}
+
+Future<InProgressWorkout?> _progressForStart(
+  WidgetRef ref,
+  Workout workout, {
+  required bool fresh,
+}) async {
+  final notifier = ref.read(inProgressProvider.notifier);
+  if (fresh) {
+    await notifier.discard(workout.id);
+    return null;
+  }
+  final saved = notifier.forWorkout(workout.id);
+  if (saved == null) {
+    return null;
+  }
+  if (!saved.canResume || !saved.matchesLayout(workout)) {
+    await notifier.discard(workout.id);
+    return null;
+  }
+  return saved;
 }
 
 Future<void> openHomePlans(BuildContext context) async {
@@ -147,6 +204,7 @@ Future<void> deleteHomeWorkout(
   }
 
   await ref.read(workoutsProvider.notifier).deleteWorkout(workout.id);
+  await ref.read(inProgressProvider.notifier).discard(workout.id);
 }
 
 Future<void> duplicateHomeWorkout(

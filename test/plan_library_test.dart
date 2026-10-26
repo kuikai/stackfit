@@ -42,8 +42,11 @@ void main() {
       for (final plan in PlanLibrary.all) {
         for (final day in plan.days) {
           final ids = day.exercises.map((exercise) => exercise.id).toList();
-          expect(ids.toSet().length, ids.length,
-              reason: '${plan.id}/${day.name}');
+          expect(
+            ids.toSet().length,
+            ids.length,
+            reason: '${plan.id}/${day.name}',
+          );
         }
       }
     });
@@ -119,10 +122,7 @@ void main() {
       expect(workouts.length, plan.days.length);
       final ids = workouts.map((workout) => workout.id).toSet();
       expect(ids.length, workouts.length);
-      expect(
-        workouts.every((workout) => workout.section == plan.name),
-        isTrue,
-      );
+      expect(workouts.every((workout) => workout.section == plan.name), isTrue);
     });
   });
 

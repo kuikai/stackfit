@@ -19,17 +19,29 @@ class WorkoutSessionController extends ChangeNotifier
     required this.onWorkFinished,
     required this.onRestFinished,
     required this.onWorkoutFinished,
-  }) : state = WorkoutSessionState(
-         workout: workout,
-         blockIndex: 0,
-         roundIndex: 0,
-         exerciseIndex: 0,
-         setIndex: 0,
-         phase: SessionPhase.work,
-         remainingSeconds: 0,
-         isPaused: false,
-         startedAt: DateTime.now(),
-       ) {
+    WorkoutSessionState? resumeState,
+    List<SetLog>? resumeLogs,
+    String? resumeAfterRest,
+  }) : state =
+           resumeState ??
+           WorkoutSessionState(
+             workout: workout,
+             blockIndex: 0,
+             roundIndex: 0,
+             exerciseIndex: 0,
+             setIndex: 0,
+             phase: SessionPhase.work,
+             remainingSeconds: 0,
+             isPaused: false,
+             startedAt: DateTime.now(),
+           ) {
+    if (resumeLogs != null) {
+      _setLog.replaceAll(resumeLogs);
+    }
+    if (resumeState != null) {
+      _armRestoredSession(resumeAfterRest);
+      return;
+    }
     if (!workout.hasStations) {
       state = state.copyWith(phase: SessionPhase.complete);
     } else {
@@ -58,8 +70,17 @@ class WorkoutSessionController extends ChangeNotifier
 
   final SessionSetLog _setLog = SessionSetLog();
 
+  /// Elapsed seconds frozen while the app is in the background.
+  int? _frozenElapsed;
+
   /// Reps logged so far, in the order sets were completed.
   List<SetLog> get setLogs => _setLog.logs;
+
+  /// Time spent in this run. Does not grow while [freezeClock] is in effect.
+  int get elapsedSeconds => _frozenElapsed ?? state.elapsedSeconds;
+
+  /// Where a rest in progress will go when it ends.
+  String get restContinuation => _afterRestName(_afterRest);
 
   /// The set just completed, while its rest is running. Null otherwise.
   SetLog? get restingSetLog {
@@ -144,11 +165,34 @@ class WorkoutSessionController extends ChangeNotifier
     _finishRest(playAlarm: false);
   }
 
+  /// Stops the countdown and holds [elapsedSeconds] until [thawClock].
+  void freezeClock() {
+    _frozenElapsed ??= state.elapsedSeconds;
+    _stopTicker();
+  }
+
+  /// Continues the countdown from the held elapsed time, if it was running.
+  void thawClock() {
+    final frozen = _frozenElapsed;
+    if (frozen == null) {
+      return;
+    }
+    _frozenElapsed = null;
+    state = state.copyWith(
+      startedAt: DateTime.now().subtract(Duration(seconds: frozen)),
+    );
+    if (_shouldTick) {
+      _startTicker();
+    }
+    notifyListeners();
+  }
+
   /// Restart the whole workout from the first exercise.
   void restart() {
     if (!state.workout.hasStations) {
       return;
     }
+    _frozenElapsed = null;
     _stopTicker();
     _afterRest = _AfterRest.block;
     _instantSkips = 0;
@@ -165,6 +209,57 @@ class WorkoutSessionController extends ChangeNotifier
       startedAt: DateTime.now(),
     );
     _enterBlock(0);
+  }
+
+  void _armRestoredSession(String? afterRest) {
+    if (state.phase == SessionPhase.rest) {
+      _afterRest = _afterRestFromName(afterRest ?? _inferredAfterRest());
+    }
+    if (_shouldTick) {
+      _startTicker();
+    }
+  }
+
+  bool get _shouldTick {
+    if (state.isPaused || state.isComplete) {
+      return false;
+    }
+    return state.phase == SessionPhase.work || state.phase == SessionPhase.rest;
+  }
+
+  /// Best guess when a saved rest did not record where it was going.
+  String _inferredAfterRest() {
+    final exercise = state.currentExercise;
+    if (exercise == null) {
+      return 'block';
+    }
+    if (exercise.type == ExerciseType.timer) {
+      final rounds = exercise.sets ?? 1;
+      if (state.setIndex < rounds - 1) {
+        return 'timerRound';
+      }
+    } else {
+      final sets = exercise.sets ?? 1;
+      if (state.setIndex < sets - 1) {
+        return 'set';
+      }
+    }
+    return _stationExitName();
+  }
+
+  String _stationExitName() {
+    final exit = planStationExit(
+      workout: state.workout,
+      blockIndex: state.blockIndex,
+      roundIndex: state.roundIndex,
+      exerciseIndex: state.exerciseIndex,
+      restAfterLastSet: state.currentExercise?.type == ExerciseType.sets,
+    );
+    return switch (exit.destination) {
+      StationDestination.station => 'station',
+      StationDestination.round => 'round',
+      StationDestination.block => 'block',
+    };
   }
 
   /// Skip current work interval, rest, or set.
@@ -216,4 +311,52 @@ class WorkoutSessionController extends ChangeNotifier
     }
     _startRest(exercise.restSeconds ?? 0, _AfterRest.set);
   }
+}
+
+/// Builds the timer place for a saved run, using [now] so closed time is dropped.
+WorkoutSessionState stateFromProgress(
+  InProgressWorkout progress,
+  Workout workout,
+  DateTime now,
+) {
+  return WorkoutSessionState(
+    workout: workout,
+    blockIndex: progress.blockIndex,
+    roundIndex: progress.roundIndex,
+    exerciseIndex: progress.exerciseIndex,
+    setIndex: progress.setIndex,
+    phase: _phaseFromName(progress.phase),
+    remainingSeconds: progress.remainingSeconds,
+    isPaused: progress.isPaused,
+    startedAt: progress.resumedStartedAt(now),
+  );
+}
+
+SessionPhase _phaseFromName(String raw) {
+  for (final phase in SessionPhase.values) {
+    if (phase.name == raw) {
+      return phase;
+    }
+  }
+  return SessionPhase.work;
+}
+
+String _afterRestName(_AfterRest after) {
+  return switch (after) {
+    _AfterRest.timerRound => 'timerRound',
+    _AfterRest.set => 'set',
+    _AfterRest.station => 'station',
+    _AfterRest.round => 'round',
+    _AfterRest.block => 'block',
+  };
+}
+
+_AfterRest _afterRestFromName(String name) {
+  return switch (name) {
+    'timerRound' => _AfterRest.timerRound,
+    'set' => _AfterRest.set,
+    'station' => _AfterRest.station,
+    'round' => _AfterRest.round,
+    _ => _AfterRest.block,
+  };
 }

@@ -1,7 +1,7 @@
 # StackFit – Acceptance Criteria (MVP)
 
 **App name:** StackFit  
-**Package:** `com.yourname.stackfit`  
+**Package:** `com.dix.stackfit`  
 **Platform:** Android + iOS (+ Windows for local testing)  
 **Monetization:** Free limited + $1.99 one-time Pro (RevenueCat — pending)  
 **Style:** Clean, minimal Material 3, offline-first
@@ -67,8 +67,8 @@
 ### Global controls (immediate — no confirm popups)
 - [x] Pause / Resume
 - [x] Skip current interval or set
-- [x] **Reset** — restarts the whole run from the first exercise
-- [x] **Stop** — exits the run immediately (no save)
+- [x] **Reset** — restarts the whole run from the first exercise and clears the saved place
+- [x] **Stop** — leaves the run and saves the place, sets, and time so it can be continued
 - [x] Avoid interruptive dialogs during the active timer flow
 
 ### Complete

@@ -76,7 +76,7 @@ Not stored as a fake cloud flag:
 Stays on the device, not in the account:
 
 - Exercise catalog (still shipped inside the app)
-- An in-progress timer that has not been completed (Stop still exits without saving)
+- An in-progress workout (saved on the phone so it can be continued; not part of the account)
 
 A completed workout still writes a history session, the same as today. That session is what syncs.
 

@@ -38,11 +38,9 @@ class AccountApiException implements Exception {
 
 /// HTTP client for the StackFit account server.
 class AccountApiClient {
-  AccountApiClient({
-    required String baseUrl,
-    http.Client? httpClient,
-  })  : _baseUrl = _trimUrl(baseUrl),
-        _httpClient = httpClient ?? http.Client();
+  AccountApiClient({required String baseUrl, http.Client? httpClient})
+    : _baseUrl = _trimUrl(baseUrl),
+      _httpClient = httpClient ?? http.Client();
 
   final String _baseUrl;
   final http.Client _httpClient;
@@ -66,10 +64,7 @@ class AccountApiClient {
     required String email,
     required String password,
   }) {
-    return _auth('/v1/auth/signin', {
-      'email': email,
-      'password': password,
-    });
+    return _auth('/v1/auth/signin', {'email': email, 'password': password});
   }
 
   Future<void> signOut(String token) async {
@@ -78,6 +73,19 @@ class AccountApiClient {
       '/v1/auth/signout',
       token: token,
       offlineMessage: 'Signed out on this device.',
+    );
+  }
+
+  Future<void> deleteAccount({
+    required String token,
+    required String password,
+  }) async {
+    await _send(
+      'DELETE',
+      '/v1/account',
+      token: token,
+      body: {'password': password},
+      offlineMessage: 'A connection is required to delete your account.',
     );
   }
 
@@ -98,11 +106,7 @@ class AccountApiClient {
     await _send(
       'POST',
       '/v1/auth/reset',
-      body: {
-        'email': email,
-        'code': code,
-        'password': password,
-      },
+      body: {'email': email, 'code': code, 'password': password},
       offlineMessage: 'A connection is required to reset your password.',
     );
   }
@@ -140,10 +144,7 @@ class AccountApiClient {
       'PUT',
       '/v1/sync',
       token: token,
-      body: {
-        'baseRevision': baseRevision,
-        'snapshot': snapshot.toJson(),
-      },
+      body: {'baseRevision': baseRevision, 'snapshot': snapshot.toJson()},
       offlineMessage: 'Offline — will save when online',
     );
     return _remoteFromJson(decoded);
@@ -160,7 +161,9 @@ class AccountApiClient {
     final token = decoded['token'] as String?;
     final user = decoded['user'];
     if (token == null || user is! Map) {
-      throw const AccountApiException('The account server sent an unexpected response.');
+      throw const AccountApiException(
+        'The account server sent an unexpected response.',
+      );
     }
     final userMap = Map<String, dynamic>.from(user);
     return AccountSession(
@@ -201,6 +204,7 @@ class AccountApiClient {
     } on http.ClientException {
       throw AccountApiException(offlineMessage, offline: true);
     } catch (_) {
+      // Not a timeout or a dropped connection. Show a plain message.
       throw const AccountApiException('Something went wrong.');
     }
   }

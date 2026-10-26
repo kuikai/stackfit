@@ -1,7 +1,7 @@
 # FitTimer / StackFit – Product Spec (MVP)
 
 **App name:** StackFit  
-**Package name:** `com.yourname.stackfit`  
+**Package name:** `com.dix.stackfit`  
 **Platform:** Android + iOS (Flutter)  
 **Monetization:** Free limited + $1.99 one-time Pro (RevenueCat)  
 **Style:** Clean, minimal, Material 3, offline-first
@@ -70,8 +70,8 @@ The app also includes a built-in **Exercise Catalog** so users can quickly add c
 - Global controls always available (**no confirmation popups** — keep the flow uninterrupted):
   - Pause / Resume
   - Skip current interval or set
-  - **Reset** — restarts the whole workout from the first exercise
-  - Stop entire workout (exits immediately)
+  - **Reset** — restarts the whole workout from the first exercise and clears any saved place
+  - Stop entire workout (saves the place, sets, and time, then leaves; opening it continues there)
 - When last exercise finishes → “Workout Complete” screen + sound
 
 ### 2.4 Free vs Pro

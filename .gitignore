@@ -46,3 +46,9 @@ app.*.map.json
 
 # Local account server data (emails and password hashes)
 /server/data/
+
+# Play upload key. Losing this after the first upload locks the app.
+/android/key.properties
+/android/app/upload-keystore.jks
+*.jks
+*.keystore

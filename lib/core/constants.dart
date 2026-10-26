@@ -22,6 +22,7 @@ class AppConstants {
   static const String proEntitlementId = 'StackFit Pro';
 
   /// Local account server. Override with --dart-define=STACKFIT_ACCOUNT_URL=...
+  /// A Play release build shows sign-in only when this address is https.
   static const String accountServerUrl = String.fromEnvironment(
     'STACKFIT_ACCOUNT_URL',
     defaultValue: 'http://127.0.0.1:8787',

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:stackfit/core/skins.dart';
 import 'package:stackfit/core/theme.dart';
+import 'package:stackfit/widgets/chibi_run.dart';
 
 void main() {
   setUpAll(() {
@@ -54,6 +55,36 @@ void main() {
     expect(AppSkin.cyberpunk.previewAsset, contains('cyberpunk'));
     expect(AppSkin.cyberpunk.backgroundAsset, contains('background.jpg'));
     expect(AppSkin.classic.backgroundAsset, isNull);
+    expect(AppSkin.cyberpunk.mascotAsset, contains('mascot-chibi.png'));
+    expect(AppSkin.cyberpunk.mascotSeatAsset, contains('mascot-chibi-sit'));
+    expect(AppSkin.cyberpunk.mascotRestAsset, contains('mascot-chibi-rest'));
+    expect(AppSkin.cyberpunk.mascotRunFrames, hasLength(13));
+    expect(AppSkin.classic.mascotRunFrames, isEmpty);
+    expect(runFrameIndex(elapsedSeconds: 0, frameCount: 6), 0);
+    expect(runFrameIndex(elapsedSeconds: 0.5, frameCount: 6), 4);
+    expect(runFrameIndex(elapsedSeconds: 0.75, frameCount: 6), 0);
+    expect(runFrameIndex(elapsedSeconds: 1, frameCount: 0), 0);
+    expect(AppSkin.classic.mascotAsset, isNull);
+    expect(AppSkin.classic.mascotSeatAsset, isNull);
+    expect(AppSkin.classic.mascotRestAsset, isNull);
+    expect(AppSkin.cyberpunk.heroAsset, contains('girl-standing'));
+    expect(AppSkin.cyberpunk.homePlateAsset, contains('girl-standing'));
+    expect(AppSkin.classic.heroAsset, isNull);
+    expect(AppSkin.classic.homePlateAsset, isNull);
+    expect(AppSkins.look(AppSkin.cyberpunk).cardOpacity, 0.12);
+    expect(AppSkins.look(AppSkin.classic).cardOpacity, 1);
+    final cyberpunkFill = AppSkins.look(
+      AppSkin.cyberpunk,
+    ).cardFill(const ColorScheme.dark());
+    expect(cyberpunkFill.a, closeTo(0.72, 0.01));
+    final portraitFill = AppSkins.look(
+      AppSkin.cyberpunk,
+    ).cardFill(const ColorScheme.dark(), overPortrait: true);
+    expect(portraitFill.a, closeTo(0.72, 0.01));
+    expect(
+      AppSkins.look(AppSkin.classic).cardFill(const ColorScheme.dark()).a,
+      1,
+    );
     expect(AppSkin.dumbbell.previewAsset, contains('banner-home'));
     expect(AppSkin.classic.previewAsset, isNull);
   });

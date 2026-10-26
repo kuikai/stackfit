@@ -7,7 +7,13 @@ Workout _benchWorkout() {
     id: 'w1',
     name: 'Bench day',
     exercises: [
-      Exercise.sets(id: 'e1', name: 'Bench Press', sets: 2, reps: 8, restSeconds: 60),
+      Exercise.sets(
+        id: 'e1',
+        name: 'Bench Press',
+        sets: 2,
+        reps: 8,
+        restSeconds: 60,
+      ),
       Exercise.sets(id: 'e2', name: 'Push-ups', sets: 1, restSeconds: 0),
     ],
     createdAt: DateTime(2026),
@@ -121,7 +127,12 @@ void main() {
             reps: 8,
             weightKg: 60,
           ),
-          SetLog(exerciseId: 'e1', exerciseName: 'Bench Press', setNumber: 2, reps: 6),
+          SetLog(
+            exerciseId: 'e1',
+            exerciseName: 'Bench Press',
+            setNumber: 2,
+            reps: 6,
+          ),
         ],
       );
 
@@ -139,10 +150,18 @@ void main() {
       expect(SetLog.formatKg(60), '60');
       expect(SetLog.formatKg(62.5), '62.5');
       const bodyweight = SetLog(
-        exerciseId: 'e', exerciseName: 'Push-ups', setNumber: 1, reps: 12);
+        exerciseId: 'e',
+        exerciseName: 'Push-ups',
+        setNumber: 1,
+        reps: 12,
+      );
       const weighted = SetLog(
-        exerciseId: 'e', exerciseName: 'Squat', setNumber: 1, reps: 5,
-        weightKg: 102.5);
+        exerciseId: 'e',
+        exerciseName: 'Squat',
+        setNumber: 1,
+        reps: 5,
+        weightKg: 102.5,
+      );
       expect(bodyweight.shortLabel, '12');
       expect(weighted.shortLabel, '5×102.5');
     });

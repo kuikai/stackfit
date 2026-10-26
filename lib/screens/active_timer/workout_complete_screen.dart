@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/utils.dart';
 import '../../models/models.dart';
 import '../../providers/completed_sessions_provider.dart';
+import '../../providers/settings_provider.dart';
 import '../../services/sound_service.dart';
+import '../../widgets/chibi_run.dart';
 import '../../widgets/set_log_list.dart';
 
 class WorkoutCompleteArgs {
@@ -20,10 +22,7 @@ class WorkoutCompleteArgs {
 }
 
 class WorkoutCompleteScreen extends ConsumerStatefulWidget {
-  const WorkoutCompleteScreen({
-    super.key,
-    required this.args,
-  });
+  const WorkoutCompleteScreen({super.key, required this.args});
 
   final WorkoutCompleteArgs args;
 
@@ -49,7 +48,9 @@ class _WorkoutCompleteScreenState extends ConsumerState<WorkoutCompleteScreen> {
     }
     _saved = true;
     final workout = widget.args.workout;
-    await ref.read(completedSessionsProvider.notifier).addSession(
+    await ref
+        .read(completedSessionsProvider.notifier)
+        .addSession(
           CompletedSession(
             id: AppUtils.newId(),
             workoutId: workout.id,
@@ -64,82 +65,96 @@ class _WorkoutCompleteScreenState extends ConsumerState<WorkoutCompleteScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final args = widget.args;
+    final runFrames = ref.watch(settingsProvider).skin.mascotRunFrames;
 
     return Scaffold(
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              const Spacer(),
-              Container(
-                width: 88,
-                height: 88,
-                decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.check_rounded,
-                  size: 48,
-                  color: colorScheme.onPrimaryContainer,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Workout complete',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                args.workout.name,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 28),
-              Text(
-                AppUtils.formatDurationFriendly(args.durationSeconds),
-                style: theme.textTheme.displaySmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -1,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${args.workout.exercises.length} exercises',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-              ),
-              if (args.setLogs.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                Flexible(
-                  flex: 3,
-                  child: SetLogList(logs: args.setLogs),
-                ),
-              ],
-              const Spacer(),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () {
-                    Navigator.of(context).popUntil((route) => route.isFirst);
-                  },
-                  child: const Text('Done'),
-                ),
-              ),
-            ],
-          ),
+          child: _finishColumn(runFrames),
         ),
       ),
+    );
+  }
+
+  Widget _finishColumn(List<String> runFrames) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final args = widget.args;
+
+    return Column(
+      children: [
+        const Spacer(),
+        Container(
+          width: 88,
+          height: 88,
+          decoration: BoxDecoration(
+            color: colorScheme.primaryContainer,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.check_rounded,
+            size: 48,
+            color: colorScheme.onPrimaryContainer,
+          ),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Workout complete',
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          args.workout.name,
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: colorScheme.onSurface.withValues(alpha: 0.7),
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 28),
+        Text(
+          AppUtils.formatDurationFriendly(args.durationSeconds),
+          style: theme.textTheme.displaySmall?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -1,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '${args.workout.exercises.length} exercises',
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+        if (args.setLogs.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          Flexible(flex: 3, child: SetLogList(logs: args.setLogs)),
+        ],
+        _finishLane(runFrames),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: () {
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            },
+            child: const Text('Done'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _finishLane(List<String> frames) {
+    if (frames.isEmpty) {
+      return const Spacer();
+    }
+    return SizedBox(
+      height: 120,
+      width: double.infinity,
+      child: ChibiRun(frames: frames),
     );
   }
 }

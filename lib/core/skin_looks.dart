@@ -97,6 +97,7 @@ const _cyberpunkLook = SkinLook(
   listGap: 8,
   buttonPaddingHorizontal: 18,
   buttonPaddingVertical: 10,
+  cardOpacity: 0.12,
 );
 
 const _dumbbellLook = SkinLook(
