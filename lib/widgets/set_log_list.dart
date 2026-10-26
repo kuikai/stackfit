@@ -29,9 +29,10 @@ class SetLogList extends StatelessWidget {
             titleStyle: theme.textTheme.bodyLarge?.copyWith(
               fontWeight: FontWeight.w600,
             ),
-            summaryStyle: theme.textTheme.bodyLarge?.copyWith(
+            summaryStyle: theme.textTheme.bodyMedium?.copyWith(
               color: colorScheme.primary,
               fontWeight: FontWeight.w700,
+              height: 1.35,
               fontFeatures: const [FontFeature.tabularFigures()],
             ),
           );
@@ -64,8 +65,9 @@ class SetLogList extends StatelessWidget {
   }
 }
 
-/// Name on the left, sets on the right. Both sides have a real width, so a
-/// long reps×kg line wraps inside the card instead of spilling out.
+/// Exercise name, then its sets on the next line. The numbers use the full
+/// width of the card, so a long line wraps cleanly instead of breaking
+/// beside the name.
 class _SetLogRow extends StatelessWidget {
   const _SetLogRow({
     required this.title,
@@ -82,24 +84,18 @@ class _SetLogRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            flex: 4,
-            child: Text(
-              title,
-              style: titleStyle,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
+          Text(
+            title,
+            style: titleStyle,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            flex: 5,
-            child: Text(summary, textAlign: TextAlign.end, style: summaryStyle),
-          ),
+          const SizedBox(height: 2),
+          Text(summary, style: summaryStyle),
         ],
       ),
     );

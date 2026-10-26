@@ -1,0 +1,39 @@
+---
+description: Open the phone app in the browser at one fixed address
+alwaysApply: true
+---
+
+# Test the app in the browser
+
+When you need to see the phone app, open this address and no other:
+
+http://127.0.0.1:8181
+
+That page is the Flutter app. http://127.0.0.1:8787 is the account website. Do not use it to check a screen.
+
+## Start it once
+
+From the project root, only if 8181 is not already StackFit:
+
+```bash
+flutter run -d web-server --web-hostname 127.0.0.1 --web-port 8181
+```
+
+Do not start a second copy. Do not use `flutter run -d chrome`, Windows, Android, or a phone. Those pick their own window and port.
+
+## App window
+
+The Cursor browser cannot hide its tabs. Chrome can. Once 8181 is up, open the app as its own window:
+
+```powershell
+& "C:\Program Files\Google\Chrome\Application\chrome.exe" --user-data-dir="$env:LOCALAPPDATA\StackFit\chrome-app" --app=http://127.0.0.1:8181 --window-size=430,900
+```
+
+The separate profile is what makes a real app window. Without it, Chrome just adds a tab to the window you already have. That app window has no address bar and no tab strip.
+
+## Stay on that run
+
+- After a code change, press `r` in that same terminal. The page stays where it is.
+- Press `R` only when the screen is stuck. Then tap Continue on Home if a workout was already going.
+- Move through a workout with Skip and Skip rest. A one-exercise test workout is enough for the timer.
+- `flutter test` still checks logic. Use the browser when a person would see the change.

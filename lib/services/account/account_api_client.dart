@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
@@ -199,12 +198,14 @@ class AccountApiClient {
       rethrow;
     } on TimeoutException {
       throw AccountApiException(offlineMessage, offline: true);
-    } on SocketException {
-      throw AccountApiException(offlineMessage, offline: true);
     } on http.ClientException {
       throw AccountApiException(offlineMessage, offline: true);
-    } catch (_) {
-      // Not a timeout or a dropped connection. Show a plain message.
+    } catch (error) {
+      // SocketException is a phone/desktop type. The browser build cannot
+      // import it, so a dropped connection is matched by name.
+      if (error.runtimeType.toString() == 'SocketException') {
+        throw AccountApiException(offlineMessage, offline: true);
+      }
       throw const AccountApiException('Something went wrong.');
     }
   }

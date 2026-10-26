@@ -4,7 +4,7 @@ import '../../core/utils.dart';
 import '../../models/models.dart';
 import '../../services/workout_session_controller.dart';
 
-/// The big WORK / REST countdown. Rest sits on the background. Work stays in a card.
+/// The WORK / REST countdown, drawn on the background with no holder box.
 class ActiveTimerCard extends StatelessWidget {
   const ActiveTimerCard({super.key, required this.state});
 
@@ -72,10 +72,7 @@ class ActiveTimerCard extends StatelessWidget {
       ),
     );
 
-    if (state.phase == SessionPhase.rest) {
-      return countdown;
-    }
-    return Card(child: countdown);
+    return countdown;
   }
 
   /// Big time, shrunk to the space under the phase label so it never overflows.

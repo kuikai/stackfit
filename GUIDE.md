@@ -274,6 +274,7 @@ analysis_options.yaml House style the phone app is checked against
 .cursor/rules/
   keep-guide-current.mdc   Tells the AI agent to update this file whenever it adds, moves, or removes code
   keep-code-sharp.mdc      Tells the AI agent to keep screens, providers, services, and models in their own layers
+  test-in-browser.mdc      Tells the AI agent to open the phone app at http://127.0.0.1:8181
 ```
 
 ### `icon/` – home-screen picture
@@ -281,6 +282,15 @@ analysis_options.yaml House style the phone app is checked against
 ```
 icon.png              Home-screen icon picture. Black background, blue dumbbell, 1024×1024
 app-store-header.png  App Store header and search image. Same dumbbell, 5244×2950
+```
+
+### `web/` – the same phone app, opened in a browser
+
+```
+index.html            Browser page that loads the app. Open http://127.0.0.1:8181
+manifest.json         Name and colours if the browser offers to install the app
+favicon.png           Tiny icon in the browser tab
+icons/                Larger icons for that install prompt
 ```
 
 ### `lib/` – phone app
@@ -358,7 +368,7 @@ screens/                          One folder per screen.
   catalog/catalog_screen.dart     Searchable catalog: built-in exercises plus ones you added
   active_timer/active_timer_screen.dart       The big timer. Saves an unfinished run and can continue it.
   active_timer/timer_controls.dart            Done, skip rest, pause, skip, reset, and stop. Logging hides pause and skip
-  active_timer/active_timer_card.dart         WORK countdown card. REST countdown sits on the background
+  active_timer/active_timer_card.dart         WORK and REST countdown, drawn on the background
   active_timer/workout_complete_screen.dart   Done screen. Saves the session. Cyberpunk puts the night gym behind her run.
   history/history_screen.dart     Completed sessions across every workout
   history/workout_history_screen.dart  Past sessions of one workout
@@ -487,9 +497,20 @@ skin_look_test.dart               Each skin's corners, spacing, and typeface
 
 ## 9. Running things
 
+Check the phone app at http://127.0.0.1:8181. Leave that run open and press `r` in its terminal after a code change. Skip and Skip rest move through a workout without waiting. http://127.0.0.1:8787 is the account website, not the phone app.
+
+Chrome can show that same page as an app window, with no address bar and no tabs:
+
+```powershell
+& "C:\Program Files\Google\Chrome\Application\chrome.exe" --user-data-dir="$env:LOCALAPPDATA\StackFit\chrome-app" --app=http://127.0.0.1:8181 --window-size=430,900
+```
+
 ```bash
-# phone app
+# phone app, served for the browser and for the Chrome app window
 flutter pub get
+flutter run -d web-server --web-hostname 127.0.0.1 --web-port 8181
+
+# phone app on a device, when you are not just checking a screen
 flutter run
 
 # server + website (from the server/ folder)
