@@ -23,7 +23,7 @@ class StorageService {
   // ── Workouts ──────────────────────────────────────────────────────────────
 
   List<Workout> loadWorkouts() {
-    final raw = _prefs.getString(_workoutsKey);
+    final raw = _readString(_workoutsKey);
     if (raw == null || raw.isEmpty) {
       return const [];
     }
@@ -49,7 +49,7 @@ class StorageService {
   // ── Completed sessions ────────────────────────────────────────────────────
 
   List<CompletedSession> loadCompletedSessions() {
-    final raw = _prefs.getString(_sessionsKey);
+    final raw = _readString(_sessionsKey);
     if (raw == null || raw.isEmpty) {
       return const [];
     }
@@ -77,7 +77,7 @@ class StorageService {
   // ── Unfinished workouts ───────────────────────────────────────────────────
 
   List<InProgressWorkout> loadInProgress() {
-    final raw = _prefs.getString(_inProgressKey);
+    final raw = _readString(_inProgressKey);
     if (raw == null || raw.isEmpty) {
       return const [];
     }
@@ -111,7 +111,7 @@ class StorageService {
   }
 
   ThemeMode loadThemeMode() {
-    final raw = _prefs.getString(_themeModeKey);
+    final raw = _readString(_themeModeKey);
     switch (raw) {
       case 'light':
         return ThemeMode.light;
@@ -131,7 +131,7 @@ class StorageService {
     await _prefs.setString(_themeModeKey, value);
   }
 
-  AppSkin loadSkin() => AppSkin.fromStorage(_prefs.getString(_skinKey));
+  AppSkin loadSkin() => AppSkin.fromStorage(_readString(_skinKey));
 
   Future<void> saveSkin(AppSkin skin) async {
     await _prefs.setString(_skinKey, skin.name);
@@ -140,7 +140,7 @@ class StorageService {
   // ── Custom catalog ────────────────────────────────────────────────────────
 
   List<CatalogExercise> loadCustomExercises() {
-    final raw = _prefs.getString(_customExercisesKey);
+    final raw = _readString(_customExercisesKey);
     if (raw == null || raw.isEmpty) {
       return const [];
     }
@@ -161,6 +161,26 @@ class StorageService {
       exercises.map((exercise) => exercise.toJson()).toList(),
     );
     await _prefs.setString(_customExercisesKey, encoded);
+  }
+
+  /// Text saved with [SharedPreferences.setString], or a list saved as raw JSON.
+  ///
+  /// On the web every value is JSON. A list that was not wrapped in a string
+  /// comes back as a list, and [SharedPreferences.getString] then throws.
+  String? _readString(String key) {
+    final Object? value = _prefs.get(key);
+    if (value is String) {
+      return value;
+    }
+    if (value == null) {
+      return null;
+    }
+    try {
+      return jsonEncode(value);
+    } catch (_) {
+      // The web store already cast that list to strings, so the maps are gone.
+      return null;
+    }
   }
 }
 

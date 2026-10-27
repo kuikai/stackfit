@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'page_transition.dart';
 import 'skins.dart';
 
 /// Clean Athletic Material 3 themes from the selected [AppSkin].
@@ -36,6 +37,7 @@ class AppTheme {
       brightness: brightness,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: scaffoldBackground,
+      pageTransitionsTheme: SoftPageTransitionsBuilder.theme,
       textTheme: textTheme,
       extensions: [look],
       splashFactory: InkRipple.splashFactory,

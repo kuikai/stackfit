@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../models/models.dart';
+import '../../providers/completed_sessions_provider.dart';
 import '../../providers/in_progress_provider.dart';
+import '../../services/previous_set_log.dart';
 import '../../services/sound_service.dart';
 import '../../services/workout_session_controller.dart';
 import '../../widgets/set_tracker.dart';
@@ -146,22 +148,24 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
       return;
     }
     if (!_suppressPersist) {
-      _alignEntry();
+      _alignEntry(ref.read(completedSessionsProvider));
       _persist();
     }
     setState(() {});
   }
 
   /// Prefills reps and weight when a new set comes up.
-  void _alignEntry() {
+  void _alignEntry(List<CompletedSession> history) {
     final state = _controller.state;
     if (state.phase != SessionPhase.setReady) {
       return;
     }
-    if (_entryBlockIndex == state.blockIndex &&
+    final sameSet =
+        _entryBlockIndex == state.blockIndex &&
         _entryRoundIndex == state.roundIndex &&
         _entryExerciseIndex == state.exerciseIndex &&
-        _entrySetIndex == state.setIndex) {
+        _entrySetIndex == state.setIndex;
+    if (sameSet && _entryEdited) {
       return;
     }
     _entryEdited = false;
@@ -169,10 +173,23 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
     _entryRoundIndex = state.roundIndex;
     _entryExerciseIndex = state.exerciseIndex;
     _entrySetIndex = state.setIndex;
-    _activeEntry = ActiveSetEntry(
-      reps: state.currentExercise?.reps ?? 0,
-      weightKg: _controller.previousWeightKg(state.currentExercise?.id),
+    final exercise = state.currentExercise;
+    final previous = exercise == null
+        ? const <SetLog>[]
+        : previousLogsForExercise(
+            sessions: history,
+            workoutId: widget.workout.id,
+            exerciseId: exercise.id,
+            exerciseName: exercise.name,
+            round: state.roundNumber,
+          );
+    final start = startingEntryForSet(
+      previousLogs: previous,
+      setNumber: state.setNumber,
+      plannedReps: exercise?.reps,
+      sessionWeightKg: _controller.previousWeightKg(exercise?.id),
     );
+    _activeEntry = ActiveSetEntry(reps: start.reps, weightKg: start.weightKg);
   }
 
   void _onEntryChanged(ActiveSetEntry entry) {
@@ -295,7 +312,8 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
 
   @override
   Widget build(BuildContext context) {
-    _alignEntry();
+    final history = ref.watch(completedSessionsProvider);
+    _alignEntry(history);
     final state = _controller.state;
     final exercise = state.currentExercise;
     final theme = Theme.of(context);
@@ -349,7 +367,7 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
                   child: _buildMainArea(
                     timer: showTimerCard ? ActiveTimerCard(state: state) : null,
                     tracker: showTracker && exercise != null
-                        ? _buildTracker(exercise, state)
+                        ? _buildTracker(exercise, state, history)
                         : null,
                   ),
                 ),
@@ -417,7 +435,11 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
     );
   }
 
-  Widget _buildTracker(Exercise exercise, WorkoutSessionState state) {
+  Widget _buildTracker(
+    Exercise exercise,
+    WorkoutSessionState state,
+    List<CompletedSession> history,
+  ) {
     final isResting = state.phase == SessionPhase.rest;
     final restingLog = _controller.restingSetLog;
     final activeSetNumber = isResting
@@ -427,6 +449,13 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
     return SetTracker(
       exercise: exercise,
       logs: _controller.currentExerciseLogs,
+      previousLogs: previousLogsForExercise(
+        sessions: history,
+        workoutId: widget.workout.id,
+        exerciseId: exercise.id,
+        exerciseName: exercise.name,
+        round: state.roundNumber,
+      ),
       activeSetNumber: activeSetNumber,
       activeEntry: _activeEntry,
       isResting: isResting,

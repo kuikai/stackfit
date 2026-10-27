@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/utils.dart';
 import '../models/models.dart';
+import '../providers/completed_sessions_provider.dart';
 import 'set_log_list.dart';
 
 /// One finished session: date, duration, and a sets/reps/kg summary.
@@ -84,42 +88,104 @@ class SessionTile extends StatelessWidget {
 }
 
 /// Bottom sheet with every logged set of [session], grouped by exercise.
+/// Swipe one exercise away. The session stays in history.
 Future<void> showSessionSetLogs(
   BuildContext context,
   CompletedSession session,
-) async {
-  final theme = Theme.of(context);
-  await showModalBottomSheet<void>(
+) {
+  return showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
-    builder: (context) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                session.workoutName,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+    builder: (context) => _SessionSetLogsSheet(sessionId: session.id),
+  );
+}
+
+class _SessionSetLogsSheet extends ConsumerWidget {
+  const _SessionSetLogsSheet({required this.sessionId});
+
+  final String sessionId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final session = _findSession(ref.watch(completedSessionsProvider));
+    _closeWhenLogsAreGone(context, ref);
+    if (session == null || !session.hasSetLogs) {
+      return const SizedBox.shrink();
+    }
+
+    final theme = Theme.of(context);
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              session.workoutName,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
               ),
-              const SizedBox(height: 4),
-              Text(
-                AppUtils.formatSessionDate(session.completedAt),
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.62),
-                ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              AppUtils.formatSessionDate(session.completedAt),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.62),
               ),
-              const SizedBox(height: 16),
-              Flexible(child: SetLogList(logs: session.setLogs)),
-            ],
-          ),
+            ),
+            const SizedBox(height: 16),
+            Flexible(
+              child: SetLogList(
+                logs: session.setLogs,
+                onDeleteGroup: (group) =>
+                    _deleteExerciseLog(ref, session, group),
+              ),
+            ),
+          ],
         ),
-      );
-    },
+      ),
+    );
+  }
+
+  CompletedSession? _findSession(List<CompletedSession> sessions) {
+    for (final session in sessions) {
+      if (session.id == sessionId) {
+        return session;
+      }
+    }
+    return null;
+  }
+
+  void _closeWhenLogsAreGone(BuildContext context, WidgetRef ref) {
+    ref.listen(completedSessionsProvider, (previous, next) {
+      final current = _findSession(next);
+      if (current != null && current.hasSetLogs) {
+        return;
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          Navigator.of(context).pop();
+        }
+      });
+    });
+  }
+}
+
+void _deleteExerciseLog(
+  WidgetRef ref,
+  CompletedSession session,
+  List<SetLog> group,
+) {
+  final log = group.first;
+  unawaited(
+    ref
+        .read(completedSessionsProvider.notifier)
+        .removeExerciseLog(
+          sessionId: session.id,
+          exerciseId: log.exerciseId,
+          round: log.round,
+        ),
   );
 }

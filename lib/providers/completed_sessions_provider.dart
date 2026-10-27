@@ -53,6 +53,33 @@ class CompletedSessionsNotifier extends StateNotifier<List<CompletedSession>> {
     await _persist();
   }
 
+  /// Drops one exercise (one circuit round) from a saved session.
+  Future<void> removeExerciseLog({
+    required String sessionId,
+    required String exerciseId,
+    required int round,
+  }) async {
+    final next = <CompletedSession>[];
+    var changed = false;
+    for (final session in state) {
+      if (session.id != sessionId) {
+        next.add(session);
+        continue;
+      }
+      final updated = session.withoutExerciseLog(
+        exerciseId: exerciseId,
+        round: round,
+      );
+      changed = updated.setLogs.length != session.setLogs.length;
+      next.add(updated);
+    }
+    if (!changed) {
+      return;
+    }
+    state = next;
+    await _persist();
+  }
+
   Future<void> clearAll() async {
     state = const [];
     await _persist();

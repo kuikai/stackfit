@@ -160,6 +160,36 @@ void main() {
     final mixed = await SharedPreferences.getInstance();
     expect(StorageService(mixed).loadInProgress(), hasLength(1));
   });
+
+  test('history saved as a raw list still loads', () async {
+    final session = CompletedSession(
+      id: 's1',
+      workoutId: 'w1',
+      workoutName: 'Log check',
+      completedAt: DateTime.utc(2026, 10, 27, 18),
+      durationSeconds: 120,
+      totalExercises: 1,
+    );
+    SharedPreferences.setMockInitialValues({
+      'stackfit_completed_sessions': [session.toJson()],
+    });
+    final prefs = await SharedPreferences.getInstance();
+
+    final loaded = StorageService(prefs).loadCompletedSessions();
+
+    expect(loaded.single.workoutName, 'Log check');
+  });
+
+  test('a string-cast history list does not crash the workout', () async {
+    SharedPreferences.setMockInitialValues({
+      'stackfit_completed_sessions': <dynamic>[
+        {'id': 's1'},
+      ].cast<String>(),
+    });
+    final prefs = await SharedPreferences.getInstance();
+
+    expect(StorageService(prefs).loadCompletedSessions(), isEmpty);
+  });
 }
 
 Workout _bench({String id = 'w1', String exerciseId = 'e1'}) {
