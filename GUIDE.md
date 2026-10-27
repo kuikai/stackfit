@@ -301,7 +301,6 @@ main.dart                         App entry. Sets up Riverpod, theme, and re-syn
 core/
   constants.dart                  App name, free limits (3 workouts, 10 sessions), server URL
   theme.dart                      Builds light and dark themes from a skin's colours, font, corners, and spacing
-  page_transition.dart            The fade and short slide when Home opens another screen
   skins.dart                      Skin names, and which colours and corners go with each one
   skin_looks.dart                 Corners, spacing, and fonts for each skin
   skin_palettes.dart              Light and dark colours for each skin
@@ -337,7 +336,7 @@ providers/                        Riverpod state. Screens read from here.
   app_providers.dart              Wires SharedPreferences, StorageService, AccountStorage, AccountApiClient
   workouts_provider.dart          The workout list + add/edit/delete/duplicate + sections + the free-limit check
   custom_catalog_provider.dart    Exercises you added, listed in the catalog under Custom
-  completed_sessions_provider.dart  History list, newest first, free cap of 10, plus per-workout history. Can drop one exercise from a session
+  completed_sessions_provider.dart  History list, newest first, free cap of 10, plus per-workout history
   in_progress_provider.dart       Unfinished workouts on the phone. Not uploaded with the account
   settings_provider.dart          Theme and skin
   pro_provider.dart               Free or Pro flag
@@ -349,7 +348,6 @@ services/                         Does the work the providers ask for.
   storage_service.dart            Reads and writes workouts, history, unfinished runs, custom exercises, Pro, and settings
   workout_session_state.dart      Where the timer is: block, round, exercise, work/rest/set, seconds left, paused
   session_set_log.dart            Reps and kg typed in while a workout is still running
-  previous_set_log.dart           Last time's reps and kg, on the log and in the add fields
   station_exit.dart               Rest between circuit stations and between rounds
   workout_session_controller.dart Pause, skip, reset, and Done. Can continue a saved place
   workout_session_phases.dart     What happens when work ends, rest ends, a circuit loops, or the clock ticks
@@ -391,10 +389,8 @@ widgets/                          Reusable pieces used by several screens.
   plan_library_tile.dart          Home row that opens the Plan Library
   number_stepper.dart             Minus / number / plus; type the number in place
   set_tracker.dart                Per-set log panel during a workout
-  set_tracker_rows.dart           One set row: today's reps, and what that set was last time
-  log_row_swipe.dart              Short swipe that removes one exercise log, like marking a task done
-  set_log_list.dart               Finished sets grouped by exercise. History swipes one exercise away
-  session_tile.dart               One history row. Tap opens that session's sets
+  set_log_list.dart               Finished sets grouped by exercise
+  session_tile.dart               One history row (date, duration, reps × kg)
   skin_picker.dart                Grid of skins in Settings
   collapsible_section.dart        A settings card that stays closed until you tap Show
   skin_artwork.dart               Big girl on Home, night gym behind every dark Cyberpunk screen, chibi mascot
@@ -467,9 +463,7 @@ custom_catalog_test.dart          A custom exercise joins the catalog, and sync 
 website_snapshot_test.dart        Phone can read a snapshot the website wrote
 plan_library_test.dart            Plans have unique ids, and Home sections group plan days
 set_log_test.dart                 Set logging, kg, and history JSON
-set_log_list_test.dart            Workout summary wraps a long reps and kg line, and a swipe removes one exercise
-previous_set_log_test.dart        Last-time reps come from this workout, the newest match, and the same round
-set_tracker_test.dart             The log shows last time's reps on each set
+set_log_list_test.dart            Workout summary wraps a long reps and kg line
 circuit_session_test.dart         Circuits loop, then the rest of the workout continues
 in_progress_workout_test.dart     Closing a workout keeps the place, sets, and time for next time
 skin_look_test.dart               Each skin's corners, spacing, and typeface

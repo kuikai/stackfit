@@ -166,43 +166,6 @@ void main() {
       expect(weighted.shortLabel, '5×102.5');
     });
 
-    test('drops one exercise and leaves the other rounds', () {
-      final session = CompletedSession(
-        id: 's1',
-        workoutId: 'w1',
-        workoutName: 'Legs',
-        completedAt: DateTime.utc(2026, 10, 13, 18),
-        durationSeconds: 600,
-        totalExercises: 2,
-        setLogs: const [
-          SetLog(
-            exerciseId: 'e1',
-            exerciseName: 'Squat',
-            setNumber: 1,
-            reps: 5,
-            round: 1,
-          ),
-          SetLog(
-            exerciseId: 'e1',
-            exerciseName: 'Squat',
-            setNumber: 1,
-            reps: 5,
-            round: 2,
-          ),
-          SetLog(exerciseId: 'e2', exerciseName: 'Row', setNumber: 1, reps: 8),
-        ],
-      );
-
-      final updated = session.withoutExerciseLog(exerciseId: 'e1', round: 1);
-
-      expect(updated.setLogs.map((log) => '${log.exerciseId}:${log.round}'), [
-        'e1:2',
-        'e2:1',
-      ]);
-      expect(updated.totalExercises, 2);
-      expect(updated.id, session.id);
-    });
-
     test('old sessions without setLogs still load', () {
       final restored = CompletedSession.fromJson({
         'id': 's1',

@@ -4,8 +4,6 @@ import '../core/theme.dart';
 import '../models/models.dart';
 import 'number_stepper.dart';
 
-part 'set_tracker_rows.dart';
-
 /// What the user is entering for the set they are on right now.
 class ActiveSetEntry {
   const ActiveSetEntry({required this.reps, required this.weightKg});
@@ -22,8 +20,7 @@ class ActiveSetEntry {
 }
 
 /// Per-set log for the exercise on screen: done sets with reps × kg (tap to
-/// correct), the active set with steppers, upcoming sets dimmed, and what
-/// each set was last time.
+/// correct), the active set with steppers, and upcoming sets dimmed.
 class SetTracker extends StatefulWidget {
   const SetTracker({
     super.key,
@@ -34,17 +31,12 @@ class SetTracker extends StatefulWidget {
     required this.isResting,
     required this.onActiveEntryChanged,
     required this.onLoggedSetChanged,
-    this.previousLogs = const [],
   });
 
   final Exercise exercise;
 
   /// Logs already recorded for [exercise].
   final List<SetLog> logs;
-
-  /// What was logged for each set the last time this workout included this
-  /// exercise. Empty when there is no earlier session.
-  final List<SetLog> previousLogs;
 
   /// The set the user is about to do (SET phase) or just finished (REST).
   final int activeSetNumber;
@@ -116,6 +108,15 @@ class _SetTrackerState extends State<SetTracker> {
     });
   }
 
+  SetLog? _logFor(int setNumber) {
+    for (final log in widget.logs) {
+      if (log.setNumber == setNumber) {
+        return log;
+      }
+    }
+    return null;
+  }
+
   /// The set the steppers are changing. Rest starts on the set just finished.
   int _controlsSet() {
     if (!widget.isResting) {
@@ -160,38 +161,31 @@ class _SetTrackerState extends State<SetTracker> {
   }
 
   Widget _buildRow(int setNumber) {
-    final log = _logFor(widget.logs, setNumber);
-    final previous = _logFor(widget.previousLogs, setNumber);
+    final log = _logFor(setNumber);
     final controlsThisSet = _controlsSet() == setNumber;
-    final trailing = _trail(log, previous);
+    final key = _rowKey(setNumber);
 
     if (log != null) {
       return _SetRow(
-        key: _rowKey(setNumber),
+        key: key,
         setNumber: setNumber,
         state: _RowState.done,
         highlighted: controlsThisSet,
         onTap: () => setState(() => _editingSet = setNumber),
-        trailing: trailing,
+        trailing: _LoggedLabel(log: log),
       );
     }
 
     if (setNumber == widget.activeSetNumber && !widget.isResting) {
       return _SetRow(
-        key: _rowKey(setNumber),
+        key: key,
         setNumber: setNumber,
         state: _RowState.active,
         highlighted: true,
-        trailing: trailing,
       );
     }
 
-    return _SetRow(
-      key: _rowKey(setNumber),
-      setNumber: setNumber,
-      state: _RowState.upcoming,
-      trailing: trailing,
-    );
+    return _SetRow(key: key, setNumber: setNumber, state: _RowState.upcoming);
   }
 
   /// Steppers for the set being entered, kept under the list so they stay visible.
@@ -210,7 +204,7 @@ class _SetTrackerState extends State<SetTracker> {
       );
     }
 
-    final log = _logFor(widget.logs, _controlsSet());
+    final log = _logFor(_controlsSet());
     if (log == null) {
       return null;
     }
@@ -227,18 +221,142 @@ class _SetTrackerState extends State<SetTracker> {
   }
 }
 
-SetLog? _logFor(List<SetLog> logs, int setNumber) {
-  for (final log in logs) {
-    if (log.setNumber == setNumber) {
-      return log;
-    }
+enum _RowState { done, active, upcoming }
+
+class _SetRow extends StatelessWidget {
+  const _SetRow({
+    super.key,
+    required this.setNumber,
+    required this.state,
+    this.highlighted = false,
+    this.trailing,
+    this.onTap,
+  });
+
+  final int setNumber;
+  final _RowState state;
+  final bool highlighted;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isUpcoming = state == _RowState.upcoming;
+
+    final icon = switch (state) {
+      _RowState.done => Icons.check_circle_rounded,
+      _RowState.active => Icons.radio_button_checked_rounded,
+      _RowState.upcoming => Icons.radio_button_unchecked_rounded,
+    };
+    final iconColor = isUpcoming
+        ? colorScheme.onSurface.withValues(alpha: 0.3)
+        : colorScheme.primary;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Material(
+        color: highlighted
+            ? colorScheme.primary.withValues(alpha: 0.1)
+            : Colors.transparent,
+        borderRadius: context.skinLook.cornerRadiusSmall,
+        child: InkWell(
+          borderRadius: context.skinLook.cornerRadiusSmall,
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: Row(
+              children: [
+                Icon(icon, size: 20, color: iconColor),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Set $setNumber',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: highlighted
+                          ? FontWeight.w800
+                          : FontWeight.w600,
+                      color: isUpcoming
+                          ? colorScheme.onSurface.withValues(alpha: 0.45)
+                          : colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                ?trailing,
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
-  return null;
 }
 
-Widget? _trail(SetLog? log, SetLog? previous) {
-  if (log == null && previous == null) {
-    return null;
+/// Reps and kg on one row, small enough for a phone-width window.
+class _SetEditor extends StatelessWidget {
+  const _SetEditor({
+    required this.reps,
+    required this.weightKg,
+    required this.onRepsChanged,
+    required this.onWeightChanged,
+  });
+
+  final int reps;
+  final double weightKg;
+  final ValueChanged<double> onRepsChanged;
+  final ValueChanged<double> onWeightChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: NumberStepper(
+            label: 'Reps',
+            value: reps.toDouble(),
+            max: 999,
+            compact: true,
+            onChanged: onRepsChanged,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: NumberStepper(
+            label: 'Weight',
+            unit: 'kg',
+            value: weightKg,
+            step: 2.5,
+            decimals: 1,
+            max: 999,
+            compact: true,
+            onChanged: onWeightChanged,
+          ),
+        ),
+      ],
+    );
   }
-  return _SetTrail(log: log, previous: previous);
+}
+
+class _LoggedLabel extends StatelessWidget {
+  const _LoggedLabel({required this.log});
+
+  final SetLog log;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final text = log.hasWeight
+        ? '${log.reps} × ${SetLog.formatKg(log.weightKg!)} kg'
+        : '${log.reps} reps';
+    return Text(
+      text,
+      style: theme.textTheme.bodyLarge?.copyWith(
+        fontWeight: FontWeight.w700,
+        color: theme.colorScheme.primary,
+        fontFeatures: const [FontFeature.tabularFigures()],
+      ),
+    );
+  }
 }

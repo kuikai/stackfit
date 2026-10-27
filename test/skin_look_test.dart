@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:stackfit/core/page_transition.dart';
 import 'package:stackfit/core/skins.dart';
 import 'package:stackfit/core/theme.dart';
 import 'package:stackfit/widgets/chibi_run.dart';
@@ -157,10 +156,5 @@ void main() {
     expect(look.radius, 28);
     expect(look.pagePadding, 22);
     expect(look.bodyFont, SkinTypeface.nunito);
-    final transitions = Theme.of(
-      tester.element(find.byType(SizedBox)),
-    ).pageTransitionsTheme.builders[TargetPlatform.windows];
-    expect(transitions, isA<SoftPageTransitionsBuilder>());
-    expect(transitions!.transitionDuration, const Duration(milliseconds: 420));
   });
 }
