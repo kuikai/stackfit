@@ -24,6 +24,25 @@ class CompletedSession {
 
   bool get hasSetLogs => setLogs.isNotEmpty;
 
+  /// This session with one exercise's sets removed (one circuit round).
+  CompletedSession withoutExerciseLog({
+    required String exerciseId,
+    required int round,
+  }) {
+    return CompletedSession(
+      id: id,
+      workoutId: workoutId,
+      workoutName: workoutName,
+      completedAt: completedAt,
+      durationSeconds: durationSeconds,
+      totalExercises: totalExercises,
+      setLogs: [
+        for (final log in setLogs)
+          if (log.exerciseId != exerciseId || log.round != round) log,
+      ],
+    );
+  }
+
   /// Total reps across every logged set.
   int get totalRepsLogged {
     var total = 0;
