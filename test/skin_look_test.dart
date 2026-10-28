@@ -12,7 +12,6 @@ void main() {
   });
 
   test('anime skins are part of the phone skin list', () {
-    expect(AppSkin.proSkins, isEmpty);
     expect(AppSkin.standardSkins, [
       AppSkin.classic,
       AppSkin.midnight,
@@ -20,12 +19,15 @@ void main() {
       AppSkin.sunset,
       AppSkin.minimal,
       AppSkin.synthwave,
+    ]);
+    expect(AppSkin.proSkins, [
       AppSkin.boldSports,
       AppSkin.chibi,
       AppSkin.cyberpunk,
       AppSkin.dumbbell,
     ]);
     expect(AppSkin.standardSkins.every((skin) => !skin.pro), isTrue);
+    expect(AppSkin.proSkins.every((skin) => skin.pro), isTrue);
   });
 
   test('anime skins keep their names and neon colours', () {
@@ -54,12 +56,27 @@ void main() {
     expect(AppSkin.boldSports.previewAsset, contains('bold-sports'));
     expect(AppSkin.chibi.previewAsset, contains('chibi'));
     expect(AppSkin.cyberpunk.previewAsset, contains('cyberpunk'));
+    expect(AppSkin.boldSports.backgroundAsset, contains('bold-sports/background'));
+    expect(AppSkin.chibi.backgroundAsset, contains('chibi/background'));
     expect(AppSkin.cyberpunk.backgroundAsset, contains('background.jpg'));
+    expect(AppSkin.dumbbell.backgroundAsset, contains('dumbbell/background'));
     expect(AppSkin.classic.backgroundAsset, isNull);
+    expect(AppSkin.boldSports.mascotAsset, contains('mascot-power.png'));
+    expect(AppSkin.chibi.mascotAsset, contains('mascot-pastel.png'));
     expect(AppSkin.cyberpunk.mascotAsset, contains('mascot-chibi.png'));
+    expect(AppSkin.dumbbell.mascotAsset, contains('mascot-companion.png'));
+    expect(AppSkin.boldSports.mascotSeatAsset, contains('mascot-power-sit'));
+    expect(AppSkin.chibi.mascotSeatAsset, contains('mascot-pastel-sit'));
     expect(AppSkin.cyberpunk.mascotSeatAsset, contains('mascot-chibi-sit'));
+    expect(AppSkin.dumbbell.mascotSeatAsset, contains('mascot-companion-sit'));
+    expect(AppSkin.boldSports.mascotRestAsset, contains('mascot-power-rest'));
+    expect(AppSkin.chibi.mascotRestAsset, contains('mascot-pastel-rest'));
     expect(AppSkin.cyberpunk.mascotRestAsset, contains('mascot-chibi-rest'));
+    expect(AppSkin.dumbbell.mascotRestAsset, contains('mascot-companion-rest'));
+    expect(AppSkin.boldSports.mascotRunFrames, hasLength(8));
+    expect(AppSkin.chibi.mascotRunFrames, hasLength(8));
     expect(AppSkin.cyberpunk.mascotRunFrames, hasLength(13));
+    expect(AppSkin.dumbbell.mascotRunFrames, hasLength(8));
     expect(AppSkin.classic.mascotRunFrames, isEmpty);
     expect(runFrameIndex(elapsedSeconds: 0, frameCount: 6), 0);
     expect(runFrameIndex(elapsedSeconds: 0.5, frameCount: 6), 4);
@@ -68,11 +85,17 @@ void main() {
     expect(AppSkin.classic.mascotAsset, isNull);
     expect(AppSkin.classic.mascotSeatAsset, isNull);
     expect(AppSkin.classic.mascotRestAsset, isNull);
+    expect(AppSkin.boldSports.heroAsset, contains('girl-standing'));
+    expect(AppSkin.chibi.heroAsset, contains('girl-standing'));
     expect(AppSkin.cyberpunk.heroAsset, contains('girl-standing'));
+    expect(AppSkin.dumbbell.heroAsset, contains('girl-standing'));
     expect(AppSkin.cyberpunk.homePlateAsset, contains('girl-standing'));
     expect(AppSkin.classic.heroAsset, isNull);
     expect(AppSkin.classic.homePlateAsset, isNull);
+    expect(AppSkins.look(AppSkin.boldSports).cardOpacity, 0.12);
+    expect(AppSkins.look(AppSkin.chibi).cardOpacity, 0.14);
     expect(AppSkins.look(AppSkin.cyberpunk).cardOpacity, 0.12);
+    expect(AppSkins.look(AppSkin.dumbbell).cardOpacity, 0.14);
     expect(AppSkins.look(AppSkin.classic).cardOpacity, 1);
     final cyberpunkFill = AppSkins.look(
       AppSkin.cyberpunk,

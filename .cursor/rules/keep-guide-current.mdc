@@ -21,6 +21,8 @@ task, before finishing. Do not leave it as a suggestion.
 | Changed how sync, merge, or sharing works | Section 3, 4, or 5 (sequence / flowchart + rule table) |
 | Introduced a new word that appears in several files (a new model, store, or concept) | Section 8 "Words used in the code" |
 | Changed how to run or test something | Section 9 |
+| Changed how we chase bugs or the smoke checklists | Section 10 |
+| Changed first-release / App Store gate items | Section 11 |
 
 Small edits inside an existing file (bug fix, wording, styling) do not need a
 guide change unless the file's one-line description is no longer true.

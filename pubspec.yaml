@@ -66,8 +66,34 @@ flutter:
   assets:
     - StackFitWeb/themes/bold-sports/icons/banner.jpg
     - StackFitWeb/themes/bold-sports/icons/icon.jpg
+    - StackFitWeb/themes/bold-sports/background.jpg
+    - StackFitWeb/themes/bold-sports/girl-standing.jpg
+    - StackFitWeb/themes/bold-sports/mascots/mascot-power.png
+    - StackFitWeb/themes/bold-sports/mascots/mascot-power-sit.png
+    - StackFitWeb/themes/bold-sports/mascots/mascot-power-rest.png
+    - StackFitWeb/themes/bold-sports/mascots/animation/running/mascot-power-run-1.png
+    - StackFitWeb/themes/bold-sports/mascots/animation/running/mascot-power-run-2.png
+    - StackFitWeb/themes/bold-sports/mascots/animation/running/mascot-power-run-3.png
+    - StackFitWeb/themes/bold-sports/mascots/animation/running/mascot-power-run-4.png
+    - StackFitWeb/themes/bold-sports/mascots/animation/running/mascot-power-run-5.png
+    - StackFitWeb/themes/bold-sports/mascots/animation/running/mascot-power-run-6.png
+    - StackFitWeb/themes/bold-sports/mascots/animation/running/mascot-power-run-7.png
+    - StackFitWeb/themes/bold-sports/mascots/animation/running/mascot-power-run-8.png
     - StackFitWeb/themes/chibi/icons/banner.jpg
     - StackFitWeb/themes/chibi/icons/icon.jpg
+    - StackFitWeb/themes/chibi/background.jpg
+    - StackFitWeb/themes/chibi/girl-standing.jpg
+    - StackFitWeb/themes/chibi/mascots/mascot-pastel.png
+    - StackFitWeb/themes/chibi/mascots/mascot-pastel-sit.png
+    - StackFitWeb/themes/chibi/mascots/mascot-pastel-rest.png
+    - StackFitWeb/themes/chibi/mascots/animation/running/mascot-pastel-run-1.png
+    - StackFitWeb/themes/chibi/mascots/animation/running/mascot-pastel-run-2.png
+    - StackFitWeb/themes/chibi/mascots/animation/running/mascot-pastel-run-3.png
+    - StackFitWeb/themes/chibi/mascots/animation/running/mascot-pastel-run-4.png
+    - StackFitWeb/themes/chibi/mascots/animation/running/mascot-pastel-run-5.png
+    - StackFitWeb/themes/chibi/mascots/animation/running/mascot-pastel-run-6.png
+    - StackFitWeb/themes/chibi/mascots/animation/running/mascot-pastel-run-7.png
+    - StackFitWeb/themes/chibi/mascots/animation/running/mascot-pastel-run-8.png
     - StackFitWeb/themes/cyberpunk/icons/banner.jpg
     - StackFitWeb/themes/cyberpunk/icons/icon.jpg
     - StackFitWeb/themes/cyberpunk/background.jpg
@@ -91,6 +117,19 @@ flutter:
     - StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-13.png
     - StackFitWeb/themes/dumbbell/icons/banner-home.jpg
     - StackFitWeb/themes/dumbbell/icons/icon-companion.jpg
+    - StackFitWeb/themes/dumbbell/background.jpg
+    - StackFitWeb/themes/dumbbell/girl-standing.jpg
+    - StackFitWeb/themes/dumbbell/mascots/mascot-companion.png
+    - StackFitWeb/themes/dumbbell/mascots/mascot-companion-sit.png
+    - StackFitWeb/themes/dumbbell/mascots/mascot-companion-rest.png
+    - StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-1.png
+    - StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-2.png
+    - StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-3.png
+    - StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-4.png
+    - StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-5.png
+    - StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-6.png
+    - StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-7.png
+    - StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-8.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -8,6 +8,7 @@ import '../../providers/settings_provider.dart';
 import '../../services/sound_service.dart';
 import '../../widgets/chibi_run.dart';
 import '../../widgets/set_log_list.dart';
+import '../home/home_screen.dart';
 
 class WorkoutCompleteArgs {
   const WorkoutCompleteArgs({
@@ -63,6 +64,20 @@ class _WorkoutCompleteScreenState extends ConsumerState<WorkoutCompleteScreen> {
         );
   }
 
+  /// Back to the first screen (Home). Circuit or plain sets does not matter.
+  void _goHome() {
+    final navigator = Navigator.of(context, rootNavigator: true);
+    if (navigator.canPop()) {
+      navigator.popUntil((route) => route.isFirst);
+      return;
+    }
+    // Finish page somehow became the only route — rebuild Home so Done
+    // never leaves the user stuck on this screen.
+    navigator.pushReplacement(
+      MaterialPageRoute<void>(builder: (_) => const HomeScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final runFrames = ref.watch(settingsProvider).skin.mascotRunFrames;
@@ -84,62 +99,69 @@ class _WorkoutCompleteScreenState extends ConsumerState<WorkoutCompleteScreen> {
 
     return Column(
       children: [
-        const Spacer(),
-        Container(
-          width: 88,
-          height: 88,
-          decoration: BoxDecoration(
-            color: colorScheme.primaryContainer,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            Icons.check_rounded,
-            size: 48,
-            color: colorScheme.onPrimaryContainer,
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 88,
+                  height: 88,
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.check_rounded,
+                    size: 48,
+                    color: colorScheme.onPrimaryContainer,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Workout complete',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  args.workout.name,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 28),
+                Text(
+                  AppUtils.formatDurationFriendly(args.durationSeconds),
+                  style: theme.textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -1,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${args.workout.exercises.length} exercises',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+                if (args.setLogs.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  SetLogList(logs: args.setLogs, scrollable: false),
+                ],
+                _finishLane(runFrames),
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 24),
-        Text(
-          'Workout complete',
-          style: theme.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          args.workout.name,
-          style: theme.textTheme.titleLarge?.copyWith(
-            color: colorScheme.onSurface.withValues(alpha: 0.7),
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 28),
-        Text(
-          AppUtils.formatDurationFriendly(args.durationSeconds),
-          style: theme.textTheme.displaySmall?.copyWith(
-            fontWeight: FontWeight.w800,
-            letterSpacing: -1,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          '${args.workout.exercises.length} exercises',
-          style: theme.textTheme.bodyLarge?.copyWith(
-            color: colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-        ),
-        if (args.setLogs.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          Flexible(flex: 3, child: SetLogList(logs: args.setLogs)),
-        ],
-        _finishLane(runFrames),
+        const SizedBox(height: 12),
         SizedBox(
           width: double.infinity,
           child: FilledButton(
-            onPressed: () {
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            },
+            onPressed: _goHome,
             child: const Text('Done'),
           ),
         ),
@@ -149,12 +171,14 @@ class _WorkoutCompleteScreenState extends ConsumerState<WorkoutCompleteScreen> {
 
   Widget _finishLane(List<String> frames) {
     if (frames.isEmpty) {
-      return const Spacer();
+      return const SizedBox(height: 24);
     }
-    return SizedBox(
-      height: 120,
-      width: double.infinity,
-      child: ChibiRun(frames: frames),
+    return IgnorePointer(
+      child: SizedBox(
+        height: 120,
+        width: double.infinity,
+        child: ChibiRun(frames: frames),
+      ),
     );
   }
 }

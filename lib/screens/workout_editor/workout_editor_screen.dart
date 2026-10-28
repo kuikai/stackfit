@@ -185,6 +185,7 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
       return;
     }
     setState(() => _blocks = [..._blocks, ExerciseBlock(exercise)]);
+    await _persistEdits();
   }
 
   Future<void> _rememberCustomExercise(Exercise exercise) {
@@ -210,6 +211,7 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
           if (i == index) ExerciseBlock(updated) else _blocks[i],
       ];
     });
+    await _persistEdits();
   }
 
   void _removeBlock(int index) {
@@ -249,6 +251,7 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
         return circuit.copyWith(exercises: [...circuit.exercises, exercise]);
       });
     });
+    await _persistEdits();
   }
 
   Future<void> _editStation(String circuitId, int stationIndex) async {
@@ -272,6 +275,7 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
         return current.copyWith(exercises: stations);
       });
     });
+    await _persistEdits();
   }
 
   void _deleteStation(String circuitId, int stationIndex) {
@@ -320,6 +324,22 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
     }
 
     setState(() => _saving = true);
+    final workout = await _persistEdits();
+    if (!mounted || workout == null) {
+      return;
+    }
+    Navigator.of(context).pop(workout);
+  }
+
+  /// Writes the workout when it already has a name.
+  ///
+  /// Saving one exercise used to stay on this screen until Save workout.
+  /// Leaving before that dropped the edit, including a station in a circuit.
+  Future<Workout?> _persistEdits() async {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      return null;
+    }
     final workout = Workout(
       id: _workoutId,
       name: name,
@@ -328,18 +348,18 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
       updatedAt: DateTime.now(),
       section: Workout.normalizeSection(_sectionController.text),
     );
-
     final notifier = ref.read(workoutsProvider.notifier);
     if (_isNew) {
       await notifier.addWorkout(workout);
+      if (mounted) {
+        setState(() => _isNew = false);
+      } else {
+        _isNew = false;
+      }
     } else {
       await notifier.updateWorkout(workout);
     }
-
-    if (!mounted) {
-      return;
-    }
-    Navigator.of(context).pop(workout);
+    return workout;
   }
 
   void _snack(String message) {

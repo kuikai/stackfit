@@ -275,6 +275,7 @@ analysis_options.yaml House style the phone app is checked against
   keep-guide-current.mdc   Tells the AI agent to update this file whenever it adds, moves, or removes code
   keep-code-sharp.mdc      Tells the AI agent to keep screens, providers, services, and models in their own layers
   test-in-browser.mdc      Tells the AI agent to open the phone app at http://127.0.0.1:8181
+  debug-playbook.mdc       Tells the AI agent to follow Section 10 when debugging or checking that the app still feels smooth
 ```
 
 ### `icon/` – home-screen picture
@@ -301,7 +302,7 @@ main.dart                         App entry. Sets up Riverpod, theme, and re-syn
 core/
   constants.dart                  App name, free limits (3 workouts, 10 sessions), server URL
   theme.dart                      Builds light and dark themes from a skin's colours, font, corners, and spacing
-  page_transition.dart            The fade and short slide when Home opens another screen
+  page_transition.dart            Soft fade/slide between screens; keeps Home tappable after Done
   skins.dart                      Skin names, and which colours and corners go with each one
   skin_looks.dart                 Corners, spacing, and fonts for each skin
   skin_palettes.dart              Light and dark colours for each skin
@@ -364,14 +365,14 @@ screens/                          One folder per screen.
   home/home_screen.dart           Workout list grouped into sections, continue rows, + button, Plans / History / Settings
   home/home_actions.dart          Start or continue, start over, create, delete, duplicate, and section changes
   home/section_dialogs.dart       Name a section, move workouts in, pick which days to group
-  workout_editor/workout_editor_screen.dart   Create or edit a workout, including a circuit box, reorder and delete, optional section
+  workout_editor/workout_editor_screen.dart   Create or edit a workout, including a circuit box. Saving one exercise writes the workout
   workout_editor/workout_editor_actions.dart  Add an exercise or a circuit, and edit the stations inside it
   exercise_editor/exercise_editor_screen.dart Create or edit one exercise (timer or sets)
   catalog/catalog_screen.dart     Searchable catalog: built-in exercises plus ones you added
   active_timer/active_timer_screen.dart       The big timer. Saves an unfinished run and can continue it.
   active_timer/timer_controls.dart            Done, skip rest, pause, skip, reset, and stop. Logging hides pause and skip
   active_timer/active_timer_card.dart         WORK and REST countdown, drawn on the background
-  active_timer/workout_complete_screen.dart   Done screen. Saves the session. Cyberpunk puts the night gym behind her run.
+  active_timer/workout_complete_screen.dart   Done screen. Saves the session and always returns to Home.
   history/history_screen.dart     Completed sessions across every workout
   history/workout_history_screen.dart  Past sessions of one workout
   plans/plan_library_screen.dart  Browse built-in plans by category or search
@@ -397,9 +398,9 @@ widgets/                          Reusable pieces used by several screens.
   session_tile.dart               One history row. Tap opens that session's sets
   skin_picker.dart                Grid of skins in Settings
   collapsible_section.dart        A settings card that stays closed until you tap Show
-  skin_artwork.dart               Big girl on Home, night gym behind every dark Cyberpunk screen, chibi mascot
+  skin_artwork.dart               Big girl on Home, empty gym behind dark anime screens, skin mascot
   chibi_run.dart                  Chibi run cycle that crosses the workout-complete screen
-  skin_panel.dart                 Holder: solid on everyday skins, Home-style glass on Cyberpunk
+  skin_panel.dart                 Holder: solid on everyday skins, Home-style glass on anime skins
   account_settings_card.dart      The account box in Settings: email, Saved/Saving/Offline, sign out, delete account, move data
   empty_state.dart                Centered "nothing here yet" message
 ```
@@ -451,11 +452,11 @@ js/
 ### `StackFitWeb/` – anime theme art
 
 ```
-themes/README.md                  What the four anime themes are for
-themes/bold-sports/               Bold Sports art. Settings uses icons/banner.jpg
-themes/chibi/                     Chibi art. Settings uses icons/banner.jpg
+themes/README.md                  Shared recipe for the four Pro anime themes
+themes/bold-sports/               Bold Sports art. Home is girl-standing.jpg. background.jpg behind other dark screens. Mascot is mascots/mascot-power.png (sit / rest / run-1..8)
+themes/chibi/                     Chibi art. Home is girl-standing.jpg. background.jpg behind other dark screens. Mascot is mascots/mascot-pastel.png (sit / rest / run-1..8)
 themes/cyberpunk/                 Cyberpunk art. Home is girl-standing.jpg. The night gym in background.jpg sits behind every other dark screen. Home mascot is mascots/mascot-chibi.png. She sits on Done, rests on Skip rest, and the run frames in mascots/animation/running/ cross workout complete.
-themes/dumbbell/                  Dumbbell art. Settings uses icons/banner-home.jpg
+themes/dumbbell/                  Dumbbell art. Home is girl-standing.jpg. background.jpg behind other dark screens. Mascot is mascots/mascot-companion.png (sit / rest / run-1..8)
 ```
 
 ### `test/` – phone app tests
@@ -468,9 +469,11 @@ website_snapshot_test.dart        Phone can read a snapshot the website wrote
 plan_library_test.dart            Plans have unique ids, and Home sections group plan days
 set_log_test.dart                 Set logging, kg, and history JSON
 set_log_list_test.dart            Workout summary wraps a long reps and kg line, and a swipe removes one exercise
+workout_complete_test.dart        Done leaves the finish screen and lands on a tappable Home
 previous_set_log_test.dart        Last-time reps come from this workout, the newest match, and the same round
 set_tracker_test.dart             The log shows last time's reps on each set
 circuit_session_test.dart         Circuits loop, then the rest of the workout continues
+workout_editor_test.dart          Saving an exercise inside a circuit writes the workout
 in_progress_workout_test.dart     Closing a workout keeps the place, sets, and time for next time
 skin_look_test.dart               Each skin's corners, spacing, and typeface
 ```
@@ -543,3 +546,207 @@ flutter build appbundle
 # Sign-in appears in that build only when the server address is https:
 # flutter build appbundle --dart-define=STACKFIT_ACCOUNT_URL=https://your-server
 ```
+
+---
+
+## 10. Debug playbook
+
+How we chase a bug and how we check that the phone app still feels smooth.
+Section 9 is the commands to start things; this section is the checklist.
+
+New merge, sync, or plan-library behavior still needs a test in `test/` or
+`server/test/` (see the keep-code-sharp rule). This playbook does not replace
+that.
+
+### Chase a bug
+
+Do these in order. Do not skip ahead to a guess.
+
+1. **Reproduce once** — same taps, same workout if you can. Write down what
+   you expected and what happened.
+2. **Classify** — screen stuck, wrong data, sync, look (skin), or crash.
+3. **Pick the layer** — logic goes to `flutter test` (or `cd server && dart
+   test`). Something a person sees goes to the phone app at
+   http://127.0.0.1:8181 — never the website at 8787 for a phone screen.
+4. **Fix in the owning file** — screens, providers, services, and models stay
+   in their own layers.
+5. **Prove it** — a failing test or the smoke step that showed the bug first
+   if that helps, then the same path again after the fix. Hot-reload with `r`.
+
+### Before you call it done
+
+Every change, same gate:
+
+- `flutter analyze` (and `cd server && dart analyze` if the server changed)
+- `flutter test` (or the one test file for that change)
+- Browser smoke for the path a person would see (full list or focused list
+  below)
+
+### Full-app smoke (phone at 8181)
+
+One pass over the product. Use Skip and Skip rest so the timer stays short.
+A one-exercise sets workout is enough for the run path. Tick each item.
+
+- [ ] **Home** — list loads; can open a workout; unfinished workout shows
+  Continue when one exists
+- [ ] **Editor** — open a workout, change one exercise, save, back to Home
+  with the change kept
+- [ ] **Run** — start a short sets workout; log a set; Skip / Skip rest
+  through to Workout complete
+- [ ] **Done** — tap Done; land on Home with the city or skin visible and
+  tappable (not stuck on a blank finish)
+- [ ] **History** — the finished session appears
+- [ ] **Plans** — open a plan; Start or Add behaves (Pro gate message if
+  locked)
+- [ ] **Settings / skin** — switch an everyday skin; screen still readable
+- [ ] **Account** (only when the server is on 8787) — signed-out still works;
+  if signed in, sync status does not hang
+
+When the app feels rough overall, or someone asks to debug broadly, run this
+full list — not only the last file that changed.
+
+### After a focused change
+
+Re-run only the smoke that matches what you touched:
+
+| You changed… | Re-check |
+|--------------|----------|
+| Timer, workout complete, or page transitions | Run + Done |
+| Editor or exercise catalog | Editor (+ open that workout from Home) |
+| Home or unfinished-workout resume | Home Continue path |
+| History or set logs | Run + History |
+| Plans | Plans |
+| Skins or theme | Settings skin switch + glance at Home |
+| Account, sync, or server | Account path with 8787 up + the matching `dart test` |
+
+### Sharp edges
+
+- Soft page transitions after `pushReplacement` (timer → finish) can leave
+  Home faded and untappable. `lib/core/page_transition.dart` owns that.
+  Always include Done → Home when you smoke the timer.
+- Do not start a second web-server on 8181. Reuse the open run.
+- http://127.0.0.1:8787 is the account website, not the phone UI.
+
+---
+
+## 11. First App Store release
+
+What must be true before StackFit’s first iPhone release. Tick every box.
+Play Store can reuse most of this; this list is written for Apple first.
+Section 10 is day-to-day smoke; this section is the store gate.
+
+Bundle id is already `com.dix.stackfit`. Version in `pubspec.yaml` starts at
+`1.0.0+1`.
+
+### Decide first
+
+- [x] **Pro in 1.0** — Real store purchase via RevenueCat before release. Free
+  limits stay for people who do not buy. You can hand out **tryout keys**
+  (see below) so chosen people unlock Pro without paying.
+- [x] **No accounts in 1.0** — Phone app is offline-only for the first store
+  release. Sign-in, sync, and the public account server wait. **Next big
+  feature after 1.0:** couple the website and the phone with accounts
+  (see `NEXT_VERSION.md`).
+
+The Pro group below is required. Skip the Account server group for 1.0.
+Hide or disable account UI in the store build so reviewers and users do not
+hit a server that is not live.
+
+**Tryout keys (chosen approach):** use Apple / RevenueCat codes for the Pro
+product — not a secret string typed in Settings. A homemade unlock code that
+bypasses the App Store can get the app rejected. Friends trying the whole app
+before release use **TestFlight**; friends unlocking Pro after (or beside)
+release get a **promo / offer code** you generate and send them.
+
+### Product (must work on a real iPhone)
+
+- [ ] Full-app smoke from Section 10 on a physical iPhone (not only 8181)
+- [ ] Timer keeps the screen awake; Skip / Pause / Stop / Reset behave
+- [ ] Workout complete → Done returns to a tappable Home
+- [ ] Free limits: max 3 workouts, last 10 history sessions
+- [ ] Empty Home, delete confirm, cannot save a workout with 0 exercises
+- [ ] `flutter analyze` clean; `flutter test` green; `cd server && dart test`
+  green if the server ships
+
+### Pro (RevenueCat) — required for 1.0
+
+Still pending in `ACCEPTANCE_CRITERIA.md`. Local Unlock Pro is debug-only
+(`kDebugMode` in Settings) — that is fine for store builds; tryout people
+use promo codes or TestFlight, not that button.
+
+- [ ] App Store Connect: one-time Pro product (about $1.99) for
+  `com.dix.stackfit`
+- [ ] RevenueCat project + iOS app + entitlement matching
+  `AppConstants.proEntitlementId` / product id
+- [ ] Wire `purchases_flutter`: purchase, restore, and reflect Pro in
+  `isProProvider` (not a local bool alone)
+- [ ] Settings **Restore Purchase** works on a TestFlight build
+- [ ] Paid features gated only when entitlement is active: unlimited
+  workouts, full history, duplicate, plan Start / Add, Pro skins
+- [ ] **Tryout keys:** enable App Store promo codes and/or RevenueCat
+  promotional / offer codes for the Pro product; write down how you
+  generate a code and what the person taps on their phone to redeem
+- [ ] Redeem one test code yourself on a device that was Free; confirm Pro
+  features unlock and **Restore Purchase** still works after reinstall
+
+### Account server — not for 1.0
+
+Deferred until the next big feature (website + phone accounts). Do not block
+the first App Store submit on these.
+
+- [ ] *(Later)* Public HTTPS host for the API + website
+- [ ] *(Later)* Release builds use `--dart-define=STACKFIT_ACCOUNT_URL=https://…`
+- [ ] *(Later)* Sign up, sign in, sync, delete account; password reset by email
+- [ ] *(Later)* Turn account UI back on in the phone app and point privacy /
+  delete-account copy at the live site
+
+For 1.0 only:
+
+- [ ] Account / sign-in UI hidden or clearly unavailable in the Release build
+  (no dead “server offline” path for reviewers)
+- [ ] Privacy policy live at a **public HTTPS URL** even without accounts
+  (device data only). Can be a simple hosted page; `/privacy.html` is fine
+  once the site is on HTTPS, or a short standalone page
+- [ ] Support URL or email Apple can show on the product page
+
+### Apple account and signing
+
+- [ ] Apple Developer Program membership active
+- [ ] App record in App Store Connect for `com.dix.stackfit`
+- [ ] Distribution certificate + App Store provisioning profile
+- [ ] Xcode / `flutter build ipa` signs a Release archive successfully
+- [ ] Encryption question answered (Info.plist already has
+  `ITSAppUsesNonExemptEncryption` = false — confirm that still matches)
+
+### Store listing
+
+- [ ] App name and subtitle (display name today is `Stackfit` in
+  `ios/Runner/Info.plist` — decide on **StackFit** and make it consistent)
+- [ ] Description, keywords, category, age rating
+- [ ] Screenshots for the required iPhone sizes (and iPad if you check iPad)
+- [ ] App Privacy “nutrition labels” match 1.0 (no ads; data on device only;
+  no account email until the later accounts feature)
+- [ ] Review notes: how to test Pro / restore (no sign-in required for 1.0)
+- [ ] Home-screen icon is StackFit (not the Flutter logo) after a fresh
+  install — see `icon/icon.png` and `flutter_launcher_icons`
+
+### TestFlight then submit
+
+- [ ] Upload build to TestFlight; install on at least one real iPhone
+- [ ] Invite tryout people via TestFlight when you want them on a pre-store
+  build (whole app, sandbox purchases)
+- [ ] Buy / restore Pro on TestFlight (sandbox)
+- [ ] After Pro product exists: generate at least one promo / offer code and
+  redeem it on a Free install
+- [ ] No crash on cold start, background during a run, or after Done
+- [ ] Submit for App Review with the listing and privacy URL complete
+
+### Explicitly not required for 1.0
+
+- Accounts, sync, or a live website coupled to the phone (next big feature)
+- Custom sound assets (system sounds + haptics are enough)
+- Local notifications
+- Apple / Google sign-in
+- Homemade “type this secret in Settings” unlock keys (use store promo
+  codes instead)
+- Wearables, charts, social feed

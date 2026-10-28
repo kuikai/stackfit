@@ -6,13 +6,21 @@ import 'log_row_swipe.dart';
 /// Logged sets grouped by exercise, e.g. "Bench Press  8×60 · 8×60 · 6×60"
 /// (reps×kg, or just reps for bodyweight sets).
 class SetLogList extends StatelessWidget {
-  const SetLogList({super.key, required this.logs, this.onDeleteGroup});
+  const SetLogList({
+    super.key,
+    required this.logs,
+    this.onDeleteGroup,
+    this.scrollable = true,
+  });
 
   final List<SetLog> logs;
 
   /// When set, a short swipe removes that exercise. History passes this.
   /// The finish screen leaves it null.
   final void Function(List<SetLog> group)? onDeleteGroup;
+
+  /// False when a parent (finish screen) already scrolls the page.
+  final bool scrollable;
 
   static String groupTitle(SetLog log) {
     if (log.round <= 1) {
@@ -30,6 +38,7 @@ class SetLogList extends StatelessWidget {
     return Card(
       child: ListView.separated(
         shrinkWrap: true,
+        physics: scrollable ? null : const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         itemCount: groups.length,
         separatorBuilder: (_, _) => const Divider(height: 1),

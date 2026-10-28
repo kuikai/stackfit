@@ -29,14 +29,21 @@ class SoftPageTransitionsBuilder extends PageTransitionsBuilder {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
+    // When this route is on top again, never keep the "covered" fade. After
+    // pushReplacement (timer → finish) the leave animation can stick at 1,
+    // which leaves Home invisible and untappable over the city background.
+    final leave = route.isCurrent
+        ? const AlwaysStoppedAnimation<double>(0)
+        : secondaryAnimation;
+
     return FadeTransition(
       opacity: _enterFade.animate(animation),
       child: SlideTransition(
         position: _enterSlide.animate(animation),
         child: FadeTransition(
-          opacity: _leaveFade.animate(secondaryAnimation),
+          opacity: _leaveFade.animate(leave),
           child: SlideTransition(
-            position: _leaveSlide.animate(secondaryAnimation),
+            position: _leaveSlide.animate(leave),
             child: child,
           ),
         ),

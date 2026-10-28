@@ -75,6 +75,7 @@ const _boldSportsLook = SkinLook(
   listGap: 8,
   buttonPaddingHorizontal: 18,
   buttonPaddingVertical: 10,
+  cardOpacity: 0.12,
 );
 
 const _chibiLook = SkinLook(
@@ -86,6 +87,7 @@ const _chibiLook = SkinLook(
   listGap: 16,
   buttonPaddingHorizontal: 28,
   buttonPaddingVertical: 16,
+  cardOpacity: 0.14,
 );
 
 const _cyberpunkLook = SkinLook(
@@ -109,4 +111,5 @@ const _dumbbellLook = SkinLook(
   listGap: 12,
   buttonPaddingHorizontal: 24,
   buttonPaddingVertical: 14,
+  cardOpacity: 0.14,
 );

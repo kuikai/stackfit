@@ -14,13 +14,11 @@ enum AppSkin {
   sunset,
   minimal,
   synthwave,
-  boldSports,
-  chibi,
-  cyberpunk,
-  dumbbell;
+  boldSports(pro: true),
+  chibi(pro: true),
+  cyberpunk(pro: true),
+  dumbbell(pro: true);
 
-  // Anime skins stay free until purchases exist, so nothing passes true yet.
-  // ignore: unused_element_parameter
   const AppSkin({this.pro = false});
 
   /// True for fun themes such as anime. They live in the Pro skins section.
@@ -71,47 +69,85 @@ enum AppSkin {
     _ => null,
   };
 
-  /// Empty night gym behind Workout Plans and the timer.
+  /// Empty gym behind Workout Plans and the timer (dark mode).
   String? get backgroundAsset => switch (this) {
+    AppSkin.boldSports => 'StackFitWeb/themes/bold-sports/background.jpg',
+    AppSkin.chibi => 'StackFitWeb/themes/chibi/background.jpg',
     AppSkin.cyberpunk => 'StackFitWeb/themes/cyberpunk/background.jpg',
+    AppSkin.dumbbell => 'StackFitWeb/themes/dumbbell/background.jpg',
     _ => null,
   };
 
   /// Full Home picture. The girl and her gym are one scene.
   String? get heroAsset => switch (this) {
+    AppSkin.boldSports => 'StackFitWeb/themes/bold-sports/girl-standing.jpg',
+    AppSkin.chibi => 'StackFitWeb/themes/chibi/girl-standing.jpg',
     AppSkin.cyberpunk => 'StackFitWeb/themes/cyberpunk/girl-standing.jpg',
+    AppSkin.dumbbell => 'StackFitWeb/themes/dumbbell/girl-standing.jpg',
     _ => null,
   };
 
   /// What Home paints. The big picture wins over the empty gym.
   String? get homePlateAsset => heroAsset ?? backgroundAsset;
 
-  /// Cheering chibi. Home corner and, for Cyberpunk, not the sitting pose.
+  /// Cheering mascot. Home corner; sit/rest poses win on the timer buttons.
   String? get mascotAsset => switch (this) {
-    AppSkin.boldSports => 'StackFitWeb/themes/bold-sports/icons/icon.jpg',
-    AppSkin.chibi => 'StackFitWeb/themes/chibi/icons/icon.jpg',
+    AppSkin.boldSports =>
+      'StackFitWeb/themes/bold-sports/mascots/mascot-power.png',
+    AppSkin.chibi => 'StackFitWeb/themes/chibi/mascots/mascot-pastel.png',
     AppSkin.cyberpunk =>
       'StackFitWeb/themes/cyberpunk/mascots/mascot-chibi.png',
-    AppSkin.dumbbell => 'StackFitWeb/themes/dumbbell/icons/icon-companion.jpg',
+    AppSkin.dumbbell =>
+      'StackFitWeb/themes/dumbbell/mascots/mascot-companion.png',
     _ => null,
   };
 
-  /// Chibi perched on the Done / Next Set button.
+  /// Mascot perched on the Done / Next Set button.
   String? get mascotSeatAsset => switch (this) {
+    AppSkin.boldSports =>
+      'StackFitWeb/themes/bold-sports/mascots/mascot-power-sit.png',
+    AppSkin.chibi => 'StackFitWeb/themes/chibi/mascots/mascot-pastel-sit.png',
     AppSkin.cyberpunk =>
       'StackFitWeb/themes/cyberpunk/mascots/mascot-chibi-sit.png',
+    AppSkin.dumbbell =>
+      'StackFitWeb/themes/dumbbell/mascots/mascot-companion-sit.png',
     _ => null,
   };
 
-  /// Chibi lying on the Skip rest bar.
+  /// Mascot lying on the Skip rest bar.
   String? get mascotRestAsset => switch (this) {
+    AppSkin.boldSports =>
+      'StackFitWeb/themes/bold-sports/mascots/mascot-power-rest.png',
+    AppSkin.chibi => 'StackFitWeb/themes/chibi/mascots/mascot-pastel-rest.png',
     AppSkin.cyberpunk =>
       'StackFitWeb/themes/cyberpunk/mascots/mascot-chibi-rest.png',
+    AppSkin.dumbbell =>
+      'StackFitWeb/themes/dumbbell/mascots/mascot-companion-rest.png',
     _ => null,
   };
 
   /// Run-cycle frames. Empty unless this skin has a runner.
   List<String> get mascotRunFrames => switch (this) {
+    AppSkin.boldSports => const [
+      'StackFitWeb/themes/bold-sports/mascots/animation/running/mascot-power-run-1.png',
+      'StackFitWeb/themes/bold-sports/mascots/animation/running/mascot-power-run-2.png',
+      'StackFitWeb/themes/bold-sports/mascots/animation/running/mascot-power-run-3.png',
+      'StackFitWeb/themes/bold-sports/mascots/animation/running/mascot-power-run-4.png',
+      'StackFitWeb/themes/bold-sports/mascots/animation/running/mascot-power-run-5.png',
+      'StackFitWeb/themes/bold-sports/mascots/animation/running/mascot-power-run-6.png',
+      'StackFitWeb/themes/bold-sports/mascots/animation/running/mascot-power-run-7.png',
+      'StackFitWeb/themes/bold-sports/mascots/animation/running/mascot-power-run-8.png',
+    ],
+    AppSkin.chibi => const [
+      'StackFitWeb/themes/chibi/mascots/animation/running/mascot-pastel-run-1.png',
+      'StackFitWeb/themes/chibi/mascots/animation/running/mascot-pastel-run-2.png',
+      'StackFitWeb/themes/chibi/mascots/animation/running/mascot-pastel-run-3.png',
+      'StackFitWeb/themes/chibi/mascots/animation/running/mascot-pastel-run-4.png',
+      'StackFitWeb/themes/chibi/mascots/animation/running/mascot-pastel-run-5.png',
+      'StackFitWeb/themes/chibi/mascots/animation/running/mascot-pastel-run-6.png',
+      'StackFitWeb/themes/chibi/mascots/animation/running/mascot-pastel-run-7.png',
+      'StackFitWeb/themes/chibi/mascots/animation/running/mascot-pastel-run-8.png',
+    ],
     AppSkin.cyberpunk => const [
       'StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-1.png',
       'StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-2.png',
@@ -126,6 +162,16 @@ enum AppSkin {
       'StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-11.png',
       'StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-12.png',
       'StackFitWeb/themes/cyberpunk/mascots/animation/running/mascot-chibi-run-13.png',
+    ],
+    AppSkin.dumbbell => const [
+      'StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-1.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-2.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-3.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-4.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-5.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-6.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-7.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-8.png',
     ],
     _ => const [],
   };
