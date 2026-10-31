@@ -15,11 +15,13 @@ class AppConstants {
   static const String oneTimePurchaseCopy =
       'One-time purchase • No subscription';
 
-  /// RevenueCat / store product id (placeholder until RevenueCat is wired).
-  static const String proProductId = 'StackFitPro';
+  /// RevenueCat / store product id.
+  /// Must match the Non-Consumable product in Play Console and App Store Connect,
+  /// and the product attached to the `pro` entitlement in RevenueCat.
+  static const String proProductId = 'stackfit_pro';
 
-  /// RevenueCat entitlement id (placeholder until RevenueCat is wired).
-  static const String proEntitlementId = 'StackFit Pro';
+  /// RevenueCat entitlement id.
+  static const String proEntitlementId = 'pro';
 
   /// Local account server. Override with --dart-define=STACKFIT_ACCOUNT_URL=...
   /// A Play release build shows sign-in only when this address is https.
