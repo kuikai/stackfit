@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants.dart';
 import '../services/account/account_api_client.dart';
 import '../services/account/account_storage.dart';
+import '../services/revenue_cat_service.dart';
 import '../services/storage_service.dart';
 
 /// Must be overridden in [main] with a real [SharedPreferences] instance.
@@ -23,4 +24,8 @@ final accountApiProvider = Provider<AccountApiClient>((ref) {
   final client = AccountApiClient(baseUrl: AppConstants.accountServerUrl);
   ref.onDispose(client.close);
   return client;
+});
+
+final revenueCatServiceProvider = Provider<RevenueCatService>((ref) {
+  return RevenueCatService();
 });
