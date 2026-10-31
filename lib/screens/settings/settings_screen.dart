@@ -7,6 +7,7 @@ import '../../core/skins.dart';
 import '../../core/theme.dart';
 import '../../providers/pro_provider.dart';
 import '../../providers/settings_provider.dart';
+import '../../services/revenue_cat_service.dart';
 import '../../widgets/account_settings_card.dart';
 import '../../widgets/collapsible_section.dart';
 import '../../widgets/skin_picker.dart';
@@ -125,6 +126,26 @@ class SettingsScreen extends ConsumerWidget {
                       height: 1.4,
                     ),
                   ),
+                  if (!isPro) ...[
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: () => _purchasePro(context, ref),
+                        child: Text(
+                          'Unlock for ${AppConstants.defaultProPrice}',
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () => _restorePurchases(context, ref),
+                      child: const Text('Restore Purchase'),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -190,6 +211,38 @@ class SettingsScreen extends ConsumerWidget {
           ],
         ],
       ),
+    );
+  }
+
+  Future<void> _purchasePro(BuildContext context, WidgetRef ref) async {
+    final result = await ref.read(isProProvider.notifier).purchasePro();
+    if (!context.mounted) return;
+
+    final message = switch (result) {
+      PurchaseActionSuccess() => 'StackFit Pro unlocked.',
+      PurchaseActionCancelled() => 'Purchase cancelled.',
+      PurchaseActionFailure(:final message) => message,
+      PurchaseActionNoPurchase() => 'No purchase found.',
+    };
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _restorePurchases(BuildContext context, WidgetRef ref) async {
+    final result = await ref.read(isProProvider.notifier).restorePurchases();
+    if (!context.mounted) return;
+
+    final message = switch (result) {
+      PurchaseActionSuccess() => 'Purchase restored. Pro is unlocked.',
+      PurchaseActionCancelled() => 'Restore cancelled.',
+      PurchaseActionFailure(:final message) => message,
+      PurchaseActionNoPurchase() => 'No previous purchase found.',
+    };
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
   }
 
