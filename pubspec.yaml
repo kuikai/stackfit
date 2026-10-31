@@ -39,6 +39,7 @@ dependencies:
   shared_preferences: ^2.5.5
   wakelock_plus: ^1.7.0
   google_fonts: ^8.2.1
+  purchases_flutter: ^10.9.0
 
 dev_dependencies:
   flutter_test:
