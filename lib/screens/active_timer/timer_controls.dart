@@ -6,18 +6,24 @@ import '../../providers/settings_provider.dart';
 import '../../services/workout_session_controller.dart';
 import '../../widgets/skin_artwork.dart';
 
-/// Standing characters beside Done.
+/// How far a solo mascot sits above the Done button. The picture hangs
+/// past this so her seat lands on the bar.
+const _seatLift = 108.0;
+
+/// Sitting picture on Done.
+const _seatMascotSize = 148.0;
+
+/// Standing pair beside Done (companion and trainer).
 const _doneMascotSize = 76.0;
 
-/// One mascot beside Done when the skin has no partner.
-const _soloMascotSize = 92.0;
+/// How far a solo rest pose sits above Skip rest.
+const _restLift = 96.0;
 
-/// Sitting characters beside Skip rest. Kept low so they stay near the button.
+/// Lying pose across Skip rest.
+const _restPoseWidth = 260.0;
+
+/// Sitting pair beside Skip rest. Kept low so they stay near the button.
 const _restSitSize = 56.0;
-
-/// Lying pose beside Skip rest. Width follows the 16:9 rest pictures.
-const _restMascotWidth = 136.0;
-const _restMascotHeight = 76.0;
 
 /// Done / Skip rest, shown under the countdown.
 class TimerPrimaryAction extends ConsumerWidget {
@@ -44,28 +50,52 @@ class TimerPrimaryAction extends ConsumerWidget {
     return const SizedBox.shrink();
   }
 
-  /// Woman on the left of Done, man on the right. One mascot stays on the right.
+  /// One mascot perches on the right of Done. A pair stands on either side.
   Widget _doneButton(BuildContext context, AppSkin skin) {
     final theme = Theme.of(context);
     final onPrimary = theme.colorScheme.onPrimary;
     final label = state.setNumber >= state.totalSets
         ? 'Done'
         : 'Done / Next Set';
-    final button = Expanded(
-      child: _actionButton(label, onPrimary, theme, onCompleteSet),
-    );
     if (skin.mascotSeatPartnerAsset != null) {
-      return _donePair(button);
+      return _donePair(
+        Expanded(child: _actionButton(label, onPrimary, theme, onCompleteSet)),
+      );
     }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        button,
-        if (skin.mascotSeatAsset != null) ...[
-          const SizedBox(width: 8),
-          const SkinMascot(seated: true, size: _soloMascotSize, pinned: false),
-        ],
-      ],
+    return _doneSolo(label, onPrimary, theme, skin.mascotSeatAsset != null);
+  }
+
+  /// Full-width bar. The mascot overlaps the top-right edge.
+  Widget _doneSolo(
+    String label,
+    Color onPrimary,
+    ThemeData theme,
+    bool seated,
+  ) {
+    return Padding(
+      padding: EdgeInsets.only(top: seated ? _seatLift : 0),
+      child: SizedBox(
+        width: double.infinity,
+        height: 60,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(
+              child: _actionButton(label, onPrimary, theme, onCompleteSet),
+            ),
+            if (seated)
+              const Positioned(
+                right: 6,
+                top: -_seatLift,
+                child: SkinMascot(
+                  seated: true,
+                  size: _seatMascotSize,
+                  pinned: false,
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -112,34 +142,58 @@ class TimerPrimaryAction extends ConsumerWidget {
     );
   }
 
-  /// Woman sits on the left of Skip rest, man on the right.
+  /// One mascot lies across Skip rest. A pair sits on either side.
   Widget _skipRestButton(AppSkin skin) {
-    final button = Expanded(
-      child: SizedBox(
-        height: 52,
-        child: FilledButton.tonal(
-          onPressed: onSkipRest,
-          child: const Text('Skip rest'),
-        ),
+    if (skin.mascotRestPartnerAsset != null) {
+      return _restPair(_restButton());
+    }
+    if (skin.mascotRestAsset == null) {
+      return _restButton(expand: false);
+    }
+    return _restSolo();
+  }
+
+  Widget _restButton({bool expand = true}) {
+    final button = SizedBox(
+      height: 52,
+      width: expand ? null : double.infinity,
+      child: FilledButton.tonal(
+        onPressed: onSkipRest,
+        child: const Text('Skip rest'),
       ),
     );
-    if (skin.mascotRestPartnerAsset != null) {
-      return _restPair(button);
+    if (!expand) {
+      return button;
     }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        if (skin.mascotRestAsset != null) ...[
-          const SkinMascot(
-            resting: true,
-            width: _restMascotWidth,
-            height: _restMascotHeight,
-            pinned: false,
-          ),
-          const SizedBox(width: 8),
-        ],
-        button,
-      ],
+    return Expanded(child: button);
+  }
+
+  /// Full-width bar. The lying pose overlaps the top edge.
+  Widget _restSolo() {
+    return Padding(
+      padding: const EdgeInsets.only(top: _restLift),
+      child: SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(child: _restButton(expand: false)),
+            const Positioned(
+              left: 0,
+              right: 0,
+              top: -_restLift,
+              child: Center(
+                child: SkinMascot(
+                  resting: true,
+                  width: _restPoseWidth,
+                  pinned: false,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

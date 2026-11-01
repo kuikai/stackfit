@@ -18,7 +18,11 @@ void main() {
 
     expect(find.text('Set 3').hitTestable(), findsOneWidget);
     expect(find.text('Reps').hitTestable(), findsOneWidget);
-    expect(_overlaps(_rect(tester, 'Reps'), _rectOf(tester, Image)), isFalse);
+    final mascot = _rectOf(tester, Image);
+    final done = _rect(tester, 'Done / Next Set');
+    expect(_overlaps(_rect(tester, 'Reps'), mascot), isFalse);
+    expect(mascot.top, lessThan(done.top));
+    expect(mascot.bottom, greaterThan(done.top));
     expect(tester.takeException(), isNull);
   });
 
