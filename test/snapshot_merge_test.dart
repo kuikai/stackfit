@@ -21,7 +21,7 @@ void main() {
 
   test('a newer deletion removes the workout', () {
     final workout = _workout('lift', DateTime.utc(2026, 1, 1), 'Lift');
-    final deletion = WorkoutDeletion(
+    final deletion = SnapshotDeletion(
       id: 'lift',
       deletedAt: DateTime.utc(2026, 3, 1),
     );
@@ -37,7 +37,7 @@ void main() {
 
   test('an edit newer than a deletion keeps the workout', () {
     final workout = _workout('lift', DateTime.utc(2026, 4, 1), 'Lift');
-    final deletion = WorkoutDeletion(
+    final deletion = SnapshotDeletion(
       id: 'lift',
       deletedAt: DateTime.utc(2026, 3, 1),
     );
@@ -67,6 +67,45 @@ void main() {
     ]);
   });
 
+  test('a session deletion drops the session', () {
+    final session = _session('session-1');
+    final deletion = SnapshotDeletion(
+      id: 'session-1',
+      deletedAt: DateTime.utc(2026, 3, 1),
+    );
+
+    final merged = mergeSnapshots(
+      _snapshot(sessions: [session]),
+      _snapshot(deletedSessions: [deletion]),
+    );
+
+    expect(merged.sessions, isEmpty);
+    expect(merged.deletedSessions.single.id, 'session-1');
+  });
+
+  test('a trimmed local session does not beat a deletion', () {
+    final trimmed = CompletedSession(
+      id: 'session-1',
+      workoutId: 'workout',
+      workoutName: 'Push',
+      completedAt: DateTime.utc(2026, 4, 1),
+      durationSeconds: 60,
+      totalExercises: 1,
+    );
+    final deletion = SnapshotDeletion(
+      id: 'session-1',
+      deletedAt: DateTime.utc(2026, 3, 1),
+    );
+
+    final merged = mergeSnapshots(
+      _snapshot(sessions: [trimmed]),
+      _snapshot(deletedSessions: [deletion]),
+    );
+
+    expect(merged.sessions, isEmpty);
+    expect(merged.deletedSessions.single.id, 'session-1');
+  });
+
   test('newer appearance wins', () {
     final merged = mergeSnapshots(
       _snapshot(skin: 'forest', appearanceUpdatedAt: DateTime.utc(2026, 5, 1)),
@@ -80,8 +119,9 @@ void main() {
 
 AccountSnapshot _snapshot({
   List<Workout> workouts = const [],
-  List<WorkoutDeletion> deletedWorkouts = const [],
+  List<SnapshotDeletion> deletedWorkouts = const [],
   List<CompletedSession> sessions = const [],
+  List<SnapshotDeletion> deletedSessions = const [],
   String skin = 'classic',
   DateTime? appearanceUpdatedAt,
 }) {
@@ -89,6 +129,7 @@ AccountSnapshot _snapshot({
     workouts: workouts,
     deletedWorkouts: deletedWorkouts,
     sessions: sessions,
+    deletedSessions: deletedSessions,
     themeMode: 'dark',
     skin: skin,
     appearanceUpdatedAt: appearanceUpdatedAt ?? DateTime.utc(1970),

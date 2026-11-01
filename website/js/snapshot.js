@@ -8,6 +8,7 @@ export function emptySnapshot() {
     workouts: [],
     deletedWorkouts: [],
     sessions: [],
+    deletedSessions: [],
     customExercises: [],
     themeMode: 'system',
     skin: 'classic',
@@ -27,6 +28,9 @@ export function ensureSnapshot(raw) {
       ? snapshot.deletedWorkouts
       : [],
     sessions: Array.isArray(snapshot.sessions) ? snapshot.sessions : [],
+    deletedSessions: Array.isArray(snapshot.deletedSessions)
+      ? snapshot.deletedSessions
+      : [],
     customExercises: Array.isArray(snapshot.customExercises)
       ? snapshot.customExercises
       : [],
@@ -40,11 +44,13 @@ export function ensureSnapshot(raw) {
 /// Same rules as lib/services/account/snapshot_merge.dart.
 export function mergeSnapshots(local, remote) {
   const workouts = mergeWorkouts(local, remote);
+  const sessions = mergeSessions(local, remote);
   const appearance = newerAppearance(local, remote);
   return {
     workouts: workouts.workouts,
     deletedWorkouts: workouts.deletions,
-    sessions: mergeSessions(local.sessions, remote.sessions),
+    sessions: sessions.sessions,
+    deletedSessions: sessions.deletions,
     customExercises: mergeCustomExercises(
       local.customExercises,
       remote.customExercises,
@@ -238,15 +244,34 @@ function mergeCustomExercises(local, remote) {
 }
 
 function mergeSessions(local, remote) {
-  const byId = new Map();
-  for (const session of [...(local || []), ...(remote || [])]) {
-    if (!byId.has(session.id)) {
-      byId.set(session.id, session);
+  const sessions = new Map();
+  for (const session of [...(local.sessions || []), ...(remote.sessions || [])]) {
+    if (!sessions.has(session.id)) {
+      sessions.set(session.id, session);
     }
   }
-  return [...byId.values()].sort(
+  const deletions = new Map();
+  keepDeletions(deletions, local.deletedSessions);
+  keepDeletions(deletions, remote.deletedSessions);
+
+  const keptSessions = [];
+  const keptDeletions = [];
+  const ids = new Set([...sessions.keys(), ...deletions.keys()]);
+  for (const id of ids) {
+    const deletedAt = deletions.get(id);
+    if (deletedAt) {
+      keptDeletions.push({ id, deletedAt });
+      continue;
+    }
+    const session = sessions.get(id);
+    if (session) {
+      keptSessions.push(session);
+    }
+  }
+  keptSessions.sort(
     (a, b) => Date.parse(b.completedAt) - Date.parse(a.completedAt),
   );
+  return { sessions: keptSessions, deletions: keptDeletions };
 }
 
 function newerAppearance(local, remote) {

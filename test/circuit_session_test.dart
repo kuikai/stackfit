@@ -168,6 +168,168 @@ void main() {
     expect(controller.setLogs.first.reps, 12);
     expect(controller.setLogs[1].reps, 8);
   });
+
+  test('a circuit names the next station', () {
+    final workout = _circuitWorkout();
+    WorkoutSessionState at({
+      required int block,
+      required int round,
+      required int station,
+    }) {
+      return WorkoutSessionState(
+        workout: workout,
+        blockIndex: block,
+        roundIndex: round,
+        exerciseIndex: station,
+        setIndex: 0,
+        phase: SessionPhase.work,
+        remainingSeconds: 0,
+        isPaused: false,
+        startedAt: DateTime.utc(2026, 10, 23),
+      );
+    }
+
+    expect(at(block: 0, round: 0, station: 0).nextExercise, isNull);
+    expect(at(block: 1, round: 0, station: 0).nextExercise?.name, 'Squats');
+    expect(at(block: 1, round: 0, station: 1).nextExercise?.name, 'Push-ups');
+    expect(at(block: 1, round: 1, station: 1).nextExercise?.name, 'Plank');
+    expect(at(block: 2, round: 0, station: 0).nextExercise, isNull);
+  });
+
+  test('rest keeps counting while the app is away', () {
+    final clock = _Clock(DateTime.utc(2026, 10, 29, 12));
+    var alarms = 0;
+    final controller = _controller(
+      workout: _setsWorkout(),
+      clock: clock,
+      onRestFinished: () => alarms++,
+    );
+
+    controller.completeSet(repsDone: 8);
+    expect(controller.state.phase, SessionPhase.rest);
+    expect(controller.state.remainingSeconds, 60);
+
+    controller.freezeClock();
+    clock.advance(const Duration(seconds: 10));
+    controller.freezeClock();
+    clock.advance(const Duration(seconds: 15));
+    controller.thawClock();
+
+    expect(controller.state.phase, SessionPhase.rest);
+    expect(controller.state.remainingSeconds, 35);
+    expect(controller.elapsedSeconds, 25);
+    expect(alarms, 0);
+
+    controller.freezeClock();
+    clock.advance(const Duration(seconds: 40));
+    controller.thawClock();
+
+    expect(controller.state.phase, SessionPhase.setReady);
+    expect(controller.state.setIndex, 1);
+    expect(alarms, 1);
+    expect(controller.elapsedSeconds, 65);
+  });
+
+  test('a work interval stays put while the app is away', () {
+    final clock = _Clock(DateTime.utc(2026, 10, 29, 12));
+    final controller = _controller(workout: _timerWorkout(), clock: clock);
+
+    expect(controller.state.phase, SessionPhase.work);
+    expect(controller.state.remainingSeconds, 30);
+
+    controller.freezeClock();
+    clock.advance(const Duration(seconds: 20));
+    controller.thawClock();
+
+    expect(controller.state.phase, SessionPhase.work);
+    expect(controller.state.remainingSeconds, 30);
+    expect(controller.elapsedSeconds, 0);
+  });
+
+  test('a paused rest stays put while the app is away', () {
+    final clock = _Clock(DateTime.utc(2026, 10, 29, 12));
+    final controller = _controller(workout: _setsWorkout(), clock: clock);
+
+    controller.completeSet(repsDone: 8);
+    controller.togglePause();
+    final left = controller.state.remainingSeconds;
+
+    controller.freezeClock();
+    clock.advance(const Duration(seconds: 30));
+    controller.thawClock();
+
+    expect(controller.state.isPaused, isTrue);
+    expect(controller.state.phase, SessionPhase.rest);
+    expect(controller.state.remainingSeconds, left);
+    expect(controller.elapsedSeconds, 0);
+  });
+}
+
+class _Clock {
+  _Clock(this._now);
+
+  DateTime _now;
+
+  DateTime call() => _now;
+
+  void advance(Duration by) {
+    _now = _now.add(by);
+  }
+}
+
+WorkoutSessionController _controller({
+  required Workout workout,
+  required _Clock clock,
+  void Function()? onRestFinished,
+}) {
+  final controller = WorkoutSessionController(
+    workout: workout,
+    onWorkFinished: () {},
+    onRestFinished: onRestFinished ?? () {},
+    onWorkoutFinished: () {},
+    clock: clock.call,
+  );
+  addTearDown(controller.disposeController);
+  return controller;
+}
+
+Workout _setsWorkout() {
+  return Workout(
+    id: 'sets',
+    name: 'Bench',
+    createdAt: DateTime.utc(2026, 10, 29),
+    updatedAt: DateTime.utc(2026, 10, 29),
+    blocks: [
+      ExerciseBlock(
+        Exercise.sets(
+          id: 'bench',
+          name: 'Bench',
+          sets: 3,
+          reps: 8,
+          restSeconds: 60,
+        ),
+      ),
+    ],
+  );
+}
+
+Workout _timerWorkout() {
+  return Workout(
+    id: 'timer',
+    name: 'Plank',
+    createdAt: DateTime.utc(2026, 10, 29),
+    updatedAt: DateTime.utc(2026, 10, 29),
+    blocks: [
+      ExerciseBlock(
+        Exercise.timer(
+          id: 'plank',
+          name: 'Plank',
+          workSeconds: 30,
+          restSeconds: 10,
+        ),
+      ),
+    ],
+  );
 }
 
 Workout _circuitWorkout() {

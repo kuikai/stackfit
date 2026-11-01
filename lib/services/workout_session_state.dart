@@ -63,6 +63,39 @@ class WorkoutSessionState {
     return null;
   }
 
+  /// Next station in this circuit, or the first exercise after it.
+  ///
+  /// Null outside a circuit, and when this is the last station of the workout.
+  Exercise? get nextExercise {
+    final block = currentBlock;
+    if (block is! CircuitBlock) {
+      return null;
+    }
+    final stations = block.circuit.exercises;
+    if (exerciseIndex + 1 < stations.length) {
+      return stations[exerciseIndex + 1];
+    }
+    final rounds = block.circuit.rounds < 1 ? 1 : block.circuit.rounds;
+    if (roundIndex + 1 < rounds && stations.isNotEmpty) {
+      return stations.first;
+    }
+    return _firstExerciseAfter(blockIndex);
+  }
+
+  Exercise? _firstExerciseAfter(int afterBlockIndex) {
+    for (
+      var index = afterBlockIndex + 1;
+      index < workout.blocks.length;
+      index++
+    ) {
+      final exercises = workout.blocks[index].exercises;
+      if (exercises.isNotEmpty) {
+        return exercises.first;
+      }
+    }
+    return null;
+  }
+
   int get roundNumber => roundIndex + 1;
 
   /// "Exercise 2 of 4", or "Round 2 of 3 · Station 1 of 4" inside a circuit.

@@ -7,19 +7,15 @@ class ExerciseEditorTile extends StatelessWidget {
   const ExerciseEditorTile({
     super.key,
     required this.exercise,
-    required this.index,
     required this.onEdit,
     required this.onDelete,
-    this.draggable = true,
     this.onMoveUp,
     this.onMoveDown,
   });
 
   final Exercise exercise;
-  final int index;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
-  final bool draggable;
   final VoidCallback? onMoveUp;
   final VoidCallback? onMoveDown;
 
@@ -32,29 +28,21 @@ class ExerciseEditorTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
         contentPadding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
-        leading: draggable
-            ? ReorderableDragStartListener(
-                index: index,
-                child: Icon(
-                  Icons.drag_handle_rounded,
-                  color: colorScheme.onSurface.withValues(alpha: 0.45),
-                ),
-              )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _MoveButton(
-                    tooltip: 'Move up',
-                    icon: Icons.keyboard_arrow_up_rounded,
-                    onPressed: onMoveUp,
-                  ),
-                  _MoveButton(
-                    tooltip: 'Move down',
-                    icon: Icons.keyboard_arrow_down_rounded,
-                    onPressed: onMoveDown,
-                  ),
-                ],
-              ),
+        leading: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            EditorMoveButton(
+              tooltip: 'Move up',
+              icon: Icons.keyboard_arrow_up_rounded,
+              onPressed: onMoveUp,
+            ),
+            EditorMoveButton(
+              tooltip: 'Move down',
+              icon: Icons.keyboard_arrow_down_rounded,
+              onPressed: onMoveDown,
+            ),
+          ],
+        ),
         title: Text(
           exercise.name,
           style: theme.textTheme.titleMedium?.copyWith(
@@ -98,8 +86,10 @@ class ExerciseEditorTile extends StatelessWidget {
   }
 }
 
-class _MoveButton extends StatelessWidget {
-  const _MoveButton({
+/// Small up or down control used on exercise rows and circuit headers.
+class EditorMoveButton extends StatelessWidget {
+  const EditorMoveButton({
+    super.key,
     required this.tooltip,
     required this.icon,
     required this.onPressed,

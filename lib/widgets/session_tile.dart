@@ -6,11 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/utils.dart';
 import '../models/models.dart';
 import '../providers/completed_sessions_provider.dart';
+import 'log_row_swipe.dart';
 import 'set_log_list.dart';
 
 /// One finished session: date, duration, and a sets/reps/kg summary.
 /// Tapping a session with logged sets opens them in a bottom sheet.
-class SessionTile extends StatelessWidget {
+/// Swiping the row asks before deleting the whole session.
+class SessionTile extends ConsumerWidget {
   const SessionTile({
     super.key,
     required this.session,
@@ -34,7 +36,7 @@ class SessionTile extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final date = AppUtils.formatSessionDate(session.completedAt);
@@ -48,39 +50,45 @@ class SessionTile extends StatelessWidget {
       if (session.hasSetLogs) setSummary(session),
     ];
 
-    return Card(
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        title: Text(
-          title,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w700,
+    return LogRowSwipe(
+      onDelete: () => unawaited(_confirmDeleteSession(context, ref, session)),
+      child: Card(
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 8,
           ),
-        ),
-        subtitle: subtitleLines.isEmpty
-            ? null
-            : Text(subtitleLines.join('\n'), style: mutedStyle),
-        isThreeLine: subtitleLines.length > 1,
-        onTap: session.hasSetLogs
-            ? () => showSessionSetLogs(context, session)
-            : null,
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              session.formattedDuration,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+          title: Text(
+            title,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
             ),
-            Text(
-              '${session.totalExercises} ex',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurface.withValues(alpha: 0.55),
+          ),
+          subtitle: subtitleLines.isEmpty
+              ? null
+              : Text(subtitleLines.join('\n'), style: mutedStyle),
+          isThreeLine: subtitleLines.length > 1,
+          onTap: session.hasSetLogs
+              ? () => showSessionSetLogs(context, session)
+              : null,
+          trailing: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                session.formattedDuration,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            ),
-          ],
+              Text(
+                '${session.totalExercises} ex',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurface.withValues(alpha: 0.55),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -188,4 +196,34 @@ void _deleteExerciseLog(
           round: log.round,
         ),
   );
+}
+
+Future<void> _confirmDeleteSession(
+  BuildContext context,
+  WidgetRef ref,
+  CompletedSession session,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('Delete this session?'),
+        content: Text('"${session.workoutName}" will be removed from history.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      );
+    },
+  );
+  if (confirmed != true) {
+    return;
+  }
+  await ref.read(completedSessionsProvider.notifier).deleteSession(session.id);
 }

@@ -66,6 +66,28 @@ const _synthwaveLook = SkinLook(
   buttonPaddingVertical: 10,
 );
 
+const _whiteEnergyLook = SkinLook(
+  bodyFont: SkinTypeface.spaceGrotesk,
+  displayFont: SkinTypeface.rajdhani,
+  radius: 12,
+  radiusSmall: 8,
+  pagePadding: 14,
+  listGap: 10,
+  buttonPaddingHorizontal: 20,
+  buttonPaddingVertical: 12,
+);
+
+const _toxicLimeLook = SkinLook(
+  bodyFont: SkinTypeface.rajdhani,
+  displayFont: SkinTypeface.orbitron,
+  radius: 8,
+  radiusSmall: 6,
+  pagePadding: 12,
+  listGap: 8,
+  buttonPaddingHorizontal: 18,
+  buttonPaddingVertical: 10,
+);
+
 const _boldSportsLook = SkinLook(
   bodyFont: SkinTypeface.rajdhani,
   displayFont: SkinTypeface.orbitron,

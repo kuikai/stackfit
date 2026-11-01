@@ -32,6 +32,7 @@ document.querySelector('#workout-form').addEventListener('submit', onSaveWorkout
 document.querySelector('#cancel-editor').addEventListener('click', showLibrary);
 document.querySelector('#delete-workout').addEventListener('click', onDeleteWorkout);
 document.querySelector('#cancel-session').addEventListener('click', showLibrary);
+document.querySelector('#clear-history').addEventListener('click', onClearHistory);
 document.querySelector('#show-sign-up').addEventListener('click', () => showAuth('sign-up-panel'));
 document.querySelector('#show-sign-in').addEventListener('click', () => showAuth('sign-in-panel'));
 document.querySelector('#show-reset').addEventListener('click', () => showAuth('reset-panel'));
@@ -52,6 +53,7 @@ const sharingApp = {
   loadShares,
   persist,
   cloneSnapshot,
+  deleteSession: onDeleteSession,
   closeWorkoutEditor,
   clearAccount,
   showAuth,
@@ -147,6 +149,44 @@ async function onDeleteWorkout() {
     deletedAt: new Date().toISOString(),
   });
   await persist(snapshot, 'Deleted. The app drops it the next time it syncs.');
+}
+
+async function onDeleteSession(session) {
+  const confirmed = window.confirm('Delete this session?');
+  if (!confirmed) {
+    return;
+  }
+  const snapshot = cloneSnapshot(account.snapshot);
+  snapshot.sessions = snapshot.sessions.filter((item) => item.id !== session.id);
+  snapshot.deletedSessions = snapshot.deletedSessions.filter(
+    (item) => item.id !== session.id,
+  );
+  snapshot.deletedSessions.push({
+    id: session.id,
+    deletedAt: new Date().toISOString(),
+  });
+  await persist(snapshot, 'Deleted. The app drops it the next time it syncs.');
+}
+
+async function onClearHistory() {
+  if (account.snapshot.sessions.length === 0) {
+    return;
+  }
+  const confirmed = window.confirm('Delete all history? This cannot be undone.');
+  if (!confirmed) {
+    return;
+  }
+  const snapshot = cloneSnapshot(account.snapshot);
+  const now = new Date().toISOString();
+  const kept = snapshot.deletedSessions.filter(
+    (item) => !snapshot.sessions.some((session) => session.id === item.id),
+  );
+  for (const session of snapshot.sessions) {
+    kept.push({ id: session.id, deletedAt: now });
+  }
+  snapshot.deletedSessions = kept;
+  snapshot.sessions = [];
+  await persist(snapshot, 'History cleared. The app drops it the next time it syncs.');
 }
 
 async function persist(snapshot, notice) {

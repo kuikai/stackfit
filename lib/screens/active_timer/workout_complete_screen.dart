@@ -80,19 +80,21 @@ class _WorkoutCompleteScreenState extends ConsumerState<WorkoutCompleteScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final runFrames = ref.watch(settingsProvider).skin.mascotRunFrames;
+    final skin = ref.watch(settingsProvider).skin;
+    final celebrate = skin.mascotCelebrateFrames;
+    final frames = celebrate.isNotEmpty ? celebrate : skin.mascotRunFrames;
 
     return Scaffold(
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: _finishColumn(runFrames),
+          child: _finishColumn(frames, travel: celebrate.isEmpty),
         ),
       ),
     );
   }
 
-  Widget _finishColumn(List<String> runFrames) {
+  Widget _finishColumn(List<String> frames, {required bool travel}) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final args = widget.args;
@@ -152,7 +154,7 @@ class _WorkoutCompleteScreenState extends ConsumerState<WorkoutCompleteScreen> {
                   const SizedBox(height: 24),
                   SetLogList(logs: args.setLogs, scrollable: false),
                 ],
-                _finishLane(runFrames),
+                _finishLane(frames, travel: travel),
               ],
             ),
           ),
@@ -169,7 +171,7 @@ class _WorkoutCompleteScreenState extends ConsumerState<WorkoutCompleteScreen> {
     );
   }
 
-  Widget _finishLane(List<String> frames) {
+  Widget _finishLane(List<String> frames, {required bool travel}) {
     if (frames.isEmpty) {
       return const SizedBox(height: 24);
     }
@@ -177,7 +179,7 @@ class _WorkoutCompleteScreenState extends ConsumerState<WorkoutCompleteScreen> {
       child: SizedBox(
         height: 120,
         width: double.infinity,
-        child: ChibiRun(frames: frames),
+        child: ChibiRun(frames: frames, travel: travel),
       ),
     );
   }

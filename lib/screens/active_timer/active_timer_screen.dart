@@ -18,6 +18,17 @@ import 'workout_complete_screen.dart';
 /// Side-by-side layout (timer left, set log right) from this width up.
 const double _wideLayoutBreakpoint = 720;
 
+/// Short rest clock on a phone. Stays under about a third of the open space
+/// so the set log keeps the rest.
+double _portraitClockHeight(double available) {
+  final preferred = (available * 0.30).clamp(112.0, 148.0).toDouble();
+  final cap = available * 0.42;
+  if (preferred <= cap) {
+    return preferred;
+  }
+  return cap;
+}
+
 class ActiveTimerScreen extends ConsumerStatefulWidget {
   const ActiveTimerScreen({
     super.key,
@@ -56,9 +67,13 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
   int _entryExerciseIndex = -1;
   int _entrySetIndex = -1;
 
+  /// Kept for dispose. `ref` is already gone by the time the screen unmounts.
+  late final InProgressNotifier _inProgress;
+
   @override
   void initState() {
     super.initState();
+    _inProgress = ref.read(inProgressProvider.notifier);
     WidgetsBinding.instance.addObserver(this);
     WakelockPlus.enable();
     _controller = _createController();
@@ -68,10 +83,19 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
       if (!mounted) {
         return;
       }
-      _lastSignature = _capture().changeSignature;
       if (_controller.state.isComplete) {
         _openComplete();
+        return;
       }
+      // A rest that already ended while the app was closed has moved on.
+      // Write that place so the next open does not skip another set.
+      final saved = widget.progress;
+      final placeMoved =
+          saved != null && saved.phase != _controller.state.phase.name;
+      if (placeMoved) {
+        _persist(force: true);
+      }
+      _lastSignature = _capture().changeSignature;
     });
   }
 
@@ -217,7 +241,7 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
     _controller.restart();
     _suppressPersist = false;
     _lastSignature = _capture().changeSignature;
-    unawaited(ref.read(inProgressProvider.notifier).discard(widget.workout.id));
+    unawaited(_inProgress.discard(widget.workout.id));
   }
 
   void _leave() {
@@ -251,7 +275,7 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
     final state = _controller.state;
     final logs = List<SetLog>.of(_controller.setLogs);
     final duration = _controller.elapsedSeconds;
-    unawaited(ref.read(inProgressProvider.notifier).discard(widget.workout.id));
+    unawaited(_inProgress.discard(widget.workout.id));
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(
         builder: (_) => WorkoutCompleteScreen(
@@ -286,8 +310,22 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
       afterRest: state.phase == SessionPhase.rest
           ? _controller.restContinuation
           : null,
+      restEndsAt: _savedRestEndsAt(state),
       savedAt: DateTime.now(),
     );
+  }
+
+  /// End time for a rest that should keep running if the app is closed.
+  /// Leaving the workout screen clears it, so Continue waits where you left.
+  DateTime? _savedRestEndsAt(WorkoutSessionState state) {
+    if (_announcedLeave) {
+      return null;
+    }
+    if (state.phase != SessionPhase.rest || state.isPaused) {
+      return null;
+    }
+    return _controller.restEndsAt ??
+        DateTime.now().add(Duration(seconds: state.remainingSeconds));
   }
 
   /// Writes the run when the place or the logs changed. Returns true if kept.
@@ -301,7 +339,7 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
       return run.hasProgress;
     }
     _lastSignature = signature;
-    final notifier = ref.read(inProgressProvider.notifier);
+    final notifier = _inProgress;
     if (!run.hasProgress) {
       unawaited(notifier.discard(run.workout.id));
       return false;
@@ -316,6 +354,7 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
     _alignEntry(history);
     final state = _controller.state;
     final exercise = state.currentExercise;
+    final upcoming = state.nextExercise;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final showTracker =
@@ -362,7 +401,20 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 20),
+                if (upcoming != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Next: ${upcoming.name}',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: colorScheme.onSurface.withValues(alpha: 0.55),
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                const SizedBox(height: 12),
                 Expanded(
                   child: _buildMainArea(
                     timer: showTimerCard ? ActiveTimerCard(state: state) : null,
@@ -371,7 +423,7 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
                         : null,
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 12),
                 TimerPrimaryAction(
                   state: state,
                   onCompleteSet: _completeSet,
@@ -423,15 +475,20 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
     );
   }
 
-  /// Clock on top, log underneath. Both get a real height so the time can
-  /// shrink and the reps row stays below the set list.
+  /// Clock on top, log underneath. The clock stays a short band so the sets
+  /// and the reps row fit when the phone is held upright.
   Widget _phoneStack(Widget timer, Widget tracker) {
-    return Column(
-      children: [
-        Expanded(flex: 4, child: timer),
-        const SizedBox(height: 8),
-        Expanded(flex: 5, child: tracker),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final clockHeight = _portraitClockHeight(constraints.maxHeight);
+        return Column(
+          children: [
+            SizedBox(height: clockHeight, child: timer),
+            const SizedBox(height: 8),
+            Expanded(child: tracker),
+          ],
+        );
+      },
     );
   }
 

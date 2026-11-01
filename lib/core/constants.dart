@@ -23,8 +23,13 @@ class AppConstants {
   /// RevenueCat entitlement id.
   static const String proEntitlementId = 'pro';
 
+  /// First store release is offline-only. Sign-in, sync, and the account
+  /// server wait (GUIDE section 11). Set this to true when that ships.
+  static const bool accountsEnabled = false;
+
   /// Local account server. Override with --dart-define=STACKFIT_ACCOUNT_URL=...
-  /// A Play release build shows sign-in only when this address is https.
+  /// Used only after [accountsEnabled] is true. A release build then shows
+  /// sign-in only when this address is https.
   static const String accountServerUrl = String.fromEnvironment(
     'STACKFIT_ACCOUNT_URL',
     defaultValue: 'http://127.0.0.1:8787',

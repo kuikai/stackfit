@@ -10,7 +10,11 @@ import { startWorkout } from './workout_run.js';
 
 export function renderLibrary(account, app) {
   renderWorkouts(account.snapshot.workouts, app);
-  renderHistory(account.snapshot.sessions);
+  renderHistory(account.snapshot.sessions, app);
+  const clear = document.querySelector('#clear-history');
+  if (clear) {
+    clear.hidden = account.snapshot.sessions.length === 0;
+  }
   document.querySelector('#account-email').textContent = account.email;
 }
 
@@ -91,7 +95,7 @@ function workoutCard(workout, app) {
   return card;
 }
 
-function renderHistory(sessions) {
+function renderHistory(sessions, app) {
   const list = document.querySelector('#history-list');
   list.replaceChildren();
   const ordered = [...sessions].sort(
@@ -102,11 +106,11 @@ function renderHistory(sessions) {
     return;
   }
   for (const session of ordered) {
-    list.append(historyCard(session));
+    list.append(historyCard(session, app));
   }
 }
 
-function historyCard(session) {
+function historyCard(session, app) {
   const card = document.createElement('article');
   card.className = 'card';
   const title = document.createElement('h3');
@@ -116,7 +120,15 @@ function historyCard(session) {
   const when = formatSessionDate(session.completedAt);
   const duration = formatDuration(session.durationSeconds);
   meta.textContent = `${when} · ${duration} · ${exerciseCountLabel(session.totalExercises)}`;
-  card.append(title, meta);
+  const actions = document.createElement('div');
+  actions.className = 'button-row';
+  const del = document.createElement('button');
+  del.type = 'button';
+  del.className = 'ghost';
+  del.textContent = 'Delete';
+  del.addEventListener('click', () => app.deleteSession(session));
+  actions.append(del);
+  card.append(title, meta, actions);
   return card;
 }
 

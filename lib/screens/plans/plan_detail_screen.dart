@@ -75,9 +75,7 @@ class PlanDetailScreen extends ConsumerWidget {
                           ? Icons.playlist_add_rounded
                           : Icons.lock_outline_rounded,
                     ),
-                    label: Text(
-                      'Add all ${plan.days.length} sessions to My workouts',
-                    ),
+                    label: const Text('Add plan to My workouts'),
                   ),
                 ),
               ),

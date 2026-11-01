@@ -66,6 +66,7 @@ void main() {
       'sessions': [
         {'id': 's1', 'workoutName': 'Push'},
       ],
+      'deletedSessions': <dynamic>[],
       'themeMode': 'dark',
       'skin': 'forest',
       'appearanceUpdatedAt': '2026-05-01T00:00:00.000Z',
@@ -269,6 +270,7 @@ Map<String, dynamic> _workoutSnapshot() {
     ],
     'deletedWorkouts': <dynamic>[],
     'sessions': <dynamic>[],
+    'deletedSessions': <dynamic>[],
     'themeMode': 'system',
     'skin': 'classic',
     'appearanceUpdatedAt': '1970-01-01T00:00:00.000Z',

@@ -13,10 +13,12 @@ StackFit is an offline-first Flutter app for building and running mixed workout 
 - **Plan library** — Ready-made plans: gym splits (5x5, Push/Pull/Legs, Upper/Lower, Bro Split), home HIIT, core, kettlebell, calisthenics, Couch to 5K, running speed work, swimming, cycling, rowing, boxing, jump rope, soccer conditioning, a triathlon brick, and mobility. Browsing is free; starting a plan or adding it to your workouts is Pro
 - **Active timer** — Work/rest countdowns, set tracking, pause, skip, reset; screen stays awake
 - **History** — Completed sessions with date, duration, and exercise count
-- **Themes & skins** — Light / Dark / System. Everyday skins: Classic, Midnight, Forest, Sunset, Minimal, Synthwave. Pro skins: Bold Sports, Chibi, Cyberpunk, Dumbbell
+- **Themes & skins** — Light / Dark / System. Everyday skins: Classic, Midnight, Forest, Sunset, Minimal, Synthwave, White Energy. Pro skins: Bold Sports, Chibi, Cyberpunk, Dumbbell
 - **Free & Pro** — Free: 3 workouts and recent history. Pro: unlimited workouts, full history, duplicate, plan library, and Pro skins (store purchase wiring coming soon)
 
 ### Account, sync, and sharing
+
+Not in the first store release. The phone stays offline-only until `AppConstants.accountsEnabled` is turned on (`NEXT_VERSION.md`).
 
 - **Optional account** — Sign up, sign in, sign out, and reset password from Settings. The timer still works with no account
 - **Sync** — Workouts, history, theme, and skin save to the account and merge across devices pointed at the same server
@@ -61,7 +63,7 @@ dart run bin/server.dart
 
 Then:
 
-1. Create an account or sign in from **Settings** in the app, **or** open `http://127.0.0.1:8787` in a browser
+1. Open `http://127.0.0.1:8787` in a browser. The phone’s Settings account card stays hidden until accounts ship
 2. Password reset codes print in the server window (email delivery is not connected yet)
 3. Point another device on the same network at your PC with:
 

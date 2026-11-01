@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -111,7 +113,11 @@ void main() {
 
     // pushReplacement of the timer leaves: [Home, Complete]
     final nav = Navigator.of(tester.element(find.text('Home video')));
-    nav.push<void>(MaterialPageRoute<void>(builder: (_) => _completeScreen()));
+    unawaited(
+      nav.push<void>(
+        MaterialPageRoute<void>(builder: (_) => _completeScreen()),
+      ),
+    );
     await _pumpFrames(tester);
 
     expect(find.text('Workout complete'), findsOneWidget);
@@ -174,12 +180,18 @@ void main() {
 
     final nav = Navigator.of(tester.element(find.text('StackFit')));
     // Same stack shape as a finished workout: timer was replaced by complete.
-    nav.push<void>(
-      MaterialPageRoute<void>(builder: (_) => const Scaffold(body: Text('Timer'))),
+    unawaited(
+      nav.push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Text('Timer')),
+        ),
+      ),
     );
     await _pumpFrames(tester);
-    nav.pushReplacement(
-      MaterialPageRoute<void>(builder: (_) => _completeScreen()),
+    unawaited(
+      nav.pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => _completeScreen()),
+      ),
     );
     await _pumpFrames(tester);
 

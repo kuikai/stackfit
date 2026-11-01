@@ -15,6 +15,11 @@ void main() {
   testWidgets('saving an exercise in a circuit writes the workout', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(400, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     final workout = Workout(
       id: 'w1',
       name: 'Workout A',
@@ -54,8 +59,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Bench Press'));
-    await tester.tap(find.text('Bench Press'));
+    await tester.ensureVisible(find.byTooltip('Edit'));
+    await tester.tap(find.byTooltip('Edit'));
     await tester.pumpAndSettle();
 
     await tester.enterText(_restField, '45');
@@ -65,6 +70,58 @@ void main() {
     final saved = StorageService(prefs).loadWorkouts().single;
     final station = saved.blocks.whereType<CircuitBlock>().single;
     expect(station.circuit.exercises.single.restSeconds, 45);
+  });
+
+  testWidgets('moving an exercise writes the new order', (tester) async {
+    final workout = Workout(
+      id: 'w1',
+      name: 'Workout A',
+      createdAt: DateTime.utc(2026, 10, 1),
+      updatedAt: DateTime.utc(2026, 10, 1),
+      blocks: [
+        ExerciseBlock(
+          Exercise.sets(
+            id: 'e1',
+            name: 'Squats',
+            sets: 3,
+            reps: 8,
+            restSeconds: 60,
+          ),
+        ),
+        ExerciseBlock(
+          Exercise.sets(
+            id: 'e2',
+            name: 'Lunges',
+            sets: 3,
+            reps: 10,
+            restSeconds: 60,
+          ),
+        ),
+      ],
+    );
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    await StorageService(prefs).saveWorkouts([workout]);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+        child: MaterialApp(
+          theme: AppTheme.dark(AppSkin.classic),
+          home: const WorkoutEditorScreen(workoutId: 'w1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Move down').first);
+    await tester.pumpAndSettle();
+
+    final saved = StorageService(prefs).loadWorkouts().single;
+    expect(
+      saved.blocks.whereType<ExerciseBlock>().map((block) => block.exercise.name),
+      ['Lunges', 'Squats'],
+    );
   });
 }
 

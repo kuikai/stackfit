@@ -10,23 +10,28 @@ class WorkoutBlockList extends StatelessWidget {
     super.key,
     required this.blocks,
     required this.onReorder,
+    required this.onMoveBlock,
     required this.onEditExercise,
     required this.onDeleteBlock,
     required this.onCircuitChanged,
     required this.onAddStation,
     required this.onEditStation,
     required this.onDeleteStation,
+    required this.onReorderStation,
     required this.onMoveStation,
   });
 
   final List<WorkoutBlock> blocks;
   final void Function(int oldIndex, int newIndex) onReorder;
+  final void Function(int index, int direction) onMoveBlock;
   final ValueChanged<int> onEditExercise;
   final ValueChanged<int> onDeleteBlock;
   final void Function(String circuitId, Circuit circuit) onCircuitChanged;
   final ValueChanged<String> onAddStation;
   final void Function(String circuitId, int stationIndex) onEditStation;
   final void Function(String circuitId, int stationIndex) onDeleteStation;
+  final void Function(String circuitId, int oldIndex, int newIndex)
+  onReorderStation;
   final void Function(String circuitId, int stationIndex, int direction)
   onMoveStation;
 
@@ -36,17 +41,26 @@ class WorkoutBlockList extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       buildDefaultDragHandles: false,
+      padding: EdgeInsets.zero,
       itemCount: blocks.length,
-      onReorderItem: onReorder,
+      onReorder: onReorder,
       itemBuilder: (context, index) {
         final block = blocks[index];
+        final moveUp = index == 0 ? null : () => onMoveBlock(index, -1);
+        final moveDown = index == blocks.length - 1
+            ? null
+            : () => onMoveBlock(index, 1);
         return switch (block) {
-          ExerciseBlock(:final exercise) => ExerciseEditorTile(
+          ExerciseBlock(:final exercise) => ReorderableDelayedDragStartListener(
             key: ValueKey(exercise.id),
-            exercise: exercise,
             index: index,
-            onEdit: () => onEditExercise(index),
-            onDelete: () => onDeleteBlock(index),
+            child: ExerciseEditorTile(
+              exercise: exercise,
+              onEdit: () => onEditExercise(index),
+              onDelete: () => onDeleteBlock(index),
+              onMoveUp: moveUp,
+              onMoveDown: moveDown,
+            ),
           ),
           CircuitBlock(:final circuit) => _CircuitCard(
             key: ValueKey(circuit.id),
@@ -54,9 +68,13 @@ class WorkoutBlockList extends StatelessWidget {
             circuit: circuit,
             onChanged: (next) => onCircuitChanged(circuit.id, next),
             onDelete: () => onDeleteBlock(index),
+            onMoveUp: moveUp,
+            onMoveDown: moveDown,
             onAddStation: () => onAddStation(circuit.id),
             onEditStation: (station) => onEditStation(circuit.id, station),
             onDeleteStation: (station) => onDeleteStation(circuit.id, station),
+            onReorderStation: (oldIndex, newIndex) =>
+                onReorderStation(circuit.id, oldIndex, newIndex),
             onMoveStation: (station, direction) =>
                 onMoveStation(circuit.id, station, direction),
           ),
@@ -73,9 +91,12 @@ class _CircuitCard extends StatelessWidget {
     required this.circuit,
     required this.onChanged,
     required this.onDelete,
+    required this.onMoveUp,
+    required this.onMoveDown,
     required this.onAddStation,
     required this.onEditStation,
     required this.onDeleteStation,
+    required this.onReorderStation,
     required this.onMoveStation,
   });
 
@@ -83,9 +104,12 @@ class _CircuitCard extends StatelessWidget {
   final Circuit circuit;
   final ValueChanged<Circuit> onChanged;
   final VoidCallback onDelete;
+  final VoidCallback? onMoveUp;
+  final VoidCallback? onMoveDown;
   final VoidCallback onAddStation;
   final ValueChanged<int> onEditStation;
   final ValueChanged<int> onDeleteStation;
+  final void Function(int oldIndex, int newIndex) onReorderStation;
   final void Function(int stationIndex, int direction) onMoveStation;
 
   @override
@@ -101,7 +125,12 @@ class _CircuitCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _CircuitHeader(index: index, onDelete: onDelete),
+            _CircuitHeader(
+              index: index,
+              onDelete: onDelete,
+              onMoveUp: onMoveUp,
+              onMoveDown: onMoveDown,
+            ),
             const SizedBox(height: 4),
             Text(
               'These exercises run in order, then repeat.',
@@ -144,20 +173,6 @@ class _CircuitCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            for (var station = 0; station < circuit.exercises.length; station++)
-              ExerciseEditorTile(
-                exercise: circuit.exercises[station],
-                index: station,
-                draggable: false,
-                onEdit: () => onEditStation(station),
-                onDelete: () => onDeleteStation(station),
-                onMoveUp: station == 0
-                    ? null
-                    : () => onMoveStation(station, -1),
-                onMoveDown: station == circuit.exercises.length - 1
-                    ? null
-                    : () => onMoveStation(station, 1),
-              ),
             if (circuit.exercises.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
@@ -167,6 +182,33 @@ class _CircuitCard extends StatelessWidget {
                     color: colorScheme.onSurface.withValues(alpha: 0.62),
                   ),
                 ),
+              )
+            else
+              ReorderableListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                buildDefaultDragHandles: false,
+                padding: EdgeInsets.zero,
+                itemCount: circuit.exercises.length,
+                onReorder: onReorderStation,
+                itemBuilder: (context, station) {
+                  final exercise = circuit.exercises[station];
+                  return ReorderableDelayedDragStartListener(
+                    key: ValueKey(exercise.id),
+                    index: station,
+                    child: ExerciseEditorTile(
+                      exercise: exercise,
+                      onEdit: () => onEditStation(station),
+                      onDelete: () => onDeleteStation(station),
+                      onMoveUp: station == 0
+                          ? null
+                          : () => onMoveStation(station, -1),
+                      onMoveDown: station == circuit.exercises.length - 1
+                          ? null
+                          : () => onMoveStation(station, 1),
+                    ),
+                  );
+                },
               ),
             OutlinedButton.icon(
               onPressed: onAddStation,
@@ -181,38 +223,51 @@ class _CircuitCard extends StatelessWidget {
 }
 
 class _CircuitHeader extends StatelessWidget {
-  const _CircuitHeader({required this.index, required this.onDelete});
+  const _CircuitHeader({
+    required this.index,
+    required this.onDelete,
+    required this.onMoveUp,
+    required this.onMoveDown,
+  });
 
   final int index;
   final VoidCallback onDelete;
+  final VoidCallback? onMoveUp;
+  final VoidCallback? onMoveDown;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Row(
-      children: [
-        ReorderableDragStartListener(
-          index: index,
-          child: Icon(
-            Icons.drag_handle_rounded,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
+    return ReorderableDelayedDragStartListener(
+      index: index,
+      child: Row(
+        children: [
+          EditorMoveButton(
+            tooltip: 'Move up',
+            icon: Icons.keyboard_arrow_up_rounded,
+            onPressed: onMoveUp,
           ),
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Text(
-            'Circuit',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
+          EditorMoveButton(
+            tooltip: 'Move down',
+            icon: Icons.keyboard_arrow_down_rounded,
+            onPressed: onMoveDown,
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              'Circuit',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
-        ),
-        IconButton(
-          tooltip: 'Remove circuit',
-          onPressed: onDelete,
-          icon: const Icon(Icons.delete_outline_rounded),
-        ),
-      ],
+          IconButton(
+            tooltip: 'Remove circuit',
+            onPressed: onDelete,
+            icon: const Icon(Icons.delete_outline_rounded),
+          ),
+        ],
+      ),
     );
   }
 }

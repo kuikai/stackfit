@@ -1,15 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/skins.dart';
 import '../../providers/settings_provider.dart';
 import '../../services/workout_session_controller.dart';
 import '../../widgets/skin_artwork.dart';
 
-/// How far the sitting chibi stands above the Done button.
-const _seatLift = 108.0;
+/// Standing characters beside Done.
+const _doneMascotSize = 76.0;
 
-/// How far the resting chibi stands above the Skip rest button.
-const _restLift = 96.0;
+/// One mascot beside Done when the skin has no partner.
+const _soloMascotSize = 92.0;
+
+/// Sitting characters beside Skip rest. Kept low so they stay near the button.
+const _restSitSize = 56.0;
+
+/// Lying pose beside Skip rest. Width follows the 16:9 rest pictures.
+const _restMascotWidth = 136.0;
+const _restMascotHeight = 76.0;
 
 /// Done / Skip rest, shown under the countdown.
 class TimerPrimaryAction extends ConsumerWidget {
@@ -28,81 +36,128 @@ class TimerPrimaryAction extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final skin = ref.watch(settingsProvider).skin;
     if (state.phase == SessionPhase.setReady) {
-      final lift = skin.mascotSeatAsset == null ? 0.0 : _seatLift;
-      return _doneButton(context, lift);
+      return _doneButton(context, skin);
     }
     if (state.phase == SessionPhase.rest) {
-      final lift = skin.mascotRestAsset == null ? 0.0 : _restLift;
-      return _skipRestButton(lift);
+      return _skipRestButton(skin);
     }
     return const SizedBox.shrink();
   }
 
-  Widget _doneButton(BuildContext context, double mascotLift) {
+  /// Woman on the left of Done, man on the right. One mascot stays on the right.
+  Widget _doneButton(BuildContext context, AppSkin skin) {
     final theme = Theme.of(context);
     final onPrimary = theme.colorScheme.onPrimary;
     final label = state.setNumber >= state.totalSets
         ? 'Done'
         : 'Done / Next Set';
-    return Padding(
-      padding: EdgeInsets.only(top: mascotLift),
-      child: SizedBox(
-        width: double.infinity,
-        height: 60,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned.fill(
-              child: FilledButton(
-                onPressed: onCompleteSet,
-                child: Text(
-                  label,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: onPrimary,
-                  ),
-                ),
-              ),
+    final button = Expanded(
+      child: _actionButton(label, onPrimary, theme, onCompleteSet),
+    );
+    if (skin.mascotSeatPartnerAsset != null) {
+      return _donePair(button);
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        button,
+        if (skin.mascotSeatAsset != null) ...[
+          const SizedBox(width: 8),
+          const SkinMascot(seated: true, size: _soloMascotSize, pinned: false),
+        ],
+      ],
+    );
+  }
+
+  Widget _donePair(Widget button) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        const SkinMascot(seated: true, size: _doneMascotSize, pinned: false),
+        const SizedBox(width: 8),
+        button,
+        const SizedBox(width: 8),
+        const SkinMascot(
+          seated: true,
+          size: _doneMascotSize,
+          pinned: false,
+          partner: true,
+        ),
+      ],
+    );
+  }
+
+  Widget _actionButton(
+    String label,
+    Color onPrimary,
+    ThemeData theme,
+    VoidCallback onPressed,
+  ) {
+    return SizedBox(
+      height: 60,
+      width: double.infinity,
+      child: FilledButton(
+        onPressed: onPressed,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: onPrimary,
             ),
-            if (mascotLift > 0)
-              Positioned(
-                right: 6,
-                top: -mascotLift,
-                child: const SkinMascot(seated: true, size: 148, pinned: false),
-              ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _skipRestButton(double mascotLift) {
-    return Padding(
-      padding: EdgeInsets.only(top: mascotLift),
+  /// Woman sits on the left of Skip rest, man on the right.
+  Widget _skipRestButton(AppSkin skin) {
+    final button = Expanded(
       child: SizedBox(
-        width: double.infinity,
         height: 52,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned.fill(
-              child: FilledButton.tonal(
-                onPressed: onSkipRest,
-                child: const Text('Skip rest'),
-              ),
-            ),
-            if (mascotLift > 0)
-              const Positioned(
-                left: 0,
-                right: 0,
-                top: -_restLift,
-                child: Center(
-                  child: SkinMascot(resting: true, width: 260, pinned: false),
-                ),
-              ),
-          ],
+        child: FilledButton.tonal(
+          onPressed: onSkipRest,
+          child: const Text('Skip rest'),
         ),
       ),
+    );
+    if (skin.mascotRestPartnerAsset != null) {
+      return _restPair(button);
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        if (skin.mascotRestAsset != null) ...[
+          const SkinMascot(
+            resting: true,
+            width: _restMascotWidth,
+            height: _restMascotHeight,
+            pinned: false,
+          ),
+          const SizedBox(width: 8),
+        ],
+        button,
+      ],
+    );
+  }
+
+  Widget _restPair(Widget button) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        const SkinMascot(resting: true, size: _restSitSize, pinned: false),
+        const SizedBox(width: 8),
+        button,
+        const SizedBox(width: 8),
+        const SkinMascot(
+          resting: true,
+          size: _restSitSize,
+          pinned: false,
+          partner: true,
+        ),
+      ],
     );
   }
 }

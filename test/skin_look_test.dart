@@ -19,6 +19,8 @@ void main() {
       AppSkin.sunset,
       AppSkin.minimal,
       AppSkin.synthwave,
+      AppSkin.whiteEnergy,
+      AppSkin.toxicLime,
     ]);
     expect(AppSkin.proSkins, [
       AppSkin.boldSports,
@@ -65,19 +67,29 @@ void main() {
     expect(AppSkin.chibi.mascotAsset, contains('mascot-pastel.png'));
     expect(AppSkin.cyberpunk.mascotAsset, contains('mascot-chibi.png'));
     expect(AppSkin.dumbbell.mascotAsset, contains('mascot-companion.png'));
+    expect(AppSkin.dumbbell.mascotPartnerAsset, contains('mascot-trainer'));
+    expect(AppSkin.classic.mascotPartnerAsset, isNull);
+    expect(AppSkin.chibi.mascotPartnerAsset, isNull);
     expect(AppSkin.boldSports.mascotSeatAsset, contains('mascot-power-sit'));
     expect(AppSkin.chibi.mascotSeatAsset, contains('mascot-pastel-sit'));
     expect(AppSkin.cyberpunk.mascotSeatAsset, contains('mascot-chibi-sit'));
-    expect(AppSkin.dumbbell.mascotSeatAsset, contains('mascot-companion-sit'));
+    expect(AppSkin.dumbbell.mascotSeatAsset, contains('mascot-companion-set'));
+    expect(AppSkin.dumbbell.mascotSeatPartnerAsset, contains('mascot-trainer-set'));
+    expect(AppSkin.classic.mascotSeatPartnerAsset, isNull);
     expect(AppSkin.boldSports.mascotRestAsset, contains('mascot-power-rest'));
     expect(AppSkin.chibi.mascotRestAsset, contains('mascot-pastel-rest'));
     expect(AppSkin.cyberpunk.mascotRestAsset, contains('mascot-chibi-rest'));
     expect(AppSkin.dumbbell.mascotRestAsset, contains('mascot-companion-rest'));
+    expect(AppSkin.dumbbell.mascotRestPartnerAsset, contains('mascot-trainer-rest'));
+    expect(AppSkin.classic.mascotRestPartnerAsset, isNull);
     expect(AppSkin.boldSports.mascotRunFrames, hasLength(8));
     expect(AppSkin.chibi.mascotRunFrames, hasLength(8));
     expect(AppSkin.cyberpunk.mascotRunFrames, hasLength(13));
     expect(AppSkin.dumbbell.mascotRunFrames, hasLength(8));
     expect(AppSkin.classic.mascotRunFrames, isEmpty);
+    expect(AppSkin.dumbbell.mascotCelebrateFrames, hasLength(8));
+    expect(AppSkin.classic.mascotCelebrateFrames, isEmpty);
+    expect(AppSkin.chibi.mascotCelebrateFrames, isEmpty);
     expect(runFrameIndex(elapsedSeconds: 0, frameCount: 6), 0);
     expect(runFrameIndex(elapsedSeconds: 0.5, frameCount: 6), 4);
     expect(runFrameIndex(elapsedSeconds: 0.75, frameCount: 6), 0);
@@ -161,6 +173,38 @@ void main() {
     expect(synthwave.listGap, 8);
     expect(synthwave.bodyFont, SkinTypeface.rajdhani);
     expect(synthwave.displayFont, SkinTypeface.orbitron);
+
+    final whiteEnergy = AppSkins.look(AppSkin.whiteEnergy);
+    expect(whiteEnergy.radius, 12);
+    expect(whiteEnergy.bodyFont, SkinTypeface.spaceGrotesk);
+    expect(whiteEnergy.displayFont, SkinTypeface.rajdhani);
+
+    final toxicLime = AppSkins.look(AppSkin.toxicLime);
+    expect(toxicLime.radius, 8);
+    expect(toxicLime.bodyFont, SkinTypeface.rajdhani);
+    expect(toxicLime.displayFont, SkinTypeface.orbitron);
+  });
+
+  test('white energy is a free icy white skin', () {
+    expect(AppSkin.whiteEnergy.pro, isFalse);
+    expect(AppSkin.whiteEnergy.displayName, 'White Energy');
+    expect(AppSkin.whiteEnergy.previewAsset, isNull);
+    final dark = AppSkins.palette(AppSkin.whiteEnergy, Brightness.dark);
+    expect(dark.primary, const Color(0xFFF4F8FB));
+    expect(dark.secondary, const Color(0xFF9CC6DE));
+    final light = AppSkins.palette(AppSkin.whiteEnergy, Brightness.light);
+    expect(light.background, const Color(0xFFF5F8FA));
+  });
+
+  test('toxic lime is a free black and lime skin', () {
+    expect(AppSkin.toxicLime.pro, isFalse);
+    expect(AppSkin.toxicLime.displayName, 'Toxic Lime');
+    expect(AppSkin.toxicLime.previewAsset, isNull);
+    final dark = AppSkins.palette(AppSkin.toxicLime, Brightness.dark);
+    expect(dark.primary, const Color(0xFFC8FF00));
+    expect(dark.background, const Color(0xFF050705));
+    final light = AppSkins.palette(AppSkin.toxicLime, Brightness.light);
+    expect(light.primary, const Color(0xFF4A8A00));
   });
 
   testWidgets('the theme carries the selected skin look', (tester) async {

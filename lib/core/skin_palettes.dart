@@ -132,6 +132,50 @@ const _synthwaveDark = SkinPalette(
   onSurface: Color(0xFFFFEAF5),
 );
 
+const _whiteEnergyLight = SkinPalette(
+  primary: Color(0xFF2E4658),
+  secondary: Color(0xFF7FA9C2),
+  background: Color(0xFFF5F8FA),
+  surface: Color(0xFFFFFFFF),
+  onPrimary: Color(0xFFFFFFFF),
+  onSecondary: Color(0xFF0B1A24),
+  onBackground: Color(0xFF12181D),
+  onSurface: Color(0xFF12181D),
+);
+
+const _whiteEnergyDark = SkinPalette(
+  primary: Color(0xFFF4F8FB),
+  secondary: Color(0xFF9CC6DE),
+  background: Color(0xFF0C0E11),
+  surface: Color(0xFF171A1F),
+  onPrimary: Color(0xFF0C0E11),
+  onSecondary: Color(0xFF0A1A24),
+  onBackground: Color(0xFFF4F8FB),
+  onSurface: Color(0xFFF4F8FB),
+);
+
+const _toxicLimeLight = SkinPalette(
+  primary: Color(0xFF4A8A00),
+  secondary: Color(0xFF6B8F2A),
+  background: Color(0xFFF3F8EA),
+  surface: Color(0xFFFFFFFF),
+  onPrimary: Color(0xFFFFFFFF),
+  onSecondary: Color(0xFFFFFFFF),
+  onBackground: Color(0xFF14200A),
+  onSurface: Color(0xFF14200A),
+);
+
+const _toxicLimeDark = SkinPalette(
+  primary: Color(0xFFC8FF00),
+  secondary: Color(0xFF7CFF3A),
+  background: Color(0xFF050705),
+  surface: Color(0xFF101410),
+  onPrimary: Color(0xFF0A1200),
+  onSecondary: Color(0xFF051000),
+  onBackground: Color(0xFFE8FFD0),
+  onSurface: Color(0xFFE8FFD0),
+);
+
 const _boldSportsLight = SkinPalette(
   primary: Color(0xFFE0187A),
   secondary: Color(0xFFFFB703),

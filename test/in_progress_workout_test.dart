@@ -26,6 +26,7 @@ void main() {
     expect(restored.draftReps, 6);
     expect(restored.draftWeightKg, 62.5);
     expect(restored.afterRest, 'set');
+    expect(restored.restEndsAt, isNull);
     expect(restored.elapsedSeconds, 40);
     expect(
       restored.resumedStartedAt(now),
@@ -101,6 +102,98 @@ void main() {
     expect(controller.state.phase, SessionPhase.setReady);
     expect(controller.state.setIndex, 1);
     expect(controller.state.currentExercise?.name, 'Bench');
+  });
+
+  test('a running rest keeps counting while the app was closed', () {
+    final savedAt = DateTime.utc(2026, 10, 29, 12);
+    final later = savedAt.add(const Duration(seconds: 8));
+    final workout = _bench();
+    final progress = _run(
+      workout: workout,
+      remainingSeconds: 20,
+      restEndsAt: savedAt.add(const Duration(seconds: 20)),
+      savedAt: savedAt,
+    );
+
+    expect(progress.restSecondsLeft(later), 12);
+    expect(
+      progress.resumedStartedAt(later),
+      later.subtract(const Duration(seconds: 48)),
+    );
+    expect(
+      countdownSecondsLeft(
+        savedAt.add(const Duration(milliseconds: 1)),
+        savedAt,
+      ),
+      1,
+    );
+
+    final restored = InProgressWorkout.fromJson(progress.toJson());
+    expect(restored.restEndsAt, progress.restEndsAt);
+    expect(restored.restSecondsLeft(later), 12);
+
+    final controller = WorkoutSessionController(
+      workout: workout,
+      onWorkFinished: () {},
+      onRestFinished: () {},
+      onWorkoutFinished: () {},
+      resumeState: stateFromProgress(progress, workout, later),
+      resumeLogs: progress.setLogs,
+      resumeAfterRest: progress.afterRest,
+      clock: () => later,
+    );
+    addTearDown(controller.disposeController);
+
+    expect(controller.state.phase, SessionPhase.rest);
+    expect(controller.state.remainingSeconds, 12);
+    expect(controller.elapsedSeconds, 48);
+  });
+
+  test('a rest that ended while closed continues at the next set', () {
+    final savedAt = DateTime.utc(2026, 10, 29, 12);
+    final later = savedAt.add(const Duration(seconds: 45));
+    final workout = _bench();
+    final progress = _run(
+      workout: workout,
+      remainingSeconds: 20,
+      restEndsAt: savedAt.add(const Duration(seconds: 20)),
+      savedAt: savedAt,
+    );
+    var alarms = 0;
+    final controller = WorkoutSessionController(
+      workout: workout,
+      onWorkFinished: () {},
+      onRestFinished: () => alarms++,
+      onWorkoutFinished: () {},
+      resumeState: stateFromProgress(progress, workout, later),
+      resumeLogs: progress.setLogs,
+      resumeAfterRest: progress.afterRest,
+      clock: () => later,
+    );
+    addTearDown(controller.disposeController);
+
+    expect(controller.state.phase, SessionPhase.setReady);
+    expect(controller.state.setIndex, 1);
+    expect(controller.state.currentExercise?.name, 'Bench');
+    expect(alarms, 1);
+    expect(controller.elapsedSeconds, 85);
+  });
+
+  test('a paused rest stays put while the app was closed', () {
+    final savedAt = DateTime.utc(2026, 10, 29, 12);
+    final later = savedAt.add(const Duration(minutes: 5));
+    final run = _run(
+      isPaused: true,
+      remainingSeconds: 20,
+      restEndsAt: savedAt,
+      savedAt: savedAt,
+    );
+
+    expect(run.restSecondsLeft(later), 20);
+    expect(
+      run.resumedStartedAt(later),
+      later.subtract(const Duration(seconds: 40)),
+    );
   });
 
   test('the phone remembers a run and drops one bad record', () async {
@@ -218,9 +311,12 @@ InProgressWorkout _run({
   int elapsedSeconds = 40,
   String phase = 'rest',
   int remainingSeconds = 20,
+  bool isPaused = false,
   List<SetLog>? setLogs,
   bool draftEdited = true,
   String? afterRest = 'set',
+  DateTime? restEndsAt,
+  DateTime? savedAt,
 }) {
   final session = workout ?? _bench();
   return InProgressWorkout(
@@ -232,7 +328,7 @@ InProgressWorkout _run({
     setIndex: 0,
     phase: phase,
     remainingSeconds: remainingSeconds,
-    isPaused: false,
+    isPaused: isPaused,
     elapsedSeconds: elapsedSeconds,
     setLogs:
         setLogs ??
@@ -249,7 +345,8 @@ InProgressWorkout _run({
     draftReps: 6,
     draftWeightKg: 62.5,
     afterRest: afterRest,
-    savedAt: DateTime.utc(2026, 10, 26, 11),
+    restEndsAt: restEndsAt,
+    savedAt: savedAt ?? DateTime.utc(2026, 10, 26, 11),
   );
 }
 

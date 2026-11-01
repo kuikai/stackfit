@@ -4,9 +4,9 @@ import 'catalog_exercise.dart';
 import 'completed_session.dart';
 import 'workout.dart';
 
-/// A workout removed on one device. The newer timestamp wins against edits.
-class WorkoutDeletion {
-  const WorkoutDeletion({required this.id, required this.deletedAt});
+/// A workout or history session removed on one device.
+class SnapshotDeletion {
+  const SnapshotDeletion({required this.id, required this.deletedAt});
 
   final String id;
   final DateTime deletedAt;
@@ -15,8 +15,8 @@ class WorkoutDeletion {
     return {'id': id, 'deletedAt': deletedAt.toIso8601String()};
   }
 
-  factory WorkoutDeletion.fromJson(Map<String, dynamic> json) {
-    return WorkoutDeletion(
+  factory SnapshotDeletion.fromJson(Map<String, dynamic> json) {
+    return SnapshotDeletion(
       id: json['id'] as String,
       deletedAt: DateTime.parse(json['deletedAt'] as String),
     );
@@ -34,6 +34,7 @@ class AccountSnapshot {
     required this.themeMode,
     required this.skin,
     required this.appearanceUpdatedAt,
+    this.deletedSessions = const [],
     this.customExercises = const [],
   });
 
@@ -42,6 +43,7 @@ class AccountSnapshot {
       workouts: const [],
       deletedWorkouts: const [],
       sessions: const [],
+      deletedSessions: const [],
       customExercises: const [],
       themeMode: 'system',
       skin: 'classic',
@@ -50,8 +52,9 @@ class AccountSnapshot {
   }
 
   final List<Workout> workouts;
-  final List<WorkoutDeletion> deletedWorkouts;
+  final List<SnapshotDeletion> deletedWorkouts;
   final List<CompletedSession> sessions;
+  final List<SnapshotDeletion> deletedSessions;
 
   /// Exercises the user added. Shown in the catalog under Custom.
   final List<CatalogExercise> customExercises;
@@ -63,8 +66,9 @@ class AccountSnapshot {
 
   AccountSnapshot copyWith({
     List<Workout>? workouts,
-    List<WorkoutDeletion>? deletedWorkouts,
+    List<SnapshotDeletion>? deletedWorkouts,
     List<CompletedSession>? sessions,
+    List<SnapshotDeletion>? deletedSessions,
     List<CatalogExercise>? customExercises,
     String? themeMode,
     String? skin,
@@ -74,6 +78,7 @@ class AccountSnapshot {
       workouts: workouts ?? this.workouts,
       deletedWorkouts: deletedWorkouts ?? this.deletedWorkouts,
       sessions: sessions ?? this.sessions,
+      deletedSessions: deletedSessions ?? this.deletedSessions,
       customExercises: customExercises ?? this.customExercises,
       themeMode: themeMode ?? this.themeMode,
       skin: skin ?? this.skin,
@@ -91,6 +96,9 @@ class AccountSnapshot {
           .map((deletion) => deletion.toJson())
           .toList(),
       'sessions': sessions.map((session) => session.toJson()).toList(),
+      'deletedSessions': deletedSessions
+          .map((deletion) => deletion.toJson())
+          .toList(),
       'customExercises': customExercises
           .map((exercise) => exercise.toJson())
           .toList(),
@@ -106,6 +114,7 @@ class AccountSnapshot {
     _sortById(json['workouts'] as List<dynamic>);
     _sortById(json['deletedWorkouts'] as List<dynamic>);
     _sortById(json['sessions'] as List<dynamic>);
+    _sortById(json['deletedSessions'] as List<dynamic>);
     _sortById(json['customExercises'] as List<dynamic>);
     return jsonEncode(json);
   }
@@ -115,9 +124,13 @@ class AccountSnapshot {
       workouts: _mapList(json['workouts'], Workout.fromJson),
       deletedWorkouts: _mapList(
         json['deletedWorkouts'],
-        WorkoutDeletion.fromJson,
+        SnapshotDeletion.fromJson,
       ),
       sessions: _mapList(json['sessions'], CompletedSession.fromJson),
+      deletedSessions: _mapList(
+        json['deletedSessions'],
+        SnapshotDeletion.fromJson,
+      ),
       customExercises: _mapList(
         json['customExercises'],
         CatalogExercise.fromJson,

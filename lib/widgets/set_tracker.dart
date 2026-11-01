@@ -109,7 +109,7 @@ class _SetTrackerState extends State<SetTracker> {
       Scrollable.ensureVisible(
         target,
         alignment: 1,
-        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOut,
       );

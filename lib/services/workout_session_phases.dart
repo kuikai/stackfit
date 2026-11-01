@@ -16,6 +16,14 @@ mixin WorkoutSessionPhases on ChangeNotifier {
   VoidCallback get onRestFinished;
   VoidCallback get onWorkoutFinished;
 
+  DateTime _now();
+
+  /// End of the rest that is running now. The countdown reads this, not ticks.
+  DateTime? _restEndsAt;
+
+  /// True after [freezeClock] while a rest is still on the wall clock.
+  bool _restLeftRunning = false;
+
   void _enterBlock(int index) {
     final blocks = state.workout.blocks;
     if (index >= blocks.length) {
@@ -140,6 +148,7 @@ mixin WorkoutSessionPhases on ChangeNotifier {
   }
 
   void _finishRest({required bool playAlarm}) {
+    _clearRestDeadline();
     if (playAlarm) {
       onRestFinished();
     }
@@ -180,11 +189,14 @@ mixin WorkoutSessionPhases on ChangeNotifier {
 
   void _startRest(int seconds, _AfterRest after) {
     if (seconds <= 0) {
+      _clearRestDeadline();
       _applyAfterRest(after);
       return;
     }
     _instantSkips = 0;
     _afterRest = after;
+    _restEndsAt = _now().add(Duration(seconds: seconds));
+    _restLeftRunning = false;
     state = state.copyWith(
       phase: SessionPhase.rest,
       remainingSeconds: seconds,
@@ -224,9 +236,19 @@ mixin WorkoutSessionPhases on ChangeNotifier {
     onWorkoutFinished();
   }
 
+  void _clearRestDeadline() {
+    _restEndsAt = null;
+    _restLeftRunning = false;
+  }
+
   void _startTicker() {
     _ticker?.cancel();
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _onTick());
+    // Work drops one second per tick, so it stays on a one-second timer.
+    // Rest reads the wall clock and can tick faster without drifting.
+    final step = state.phase == SessionPhase.rest
+        ? const Duration(milliseconds: 200)
+        : const Duration(seconds: 1);
+    _ticker = Timer.periodic(step, (_) => _onTick());
   }
 
   void _stopTicker() {
@@ -234,11 +256,37 @@ mixin WorkoutSessionPhases on ChangeNotifier {
     _ticker = null;
   }
 
+  /// Moves the rest countdown onto the wall clock.
+  /// Returns true while that rest is still running.
+  bool _syncRest() {
+    if (state.phase != SessionPhase.rest || state.isPaused) {
+      return false;
+    }
+    final endsAt = _restEndsAt;
+    if (endsAt == null) {
+      return false;
+    }
+    final remaining = countdownSecondsLeft(endsAt, _now());
+    if (remaining > 0) {
+      if (remaining != state.remainingSeconds) {
+        state = state.copyWith(remainingSeconds: remaining);
+        notifyListeners();
+      }
+      return true;
+    }
+    _finishRest(playAlarm: true);
+    return false;
+  }
+
   void _onTick() {
     if (state.isPaused || state.isComplete) {
       return;
     }
-    if (state.phase != SessionPhase.work && state.phase != SessionPhase.rest) {
+    if (state.phase == SessionPhase.rest) {
+      _syncRest();
+      return;
+    }
+    if (state.phase != SessionPhase.work) {
       return;
     }
 
@@ -251,12 +299,7 @@ mixin WorkoutSessionPhases on ChangeNotifier {
 
     state = state.copyWith(remainingSeconds: 0);
     notifyListeners();
-
-    if (state.phase == SessionPhase.work) {
-      _beginRestAfterWork();
-    } else if (state.phase == SessionPhase.rest) {
-      _finishRest(playAlarm: true);
-    }
+    _beginRestAfterWork();
   }
 
   _AfterRest _afterRestFor(StationDestination destination) {

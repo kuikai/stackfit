@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -19,7 +21,16 @@ class HistoryScreen extends ConsumerWidget {
     final totalCount = ref.watch(completedSessionsProvider).length;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('History')),
+      appBar: AppBar(
+        title: const Text('History'),
+        actions: [
+          if (totalCount > 0)
+            TextButton(
+              onPressed: () => unawaited(_confirmClearHistory(context, ref)),
+              child: const Text('Clear'),
+            ),
+        ],
+      ),
       body: sessions.isEmpty
           ? const EmptyState(
               title: 'No sessions yet',
@@ -71,4 +82,30 @@ class FreeHistoryBanner extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<void> _confirmClearHistory(BuildContext context, WidgetRef ref) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('Delete all history?'),
+        content: const Text('This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Clear'),
+          ),
+        ],
+      );
+    },
+  );
+  if (confirmed != true) {
+    return;
+  }
+  await ref.read(completedSessionsProvider.notifier).clearAll();
 }

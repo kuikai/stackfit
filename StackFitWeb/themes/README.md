@@ -30,4 +30,4 @@ in `pubspec.yaml`. Glass cards use a low `cardOpacity` in `skin_looks.dart`.
 - **bold-sports/** — High-energy neon pink sports anime (`mascot-power`)
 - **chibi/** — Soft pastel oversized-head cute (`mascot-pastel`)
 - **cyberpunk/** — Neon cyan/magenta night city gym (`mascot-chibi`)
-- **dumbbell/** — Bright warm Doga Kobo–inspired gym (`mascot-companion`)
+- **dumbbell/** — Bright warm Doga Kobo–inspired gym (`mascot-companion` and `mascot-trainer` on Home)

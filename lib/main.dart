@@ -53,7 +53,7 @@ class _StackFitAppState extends ConsumerState<StackFitApp>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.resumed && AppConstants.accountsEnabled) {
       ref.read(accountProvider.notifier).syncIfSignedIn();
     }
   }
@@ -61,7 +61,9 @@ class _StackFitAppState extends ConsumerState<StackFitApp>
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
-    ref.watch(accountProvider);
+    if (AppConstants.accountsEnabled) {
+      ref.watch(accountProvider);
+    }
 
     return MaterialApp(
       title: AppConstants.appName,

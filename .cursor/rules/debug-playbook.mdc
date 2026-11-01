@@ -1,0 +1,27 @@
+---
+description: Follow GUIDE.md Section 10 when debugging or verifying the app feels smooth
+alwaysApply: true
+---
+
+# Debug playbook
+
+When debugging, chasing a bug, or checking that the phone app still feels
+smooth, follow **GUIDE.md Section 10**. Do not invent a different process.
+
+## Order
+
+1. Reproduce once (expected vs actual).
+2. Classify (stuck screen, wrong data, sync, skin, crash).
+3. Pick the layer: logic → `flutter test` / `dart test`; something a person
+   sees → http://127.0.0.1:8181 (never 8787 for phone screens).
+4. Fix in the owning layer (screens / providers / services / models).
+5. Prove it with the same path, then the before-done gate in Section 10.
+
+## Smoke
+
+- Broad “app feels rough” or “debug everything” → full-app smoke checklist
+  in GUIDE §10, not only the last file touched.
+- Focused change → the matching row in the “After a focused change” table.
+
+How to open the phone app (port 8181, one run, Chrome app window) stays in
+`test-in-browser.mdc`. This rule owns the checklist process, not the port.

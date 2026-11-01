@@ -58,7 +58,7 @@ void main() {
     expect(find.text(PlanDetailScreen.proMessage), findsOneWidget);
   });
 
-  testWidgets('Settings explains that an account is optional', (tester) async {
+  testWidgets('Settings hides accounts for the first release', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
 
@@ -72,11 +72,8 @@ void main() {
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Create account'), findsOneWidget);
-    expect(find.text('Sign in'), findsOneWidget);
-    expect(
-      find.textContaining('everything stays on this device'),
-      findsOneWidget,
-    );
+    expect(find.text('Create account'), findsNothing);
+    expect(find.text('Sign in'), findsNothing);
+    expect(find.text('Appearance'), findsOneWidget);
   });
 }

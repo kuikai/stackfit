@@ -199,6 +199,7 @@ Map<String, dynamic> _snapshot() {
       },
     ],
     'deletedWorkouts': <dynamic>[],
+    'deletedSessions': <dynamic>[],
     'sessions': [
       {
         'id': 's1',

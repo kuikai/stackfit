@@ -121,8 +121,11 @@ flutter:
     - StackFitWeb/themes/dumbbell/background.jpg
     - StackFitWeb/themes/dumbbell/girl-standing.jpg
     - StackFitWeb/themes/dumbbell/mascots/mascot-companion.png
-    - StackFitWeb/themes/dumbbell/mascots/mascot-companion-sit.png
+    - StackFitWeb/themes/dumbbell/mascots/mascot-trainer.png
+    - StackFitWeb/themes/dumbbell/mascots/mascot-companion-set.png
+    - StackFitWeb/themes/dumbbell/mascots/mascot-trainer-set.png
     - StackFitWeb/themes/dumbbell/mascots/mascot-companion-rest.png
+    - StackFitWeb/themes/dumbbell/mascots/mascot-trainer-rest.png
     - StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-1.png
     - StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-2.png
     - StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-3.png
@@ -131,6 +134,14 @@ flutter:
     - StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-6.png
     - StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-7.png
     - StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-8.png
+    - StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-companion-celebrate-1.png
+    - StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-companion-celebrate-2.png
+    - StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-companion-celebrate-3.png
+    - StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-companion-celebrate-4.png
+    - StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-companion-celebrate-5.png
+    - StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-companion-celebrate-6.png
+    - StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-companion-celebrate-7.png
+    - StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-companion-celebrate-8.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

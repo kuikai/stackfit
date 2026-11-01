@@ -9,7 +9,6 @@ import '../../providers/pro_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/workouts_provider.dart';
 import '../../widgets/empty_state.dart';
-import '../../widgets/plan_library_tile.dart';
 import '../../widgets/skin_artwork.dart';
 import '../../widgets/skin_panel.dart';
 import '../../widgets/workout_limit_banner.dart';
@@ -42,6 +41,11 @@ class HomeScreen extends ConsumerWidget {
             tooltip: 'Plans',
             onPressed: () => openHomePlans(context),
             icon: const Icon(Icons.auto_awesome_motion_outlined),
+          ),
+          IconButton(
+            tooltip: 'Tabata',
+            onPressed: () => openHomeTabata(context),
+            icon: const Icon(Icons.timer_outlined),
           ),
           IconButton(
             tooltip: 'History',
@@ -81,7 +85,7 @@ class HomeScreen extends ConsumerWidget {
             const ColoredBox(color: Color(0x6605060F)),
             const Padding(
               padding: EdgeInsets.only(left: 8, bottom: 20),
-              child: SkinMascot(size: 112, alignment: Alignment.bottomLeft),
+              child: SkinHomeMascots(),
             ),
           ],
           SafeArea(
@@ -171,13 +175,10 @@ class HomeScreen extends ConsumerWidget {
     if (groups.isEmpty) {
       return _emptyHome(context, ref);
     }
-    if (rest == 0) {
-      return PlanLibraryTile(onTap: () => openHomePlans(context));
-    }
     return _buildGroup(
       context,
       ref,
-      groups[rest - 1],
+      groups[rest],
       runs: runs,
       isPro: isPro,
     );
@@ -237,10 +238,10 @@ int _homeItemCount(
   List<Workout> workouts,
   List<WorkoutHomeGroup> groups,
 ) {
-  if (workouts.isEmpty) {
+  if (workouts.isEmpty || groups.isEmpty) {
     return looseRuns.length + 1;
   }
-  return looseRuns.length + 1 + groups.length;
+  return looseRuns.length + groups.length;
 }
 
 bool _matchesRun(List<InProgressWorkout> runs, Workout workout) {

@@ -7,6 +7,7 @@ import '../../providers/workouts_provider.dart';
 import '../active_timer/active_timer_screen.dart';
 import '../history/workout_history_screen.dart';
 import '../plans/plan_library_screen.dart';
+import '../tabata/tabata_screen.dart';
 import '../workout_editor/workout_editor_screen.dart';
 import 'section_dialogs.dart';
 
@@ -85,6 +86,12 @@ Future<void> openHomePlans(BuildContext context) async {
   await Navigator.of(
     context,
   ).push<void>(MaterialPageRoute(builder: (_) => const PlanLibraryScreen()));
+}
+
+Future<void> openHomeTabata(BuildContext context) async {
+  await Navigator.of(
+    context,
+  ).push<void>(MaterialPageRoute(builder: (_) => const TabataScreen()));
 }
 
 Future<void> openHomeWorkoutHistory(

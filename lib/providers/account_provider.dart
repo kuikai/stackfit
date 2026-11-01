@@ -58,6 +58,7 @@ AccountSnapshot _readSnapshot(Ref ref, AccountStorage storage) {
     workouts: ref.read(workoutsProvider),
     deletedWorkouts: storage.loadDeletions(),
     sessions: ref.read(completedSessionsProvider),
+    deletedSessions: storage.loadSessionDeletions(),
     customExercises: ref.read(customCatalogProvider),
     themeMode: themeModeToStorage(settings.themeMode),
     skin: settings.skin.name,
@@ -68,6 +69,7 @@ AccountSnapshot _readSnapshot(Ref ref, AccountStorage storage) {
 Future<void> _writeSnapshot(Ref ref, AccountSnapshot snapshot) async {
   final storage = ref.read(accountStorageProvider);
   await storage.replaceDeletions(snapshot.deletedWorkouts);
+  await storage.replaceSessionDeletions(snapshot.deletedSessions);
   await storage.setAppearanceUpdatedAt(snapshot.appearanceUpdatedAt);
   await ref.read(workoutsProvider.notifier).replaceAll(snapshot.workouts);
   await ref

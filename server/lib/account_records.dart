@@ -158,6 +158,7 @@ Map<String, dynamic> emptySnapshot() {
     'workouts': <dynamic>[],
     'deletedWorkouts': <dynamic>[],
     'sessions': <dynamic>[],
+    'deletedSessions': <dynamic>[],
     'customExercises': <dynamic>[],
     'themeMode': 'system',
     'skin': 'classic',

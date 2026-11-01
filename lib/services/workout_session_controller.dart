@@ -22,7 +22,9 @@ class WorkoutSessionController extends ChangeNotifier
     WorkoutSessionState? resumeState,
     List<SetLog>? resumeLogs,
     String? resumeAfterRest,
-  }) : state =
+    DateTime Function()? clock,
+  }) : _clock = clock ?? DateTime.now,
+       state =
            resumeState ??
            WorkoutSessionState(
              workout: workout,
@@ -33,7 +35,7 @@ class WorkoutSessionController extends ChangeNotifier
              phase: SessionPhase.work,
              remainingSeconds: 0,
              isPaused: false,
-             startedAt: DateTime.now(),
+             startedAt: (clock ?? DateTime.now)(),
            ) {
     if (resumeLogs != null) {
       _setLog.replaceAll(resumeLogs);
@@ -56,6 +58,12 @@ class WorkoutSessionController extends ChangeNotifier
   @override
   final VoidCallback onWorkoutFinished;
 
+  /// Test hook. The running app uses the wall clock.
+  final DateTime Function() _clock;
+
+  @override
+  DateTime _now() => _clock();
+
   @override
   WorkoutSessionState state;
   @override
@@ -76,8 +84,25 @@ class WorkoutSessionController extends ChangeNotifier
   /// Reps logged so far, in the order sets were completed.
   List<SetLog> get setLogs => _setLog.logs;
 
-  /// Time spent in this run. Does not grow while [freezeClock] is in effect.
-  int get elapsedSeconds => _frozenElapsed ?? state.elapsedSeconds;
+  /// Time spent in this run.
+  ///
+  /// A work interval frozen in the background does not add time. Rest does,
+  /// because that countdown keeps running.
+  int get elapsedSeconds => _frozenElapsed ?? _secondsSinceStart;
+
+  /// When the current rest hits zero. Null when rest is not running.
+  DateTime? get restEndsAt => _restEndsAt;
+
+  int get _secondsSinceStart {
+    final seconds = _now().difference(state.startedAt).inSeconds;
+    return seconds < 0 ? 0 : seconds;
+  }
+
+  bool get _restKeepsRunning {
+    return state.phase == SessionPhase.rest &&
+        !state.isPaused &&
+        _restEndsAt != null;
+  }
 
   /// Where a rest in progress will go when it ends.
   String get restContinuation => _afterRestName(_afterRest);
@@ -142,20 +167,37 @@ class WorkoutSessionController extends ChangeNotifier
   }
 
   void togglePause() {
-    if (state.isComplete) {
+    if (state.isComplete || state.phase == SessionPhase.setReady) {
       return;
     }
-    if (state.phase == SessionPhase.setReady) {
-      return;
+    if (!state.isPaused) {
+      _holdRestForPause();
     }
     state = state.copyWith(isPaused: !state.isPaused);
     if (state.isPaused) {
       _stopTicker();
-    } else if (state.phase == SessionPhase.work ||
-        state.phase == SessionPhase.rest) {
+    } else if (_shouldTick) {
+      _releaseRestAfterPause();
       _startTicker();
     }
     notifyListeners();
+  }
+
+  void _holdRestForPause() {
+    final endsAt = _restEndsAt;
+    if (state.phase == SessionPhase.rest && endsAt != null) {
+      state = state.copyWith(
+        remainingSeconds: countdownSecondsLeft(endsAt, _now()),
+      );
+    }
+    _clearRestDeadline();
+  }
+
+  void _releaseRestAfterPause() {
+    if (state.phase != SessionPhase.rest) {
+      return;
+    }
+    _restEndsAt = _now().add(Duration(seconds: state.remainingSeconds));
   }
 
   void skipRest() {
@@ -165,21 +207,40 @@ class WorkoutSessionController extends ChangeNotifier
     _finishRest(playAlarm: false);
   }
 
-  /// Stops the countdown and holds [elapsedSeconds] until [thawClock].
+  /// Holds a work interval, and its share of the workout length, until [thawClock].
+  ///
+  /// Rest keeps its end time, so leaving the app does not pause that countdown.
   void freezeClock() {
-    _frozenElapsed ??= state.elapsedSeconds;
+    if (_restLeftRunning) {
+      return;
+    }
+    if (_restKeepsRunning) {
+      _restLeftRunning = true;
+      _stopTicker();
+      return;
+    }
+    _frozenElapsed ??= _secondsSinceStart;
     _stopTicker();
   }
 
-  /// Continues the countdown from the held elapsed time, if it was running.
+  /// Continues a frozen work interval, or catches the rest up to the wall clock.
   void thawClock() {
+    if (_restLeftRunning) {
+      _restLeftRunning = false;
+      final resting = _syncRest();
+      if (resting) {
+        _startTicker();
+      }
+      notifyListeners();
+      return;
+    }
     final frozen = _frozenElapsed;
     if (frozen == null) {
       return;
     }
     _frozenElapsed = null;
     state = state.copyWith(
-      startedAt: DateTime.now().subtract(Duration(seconds: frozen)),
+      startedAt: _now().subtract(Duration(seconds: frozen)),
     );
     if (_shouldTick) {
       _startTicker();
@@ -193,6 +254,7 @@ class WorkoutSessionController extends ChangeNotifier
       return;
     }
     _frozenElapsed = null;
+    _clearRestDeadline();
     _stopTicker();
     _afterRest = _AfterRest.block;
     _instantSkips = 0;
@@ -206,18 +268,28 @@ class WorkoutSessionController extends ChangeNotifier
       phase: SessionPhase.work,
       remainingSeconds: 0,
       isPaused: false,
-      startedAt: DateTime.now(),
+      startedAt: _now(),
     );
     _enterBlock(0);
   }
 
   void _armRestoredSession(String? afterRest) {
-    if (state.phase == SessionPhase.rest) {
-      _afterRest = _afterRestFromName(afterRest ?? _inferredAfterRest());
+    if (state.phase != SessionPhase.rest) {
+      if (_shouldTick) {
+        _startTicker();
+      }
+      return;
     }
-    if (_shouldTick) {
-      _startTicker();
+    _afterRest = _afterRestFromName(afterRest ?? _inferredAfterRest());
+    if (state.isPaused) {
+      return;
     }
+    if (state.remainingSeconds <= 0) {
+      _finishRest(playAlarm: true);
+      return;
+    }
+    _restEndsAt = _now().add(Duration(seconds: state.remainingSeconds));
+    _startTicker();
   }
 
   bool get _shouldTick {
@@ -313,7 +385,10 @@ class WorkoutSessionController extends ChangeNotifier
   }
 }
 
-/// Builds the timer place for a saved run, using [now] so closed time is dropped.
+/// Builds the timer place for a saved run.
+///
+/// Rest that stored an end time counts the gap since the save. Work and a
+/// paused rest keep the saved seconds, so time away does not move them.
 WorkoutSessionState stateFromProgress(
   InProgressWorkout progress,
   Workout workout,
@@ -326,7 +401,7 @@ WorkoutSessionState stateFromProgress(
     exerciseIndex: progress.exerciseIndex,
     setIndex: progress.setIndex,
     phase: _phaseFromName(progress.phase),
-    remainingSeconds: progress.remainingSeconds,
+    remainingSeconds: progress.restSecondsLeft(now),
     isPaused: progress.isPaused,
     startedAt: progress.resumedStartedAt(now),
   );

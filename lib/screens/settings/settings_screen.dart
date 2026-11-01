@@ -26,8 +26,10 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: context.pageGutter(top: 8, bottom: 32),
         children: [
-          const AccountSettingsCard(),
-          const SizedBox(height: 16),
+          if (AppConstants.accountsEnabled) ...[
+            const AccountSettingsCard(),
+            const SizedBox(height: 16),
+          ],
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),

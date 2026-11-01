@@ -99,6 +99,15 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
+          const SizedBox(height: 4),
+          Text(
+            'Use the arrows, or press and hold an exercise to drag it.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.62),
+            ),
+          ),
           const SizedBox(height: 8),
           if (_blocks.isEmpty)
             Padding(
@@ -116,12 +125,14 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
             WorkoutBlockList(
               blocks: _blocks,
               onReorder: _onReorder,
+              onMoveBlock: _moveBlock,
               onEditExercise: _editExercise,
               onDeleteBlock: _removeBlock,
               onCircuitChanged: _updateCircuit,
               onAddStation: _addStation,
               onEditStation: _editStation,
               onDeleteStation: _deleteStation,
+              onReorderStation: _onReorderStation,
               onMoveStation: _moveStation,
             ),
         ],
@@ -157,11 +168,29 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
     );
   }
 
-  void _onReorder(int oldIndex, int newIndex) {
+  Future<void> _onReorder(int oldIndex, int newIndex) async {
+    var dest = newIndex;
+    if (dest > oldIndex) {
+      dest -= 1;
+    }
+    await _moveBlockTo(oldIndex, dest);
+  }
+
+  Future<void> _moveBlock(int index, int direction) {
+    return _moveBlockTo(index, index + direction);
+  }
+
+  Future<void> _moveBlockTo(int index, int dest) async {
+    if (dest < 0 || dest >= _blocks.length || dest == index) {
+      return;
+    }
     setState(() {
-      final item = _blocks.removeAt(oldIndex);
-      _blocks.insert(newIndex, item);
+      final blocks = [..._blocks];
+      final block = blocks.removeAt(index);
+      blocks.insert(dest, block);
+      _blocks = blocks;
     });
+    await _persistEdits();
   }
 
   Future<void> _showAddOptions() async {
@@ -291,19 +320,45 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
     });
   }
 
-  void _moveStation(String circuitId, int stationIndex, int direction) {
+  Future<void> _onReorderStation(
+    String circuitId,
+    int oldIndex,
+    int newIndex,
+  ) async {
+    var dest = newIndex;
+    if (dest > oldIndex) {
+      dest -= 1;
+    }
+    await _moveStationTo(circuitId, oldIndex, dest);
+  }
+
+  Future<void> _moveStation(
+    String circuitId,
+    int stationIndex,
+    int direction,
+  ) {
+    return _moveStationTo(circuitId, stationIndex, stationIndex + direction);
+  }
+
+  Future<void> _moveStationTo(
+    String circuitId,
+    int stationIndex,
+    int dest,
+  ) async {
     setState(() {
       _blocks = mapCircuit(_blocks, circuitId, (circuit) {
-        final next = stationIndex + direction;
-        if (next < 0 || next >= circuit.exercises.length) {
+        if (dest < 0 ||
+            dest >= circuit.exercises.length ||
+            dest == stationIndex) {
           return circuit;
         }
         final stations = [...circuit.exercises];
         final station = stations.removeAt(stationIndex);
-        stations.insert(next, station);
+        stations.insert(dest, station);
         return circuit.copyWith(exercises: stations);
       });
     });
+    await _persistEdits();
   }
 
   Future<void> _save() async {

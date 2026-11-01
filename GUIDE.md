@@ -76,6 +76,7 @@ flowchart TB
     Editor[workout_editor_screen]
     Catalog[catalog_screen]
     Timer[active_timer_screen]
+    Tabata[tabata_screen]
     History[history_screen]
     Settings[settings_screen]
     Plans[plan_library_screen]
@@ -108,6 +109,7 @@ flowchart TB
   Editor --> CCP
   Catalog --> CCP
   Timer --> Session --> CP
+  Tabata --> Session
   Timer --> IP
   Home --> IP
   History --> CP
@@ -202,7 +204,7 @@ in `website/js/snapshot.js`:
 | Data | Rule |
 |------|------|
 | Workouts | newer `updatedAt` wins; a deletion wins if it is as new as the edit |
-| History | union by id, so the same session is never stored twice |
+| History | union by id, then drop any id in `deletedSessions` |
 | Custom exercises | union by name, ignoring case; the local copy is kept when both have it |
 | Theme + skin | newer `appearanceUpdatedAt` wins |
 | Pro | not in the snapshot at all; it stays a store purchase on the phone |
@@ -269,6 +271,7 @@ README.md             How to run the app, server, and website
 GUIDE.md              This file
 NEXT_VERSION.md       Plan + acceptance criteria for accounts and sync
 SHARING_PLAN.md       Plan + acceptance criteria for share links
+SKIN_IDEAS.md         Skins we might make later, and how to add one
 pubspec.yaml          Flutter dependencies
 analysis_options.yaml House style the phone app is checked against
 .cursor/rules/
@@ -281,8 +284,9 @@ analysis_options.yaml House style the phone app is checked against
 ### `icon/` – home-screen picture
 
 ```
-icon.png              Home-screen icon picture. Black background, blue dumbbell, 1024×1024
-app-store-header.png  App Store header and search image. Same dumbbell, 5244×2950
+icon.png              Home-screen icon picture. Pixel guy deadlifting green plates, 1024×1024
+app-store-header.png  App Store header and search image. Older blue dumbbell art, 5244×2950
+concepts/             Draft icon ideas (not used by the app until copied to icon.png)
 ```
 
 ### `web/` – the same phone app, opened in a browser
@@ -297,31 +301,33 @@ icons/                Larger icons for that install prompt
 ### `lib/` – phone app
 
 ```
-main.dart                         App entry. Sets up Riverpod, theme, and re-syncs when the app resumes.
+main.dart                         App entry. Sets up Riverpod, starts RevenueCat, theme, and re-syncs when the app resumes.
 
 core/
-  constants.dart                  App name, free limits (3 workouts, 10 sessions), server URL
+  constants.dart                  App name, free limits (3 workouts, 10 sessions), Pro product ids, server URL. Accounts stay off until accountsEnabled is true
+  revenue_cat_config.dart         Store product and entitlement ids, plus the public RevenueCat API keys
   theme.dart                      Builds light and dark themes from a skin's colours, font, corners, and spacing
   page_transition.dart            Soft fade/slide between screens; keeps Home tappable after Done
-  skins.dart                      Skin names, and which colours and corners go with each one
+  skins.dart                      Skin names, and which colours and corners go with each one. Everyday includes White Energy and Toxic Lime
   skin_looks.dart                 Corners, spacing, and fonts for each skin
   skin_palettes.dart              Light and dark colours for each skin
   theme_mode_codec.dart           Converts ThemeMode <-> the "system/light/dark" text saved on the account
   utils.dart                      Small helpers: new ids, duration formatting
 
-models/                           Data shapes. Every one has toJson / fromJson.
+models/                           Data shapes. Saved ones have toJson / fromJson.
   models.dart                     One import that re-exports all models
   exercise_type.dart              enum: timer or sets
   exercise.dart                   One exercise: name + work/rest/rounds, or sets/reps/rest
   circuit.dart                    A circuit: exercises that play in order, then repeat
   workout.dart                    A named list of exercises and circuits, optional Home section, createdAt / updatedAt
+  tabata_clock.dart               Classic 20/10/8 recipe. Builds a temporary workout the clock runs, and does not save it
   completed_session.dart          One history row: workout name, when, how long, how many exercises
-  in_progress_workout.dart        A run you left early: place, logged sets, and time, on the phone only
+  in_progress_workout.dart        A run you left early. A running rest remembers when it ends
   set_log.dart                    Reps and kg for one set, saved on a finished session, with the circuit round
   catalog_exercise.dart           One catalog row, the built-in list, and search
   custom_catalog.dart             Adds an exercise you made under Custom, or updates that name
   app_settings.dart               Theme mode + skin
-  account_snapshot.dart           The snapshot: workouts, deletions, sessions, custom exercises, appearance. What syncs.
+  account_snapshot.dart           The snapshot: workouts, deletions, sessions, deleted sessions, custom exercises, appearance. What syncs.
   workout_plan.dart               A read-only built-in plan and its days
   plans/
     plan_library.dart             Lists every built-in plan, by category, with search
@@ -335,13 +341,13 @@ models/                           Data shapes. Every one has toJson / fromJson.
   FitTimer_CURSOR_CONTEXT.md      Old project brief (still says "FitTimer"; out of date)
 
 providers/                        Riverpod state. Screens read from here.
-  app_providers.dart              Wires SharedPreferences, StorageService, AccountStorage, AccountApiClient
+  app_providers.dart              Wires SharedPreferences, StorageService, AccountStorage, AccountApiClient, RevenueCat
   workouts_provider.dart          The workout list + add/edit/delete/duplicate + sections + the free-limit check
   custom_catalog_provider.dart    Exercises you added, listed in the catalog under Custom
-  completed_sessions_provider.dart  History list, newest first, free cap of 10, plus per-workout history. Can drop one exercise from a session
+  completed_sessions_provider.dart  History list, newest first, free cap of 10, plus per-workout history. Can drop one exercise, delete a session, or clear all history
   in_progress_provider.dart       Unfinished workouts on the phone. Not uploaded with the account
   settings_provider.dart          Theme and skin
-  pro_provider.dart               Free or Pro flag
+  pro_provider.dart               Free or Pro flag, plus purchase and restore through RevenueCat
   account_state.dart              Signed in or not, saving/offline/error, and whether old device data is waiting
   account_provider.dart           Sign up, sign in, reset password, sign out, delete account, and "move my workouts"
   account_sync.dart               What happens after sign-in, and when a workout, session, theme, or custom exercise changes
@@ -352,18 +358,19 @@ services/                         Does the work the providers ask for.
   session_set_log.dart            Reps and kg typed in while a workout is still running
   previous_set_log.dart           Last time's reps and kg, on the log and in the add fields
   station_exit.dart               Rest between circuit stations and between rounds
-  workout_session_controller.dart Pause, skip, reset, and Done. Can continue a saved place
-  workout_session_phases.dart     What happens when work ends, rest ends, a circuit loops, or the clock ticks
+  workout_session_controller.dart Pause, skip, reset, and Done. Rest keeps counting if you leave the app
+  workout_session_phases.dart     Work, rest, circuits, and ticks. Rest follows the wall clock
   sound_service.dart              Beeps and haptics on phase changes
+  revenue_cat_service.dart        Talks to RevenueCat: start, buy Pro, restore, and read the entitlement
   plan_workout_builder.dart       Turns a plan day into a workout; multi-day plans share a section
   account/
     account_api_client.dart       HTTP calls to the server (/v1/auth, /v1/account, /v1/sync, /v1/profile)
-    account_storage.dart          Saves who is signed in, plus sync bookkeeping (deletions, unmoved data)
+    account_storage.dart          Saves who is signed in, plus sync bookkeeping (workout and session deletions, unmoved data)
     snapshot_merge.dart           The merge rules from section 4
 
 screens/                          One folder per screen.
-  home/home_screen.dart           Workout list grouped into sections, continue rows, + button, Plans / History / Settings
-  home/home_actions.dart          Start or continue, start over, create, delete, duplicate, and section changes
+  home/home_screen.dart           Workout list grouped into sections, continue rows, + button. Tabata is an icon beside Plans
+  home/home_actions.dart          Start or continue, start over, create, delete, duplicate, sections, and Tabata
   home/section_dialogs.dart       Name a section, move workouts in, pick which days to group
   workout_editor/workout_editor_screen.dart   Create or edit a workout, including a circuit box. Saving one exercise writes the workout
   workout_editor/workout_editor_actions.dart  Add an exercise or a circuit, and edit the stations inside it
@@ -372,12 +379,13 @@ screens/                          One folder per screen.
   active_timer/active_timer_screen.dart       The big timer. Saves an unfinished run and can continue it.
   active_timer/timer_controls.dart            Done, skip rest, pause, skip, reset, and stop. Logging hides pause and skip
   active_timer/active_timer_card.dart         WORK and REST countdown, drawn on the background
-  active_timer/workout_complete_screen.dart   Done screen. Saves the session and always returns to Home.
-  history/history_screen.dart     Completed sessions across every workout
+  active_timer/workout_complete_screen.dart   Done screen. Saves the session, plays a celebrate hop when the skin has one, and always returns to Home.
+  tabata/tabata_screen.dart       Tabata clock. Opens on 20/10/8, then start, pause, skip a work round, skip rest, and stop. Not a saved workout
+  history/history_screen.dart     Completed sessions across every workout. Clear wipes history after confirm
   history/workout_history_screen.dart  Past sessions of one workout
   plans/plan_library_screen.dart  Browse built-in plans by category or search
   plans/plan_detail_screen.dart   Days of one plan. Start continues an unfinished day. Add is Pro
-  settings/settings_screen.dart   Theme, everyday skins, Pro skins, Pro, account card
+  settings/settings_screen.dart   Theme, everyday skins, Pro skins, buy or restore Pro. Account card stays hidden until accounts ship
   account/account_screen.dart     Decides sign up, sign in, and reset. Does not call the server itself
   account/account_auth_form.dart  The email, password, and reset-code fields
   account/delete_account_dialog.dart  Password confirm before an account is deleted
@@ -389,19 +397,18 @@ widgets/                          Reusable pieces used by several screens.
   exercise_editor_tile.dart       One exercise row inside the workout editor
   workout_block_list.dart         The editor list: loose exercises and circuit boxes
   plan_card.dart                  One plan in the Plan Library
-  plan_library_tile.dart          Home row that opens the Plan Library
   number_stepper.dart             Minus / number / plus; type the number in place
   set_tracker.dart                Per-set log panel during a workout
   set_tracker_rows.dart           One set row: today's reps, and what that set was last time
-  log_row_swipe.dart              Short swipe that removes one exercise log, like marking a task done
+  log_row_swipe.dart              Short swipe that removes one exercise log or a history row, like marking a task done
   set_log_list.dart               Finished sets grouped by exercise. History swipes one exercise away
-  session_tile.dart               One history row. Tap opens that session's sets
+  session_tile.dart               One history row. Tap opens that session's sets. Swipe deletes the session after confirm
   skin_picker.dart                Grid of skins in Settings
   collapsible_section.dart        A settings card that stays closed until you tap Show
-  skin_artwork.dart               Big girl on Home, empty gym behind dark anime screens, skin mascot
-  chibi_run.dart                  Chibi run cycle that crosses the workout-complete screen
+  skin_artwork.dart               Big picture on Home, empty gym behind dark anime screens, skin mascots
+  chibi_run.dart                  Mascot run across workout complete, or an in-place hop when the skin has celebrate frames
   skin_panel.dart                 Holder: solid on everyday skins, Home-style glass on anime skins
-  account_settings_card.dart      The account box in Settings: email, Saved/Saving/Offline, sign out, delete account, move data
+  account_settings_card.dart      Account box for Settings. Hidden while accountsEnabled is false. Email, save status, sign out, delete, move data
   empty_state.dart                Centered "nothing here yet" message
 ```
 
@@ -437,10 +444,10 @@ styles.css                        Styling
 js/
   main.js                         Start here. Picks a view from the URL and wires the library buttons
   auth.js                         Sign in, sign up, reset password, sign out, and delete account
-  library.js                      Draws workouts, grouped into sections, and the history list
+  library.js                      Draws workouts, grouped into sections, and the history list with delete
   workout_run_view.js             The on-screen clock, phase name, and beep while a workout runs
   api.js                          fetch() calls to the server. Same endpoints as account_api_client.dart
-  snapshot.js                     Empty snapshot, merge rules (including custom exercises), circuit blocks, id and date helpers
+  snapshot.js                     Empty snapshot, merge rules (including custom exercises and deleted sessions), circuit blocks, id and date helpers
   editor.js                       Workout editor form: open, read the draft, validate
   editor_blocks.js                Exercise cards and circuit boxes in the workout editor
   session.js                      "Log a session" form
@@ -456,14 +463,16 @@ themes/README.md                  Shared recipe for the four Pro anime themes
 themes/bold-sports/               Bold Sports art. Home is girl-standing.jpg. background.jpg behind other dark screens. Mascot is mascots/mascot-power.png (sit / rest / run-1..8)
 themes/chibi/                     Chibi art. Home is girl-standing.jpg. background.jpg behind other dark screens. Mascot is mascots/mascot-pastel.png (sit / rest / run-1..8)
 themes/cyberpunk/                 Cyberpunk art. Home is girl-standing.jpg. The night gym in background.jpg sits behind every other dark screen. Home mascot is mascots/mascot-chibi.png. She sits on Done, rests on Skip rest, and the run frames in mascots/animation/running/ cross workout complete.
-themes/dumbbell/                  Dumbbell art. Home is girl-standing.jpg. background.jpg behind other dark screens. Mascot is mascots/mascot-companion.png (sit / rest / run-1..8)
+themes/dumbbell/                  Dumbbell art. Home is girl-standing.jpg. background.jpg behind other dark screens. Home shows mascot-companion.png beside mascot-trainer.png. Done has mascot-companion-set.png on the left and mascot-trainer-set.png on the right. Skip rest has mascot-companion-rest.png on the left and mascot-trainer-rest.png on the right. She hops on workout complete (celebrate-1..8) and can still run (run-1..8)
 ```
 
 ### `test/` – phone app tests
 
 ```
 widget_test.dart                  Home screen renders
-snapshot_merge_test.dart          Merge rules
+tabata_clock_test.dart            Classic Tabata is one timer exercise, 20/10/8, and Home opens that clock
+snapshot_merge_test.dart          Merge rules, including session deletions
+completed_sessions_test.dart      Deleting a session or clearing history writes tombstones so sync cannot bring them back
 custom_catalog_test.dart          A custom exercise joins the catalog, and sync keeps one copy of each name
 website_snapshot_test.dart        Phone can read a snapshot the website wrote
 plan_library_test.dart            Plans have unique ids, and Home sections group plan days
@@ -472,9 +481,10 @@ set_log_list_test.dart            Workout summary wraps a long reps and kg line,
 workout_complete_test.dart        Done leaves the finish screen and lands on a tappable Home
 previous_set_log_test.dart        Last-time reps come from this workout, the newest match, and the same round
 set_tracker_test.dart             The log shows last time's reps on each set
-circuit_session_test.dart         Circuits loop, then the rest of the workout continues
+portrait_timer_layout_test.dart   A phone held upright keeps the set log clear of the mascot and the rest clock
+circuit_session_test.dart         Circuits loop, and rest keeps counting while you are away
 workout_editor_test.dart          Saving an exercise inside a circuit writes the workout
-in_progress_workout_test.dart     Closing a workout keeps the place, sets, and time for next time
+in_progress_workout_test.dart     A saved run keeps its place. A live rest keeps counting while closed
 skin_look_test.dart               Each skin's corners, spacing, and typeface
 ```
 
@@ -484,10 +494,10 @@ skin_look_test.dart               Each skin's corners, spacing, and typeface
 
 | Word | Means |
 |------|-------|
-| **Snapshot** | Everything on one account in one JSON object: workouts, deleted workout ids, sessions, custom exercises, theme, skin. |
+| **Snapshot** | Everything on one account in one JSON object: workouts, deleted workout ids, sessions, deleted session ids, custom exercises, theme, skin. |
 | **Custom exercise** | An exercise you typed yourself, including its timer or sets. Listed in the catalog under Custom. |
 | **Session** (history) | One finished workout: `CompletedSession`. |
-| **In-progress workout** | A run you left before it finished. Stored on the phone only, so you can continue. Reset or Start over clears it. |
+| **In-progress workout** | A run you left before it finished. Stored on the phone only, so you can continue. A rest still running keeps counting while the app is closed. Reset or Start over clears it. |
 | **Session** (account) | Who is signed in: `AccountSession` (email + token). Different thing, same word. |
 | **Revision** | A counter the server bumps on every save. Used to spot two devices saving at once. |
 | **Provider** | A Riverpod object that holds state and tells screens when it changes. |
@@ -498,6 +508,7 @@ skin_look_test.dart               Each skin's corners, spacing, and typeface
 | **Token** (share) | The random part of a share link, `/s/<token>`. Not secret, just hard to guess. |
 | **Section** | A named folder on Home that groups workouts (for example Bro Split → Chest, Back). Stored on each workout. |
 | **Circuit** | A box in a workout. The exercises inside play in order, then the box repeats. Exercises outside the box run once. |
+| **Tabata clock** | A round timer opened from Home. Classic is 20 seconds on, 10 off, 8 rounds. It is not a saved workout. |
 | **Pro skin** | A fun theme, such as anime, listed under Pro skins. Everyday skins stay available without Pro. |
 | **Unmoved data** | Workouts made on the phone before signing in, waiting for "Move to my account". |
 | **Origin** | Whether the phone's data came from the device or from the account. Decides if "move" is offered. |
@@ -543,7 +554,8 @@ dart run flutter_launcher_icons
 # Those files are not in git. Keep a copy. Play rejects a build signed with the debug key.
 flutter build appbundle
 # Upload build/app/outputs/bundle/release/app-release.aab
-# Sign-in appears in that build only when the server address is https:
+# First release leaves accounts off (AppConstants.accountsEnabled).
+# When accounts ship, set that flag, then point a release build at https:
 # flutter build appbundle --dart-define=STACKFIT_ACCOUNT_URL=https://your-server
 ```
 
@@ -589,13 +601,14 @@ A one-exercise sets workout is enough for the run path. Tick each item.
 
 - [ ] **Home** — list loads; can open a workout; unfinished workout shows
   Continue when one exists
-- [ ] **Editor** — open a workout, change one exercise, save, back to Home
+- [ ] **Editor** — open a workout, change one exercise, move one with
+  arrows or by pressing and holding then dragging, save, back to Home
   with the change kept
 - [ ] **Run** — start a short sets workout; log a set; Skip / Skip rest
   through to Workout complete
 - [ ] **Done** — tap Done; land on Home with the city or skin visible and
   tappable (not stuck on a blank finish)
-- [ ] **History** — the finished session appears
+- [ ] **History** — the finished session appears; swipe deletes it after confirm; Clear wipes the list
 - [ ] **Plans** — open a plan; Start or Add behaves (Pro gate message if
   locked)
 - [ ] **Settings / skin** — switch an everyday skin; screen still readable
@@ -624,6 +637,9 @@ Re-run only the smoke that matches what you touched:
 - Soft page transitions after `pushReplacement` (timer → finish) can leave
   Home faded and untappable. `lib/core/page_transition.dart` owns that.
   Always include Done → Home when you smoke the timer.
+- Rest keeps counting when you leave the app, including if the app is closed
+  and you tap Continue. A work interval stays where it was. Pause still holds
+  a rest. Leaving the workout screen (Stop) saves the seconds and waits.
 - Do not start a second web-server on 8181. Reuse the open run.
 - http://127.0.0.1:8787 is the account website, not the phone UI.
 
@@ -697,13 +713,14 @@ the first App Store submit on these.
 - [ ] *(Later)* Public HTTPS host for the API + website
 - [ ] *(Later)* Release builds use `--dart-define=STACKFIT_ACCOUNT_URL=https://…`
 - [ ] *(Later)* Sign up, sign in, sync, delete account; password reset by email
-- [ ] *(Later)* Turn account UI back on in the phone app and point privacy /
+- [ ] *(Later)* Set `AppConstants.accountsEnabled` to true and point privacy /
   delete-account copy at the live site
 
 For 1.0 only:
 
-- [ ] Account / sign-in UI hidden or clearly unavailable in the Release build
-  (no dead “server offline” path for reviewers)
+- [x] Account / sign-in UI hidden. `AppConstants.accountsEnabled` is false, so
+  Settings has no account card and the app does not call the account server.
+  Flip that flag when accounts ship (later list below)
 - [ ] Privacy policy live at a **public HTTPS URL** even without accounts
   (device data only). Can be a simple hosted page; `/privacy.html` is fine
   once the site is on HTTPS, or a short standalone page

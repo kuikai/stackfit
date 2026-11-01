@@ -6,9 +6,16 @@ import '../../services/workout_session_controller.dart';
 
 /// The WORK / REST countdown, drawn on the background with no holder box.
 class ActiveTimerCard extends StatelessWidget {
-  const ActiveTimerCard({super.key, required this.state});
+  const ActiveTimerCard({
+    super.key,
+    required this.state,
+    this.countLabel = 'Set',
+  });
 
   final WorkoutSessionState state;
+
+  /// Word in front of the count. A workout says "Set". Tabata says "Round".
+  final String countLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +65,7 @@ class ActiveTimerCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               showRound
-                  ? 'Set ${state.setNumber} of ${state.totalSets}'
+                  ? '$countLabel ${state.setNumber} of ${state.totalSets}'
                   : _restCaption(),
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: colorScheme.onSurface.withValues(alpha: 0.55),

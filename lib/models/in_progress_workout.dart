@@ -6,6 +6,9 @@ import 'workout.dart';
 /// A workout left before it finished. Kept on the phone so it can be continued.
 ///
 /// This is not a history row and it is not part of the account snapshot.
+/// A rest that is still running stores [restEndsAt], so the countdown keeps
+/// going while the app is closed. Leaving the workout screen omits that, and
+/// the saved seconds stay put.
 class InProgressWorkout {
   const InProgressWorkout({
     required this.workout,
@@ -24,6 +27,7 @@ class InProgressWorkout {
     this.draftReps = 0,
     this.draftWeightKg = 0,
     this.afterRest,
+    this.restEndsAt,
   });
 
   final Workout workout;
@@ -41,7 +45,8 @@ class InProgressWorkout {
   final int remainingSeconds;
   final bool isPaused;
 
-  /// Seconds already spent. Time while the app was closed is not included.
+  /// Seconds already spent at [savedAt].
+  /// Time after that counts only when [restEndsAt] is set.
   final int elapsedSeconds;
   final List<SetLog> setLogs;
 
@@ -52,6 +57,9 @@ class InProgressWorkout {
 
   /// What should happen when a saved rest ends: timerRound, set, station, round, block.
   final String? afterRest;
+
+  /// When a running rest hits zero. Null when rest is paused or not running.
+  final DateTime? restEndsAt;
   final DateTime savedAt;
 
   static String planOrigin(String planId, String dayName) {
@@ -81,10 +89,30 @@ class InProgressWorkout {
     return workoutLayoutKey(workout) == workoutLayoutKey(current);
   }
 
-  /// Clock start that keeps [elapsedSeconds] and ignores the gap while closed.
+  /// Clock start for a continued run.
+  ///
+  /// Work and a paused rest ignore the gap while closed. A running rest
+  /// includes that gap, so the workout length keeps moving with the rest.
   DateTime resumedStartedAt(DateTime now) {
-    final seconds = elapsedSeconds < 0 ? 0 : elapsedSeconds;
-    return now.subtract(Duration(seconds: seconds));
+    final spent = elapsedSeconds < 0 ? 0 : elapsedSeconds;
+    return now.subtract(Duration(seconds: spent + _closedRestSeconds(now)));
+  }
+
+  /// Seconds of rest still left at [now]. Other phases keep [remainingSeconds].
+  int restSecondsLeft(DateTime now) {
+    final endsAt = restEndsAt;
+    if (phase != 'rest' || isPaused || endsAt == null) {
+      return remainingSeconds;
+    }
+    return countdownSecondsLeft(endsAt, now);
+  }
+
+  int _closedRestSeconds(DateTime now) {
+    if (phase != 'rest' || isPaused || restEndsAt == null) {
+      return 0;
+    }
+    final away = now.difference(savedAt).inSeconds;
+    return away > 0 ? away : 0;
   }
 
   /// Changes that should be written. The ticking clock is not one of them.
@@ -117,6 +145,7 @@ class InProgressWorkout {
       if (draftEdited) 'draftReps': draftReps,
       if (draftEdited) 'draftWeightKg': draftWeightKg,
       if (afterRest != null) 'afterRest': afterRest,
+      if (restEndsAt != null) 'restEndsAt': restEndsAt!.toIso8601String(),
       'savedAt': savedAt.toIso8601String(),
     };
   }
@@ -142,6 +171,7 @@ class InProgressWorkout {
       draftReps: _nonNegative(json['draftReps']),
       draftWeightKg: (json['draftWeightKg'] as num?)?.toDouble() ?? 0,
       afterRest: json['afterRest'] as String?,
+      restEndsAt: _optionalTime(json['restEndsAt']),
       savedAt: DateTime.parse(json['savedAt'] as String),
     );
   }
@@ -170,6 +200,22 @@ String _circuitLayout(Circuit circuit) {
 String _exerciseLayout(Exercise exercise) {
   return '${exercise.id}:${exercise.type.name}:${exercise.sets}:'
       '${exercise.reps}:${exercise.workSeconds}:${exercise.restSeconds}';
+}
+
+/// Whole seconds until [endsAt], rounded up. Zero once that moment has passed.
+int countdownSecondsLeft(DateTime endsAt, DateTime now) {
+  final milliseconds = endsAt.difference(now).inMilliseconds;
+  if (milliseconds <= 0) {
+    return 0;
+  }
+  return (milliseconds + 999) ~/ 1000;
+}
+
+DateTime? _optionalTime(Object? raw) {
+  if (raw is! String || raw.isEmpty) {
+    return null;
+  }
+  return DateTime.tryParse(raw);
 }
 
 int _nonNegative(Object? raw) {

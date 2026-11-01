@@ -35,6 +35,10 @@ class _AccountSettingsCardState extends ConsumerState<AccountSettingsCard> {
 
   @override
   Widget build(BuildContext context) {
+    if (!AppConstants.accountsEnabled) {
+      return const SizedBox.shrink();
+    }
+
     final account = ref.watch(accountProvider);
     final theme = Theme.of(context);
     ref.listen<AccountState>(accountProvider, (previous, next) {

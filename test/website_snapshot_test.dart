@@ -69,5 +69,26 @@ void main() {
     expect(snapshot.customExercises.single.name, 'Farmer Carry');
     expect(snapshot.customExercises.single.sets, 4);
     expect(snapshot.customExercises.single.preset?.reps, 6);
+    expect(snapshot.deletedSessions, isEmpty);
+  });
+
+  test('the app can read a website snapshot that deleted a session', () {
+    final snapshot = AccountSnapshot.fromJson({
+      'workouts': <Map<String, dynamic>>[],
+      'deletedWorkouts': <Map<String, dynamic>>[],
+      'sessions': <Map<String, dynamic>>[],
+      'deletedSessions': [
+        {
+          'id': 'session-1',
+          'deletedAt': '2026-10-12T09:00:00.000Z',
+        },
+      ],
+      'themeMode': 'system',
+      'skin': 'classic',
+      'appearanceUpdatedAt': '1970-01-01T00:00:00.000Z',
+    });
+
+    expect(snapshot.sessions, isEmpty);
+    expect(snapshot.deletedSessions.single.id, 'session-1');
   });
 }

@@ -14,6 +14,8 @@ enum AppSkin {
   sunset,
   minimal,
   synthwave,
+  whiteEnergy,
+  toxicLime,
   boldSports(pro: true),
   chibi(pro: true),
   cyberpunk(pro: true),
@@ -41,6 +43,8 @@ enum AppSkin {
     AppSkin.sunset => 'Sunset',
     AppSkin.minimal => 'Minimal',
     AppSkin.synthwave => 'Synthwave',
+    AppSkin.whiteEnergy => 'White Energy',
+    AppSkin.toxicLime => 'Toxic Lime',
     AppSkin.boldSports => 'Bold Sports',
     AppSkin.chibi => 'Chibi',
     AppSkin.cyberpunk => 'Cyberpunk',
@@ -54,6 +58,8 @@ enum AppSkin {
     AppSkin.sunset => 'Warm energetic coral',
     AppSkin.minimal => 'Quiet premium neutrals',
     AppSkin.synthwave => 'Neon pink & cyan fun',
+    AppSkin.whiteEnergy => 'Icy white energy-can chill',
+    AppSkin.toxicLime => 'Black gym with toxic lime accent',
     AppSkin.boldSports => 'High-energy neon pink sports anime',
     AppSkin.chibi => 'Soft pastel cute anime',
     AppSkin.cyberpunk => 'Neon cyan and magenta night city',
@@ -102,6 +108,13 @@ enum AppSkin {
     _ => null,
   };
 
+  /// Second little mascot on Home, beside [mascotAsset].
+  String? get mascotPartnerAsset => switch (this) {
+    AppSkin.dumbbell =>
+      'StackFitWeb/themes/dumbbell/mascots/mascot-trainer.png',
+    _ => null,
+  };
+
   /// Mascot perched on the Done / Next Set button.
   String? get mascotSeatAsset => switch (this) {
     AppSkin.boldSports =>
@@ -110,11 +123,18 @@ enum AppSkin {
     AppSkin.cyberpunk =>
       'StackFitWeb/themes/cyberpunk/mascots/mascot-chibi-sit.png',
     AppSkin.dumbbell =>
-      'StackFitWeb/themes/dumbbell/mascots/mascot-companion-sit.png',
+      'StackFitWeb/themes/dumbbell/mascots/mascot-companion-set.png',
     _ => null,
   };
 
-  /// Mascot lying on the Skip rest bar.
+  /// Second character beside [mascotSeatAsset] on Done.
+  String? get mascotSeatPartnerAsset => switch (this) {
+    AppSkin.dumbbell =>
+      'StackFitWeb/themes/dumbbell/mascots/mascot-trainer-set.png',
+    _ => null,
+  };
+
+  /// Mascot on the left of Skip rest.
   String? get mascotRestAsset => switch (this) {
     AppSkin.boldSports =>
       'StackFitWeb/themes/bold-sports/mascots/mascot-power-rest.png',
@@ -123,6 +143,13 @@ enum AppSkin {
       'StackFitWeb/themes/cyberpunk/mascots/mascot-chibi-rest.png',
     AppSkin.dumbbell =>
       'StackFitWeb/themes/dumbbell/mascots/mascot-companion-rest.png',
+    _ => null,
+  };
+
+  /// Second character on the right of Skip rest.
+  String? get mascotRestPartnerAsset => switch (this) {
+    AppSkin.dumbbell =>
+      'StackFitWeb/themes/dumbbell/mascots/mascot-trainer-rest.png',
     _ => null,
   };
 
@@ -172,6 +199,21 @@ enum AppSkin {
       'StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-6.png',
       'StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-7.png',
       'StackFitWeb/themes/dumbbell/mascots/animation/running/mascot-companion-run-8.png',
+    ],
+    _ => const [],
+  };
+
+  /// In-place hop on workout complete. Empty skins keep the run cycle.
+  List<String> get mascotCelebrateFrames => switch (this) {
+    AppSkin.dumbbell => const [
+      'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-companion-celebrate-1.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-companion-celebrate-2.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-companion-celebrate-3.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-companion-celebrate-4.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-companion-celebrate-5.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-companion-celebrate-6.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-companion-celebrate-7.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-companion-celebrate-8.png',
     ],
     _ => const [],
   };
@@ -377,6 +419,8 @@ class AppSkins {
       AppSkin.sunset => isDark ? _sunsetDark : _sunsetLight,
       AppSkin.minimal => isDark ? _minimalDark : _minimalLight,
       AppSkin.synthwave => isDark ? _synthwaveDark : _synthwaveLight,
+      AppSkin.whiteEnergy => isDark ? _whiteEnergyDark : _whiteEnergyLight,
+      AppSkin.toxicLime => isDark ? _toxicLimeDark : _toxicLimeLight,
       AppSkin.boldSports => isDark ? _boldSportsDark : _boldSportsLight,
       AppSkin.chibi => isDark ? _chibiDark : _chibiLight,
       AppSkin.cyberpunk => isDark ? _cyberpunkDark : _cyberpunkLight,
@@ -392,6 +436,8 @@ class AppSkins {
       AppSkin.sunset => _sunsetLook,
       AppSkin.minimal => _minimalLook,
       AppSkin.synthwave => _synthwaveLook,
+      AppSkin.whiteEnergy => _whiteEnergyLook,
+      AppSkin.toxicLime => _toxicLimeLook,
       AppSkin.boldSports => _boldSportsLook,
       AppSkin.chibi => _chibiLook,
       AppSkin.cyberpunk => _cyberpunkLook,
