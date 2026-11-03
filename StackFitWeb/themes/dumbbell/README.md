@@ -14,8 +14,9 @@ Bright warm gym style inspired by *How Heavy Are the Dumbbells You Lift?* (Dumbb
 - `mascots/mascot-trainer-set.png` — Standing trainer on the right of Done / Next Set
 - `mascots/mascot-companion-rest.png` — Sitting companion on the left of Skip rest
 - `mascots/mascot-trainer-rest.png` — Sitting trainer on the right of Skip rest
-- `mascots/animation/running/mascot-companion-run-1.png` through `run-8.png` — Run cycle on workout complete when no celebrate hop is set
-- `mascots/animation/celebrate/mascot-companion-celebrate-1.png` through `celebrate-8.png` — In-place hop on workout complete
+- `mascots/animation/running/mascot-companion-run-1.png` through `run-8.png` — Run cycle on workout complete when no celebrate jump is set
+- `mascots/animation/celebrate/mascot-companion-celebrate-1.png` through `celebrate-8.png` — Her in-place jump on workout complete
+- `mascots/animation/celebrate/mascot-trainer-celebrate-1.png` through `celebrate-8.png` — His in-place jump beside her on workout complete
 - `mascot-flex.jpg` / `mascot-dumbbell.jpg` — Mega-buff trainer reference art
 
 ## Vibe

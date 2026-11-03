@@ -19,6 +19,7 @@ class WorkoutSessionController extends ChangeNotifier
     required this.onWorkFinished,
     required this.onRestFinished,
     required this.onWorkoutFinished,
+    this.onCountdown,
     WorkoutSessionState? resumeState,
     List<SetLog>? resumeLogs,
     String? resumeAfterRest,
@@ -57,6 +58,10 @@ class WorkoutSessionController extends ChangeNotifier
   final VoidCallback onRestFinished;
   @override
   final VoidCallback onWorkoutFinished;
+
+  /// Fires once when the clock shows 3, 2, or 1. Null skips the cue.
+  @override
+  final void Function(int secondsLeft)? onCountdown;
 
   /// Test hook. The running app uses the wall clock.
   final DateTime Function() _clock;
@@ -166,8 +171,30 @@ class WorkoutSessionController extends ChangeNotifier
     _ticker = null;
   }
 
+  /// Starts the work countdown. Used when a timer exercise has just opened.
+  void startWork() {
+    if (state.phase != SessionPhase.workReady || state.isComplete) {
+      return;
+    }
+    final work = state.remainingSeconds;
+    if (work <= 0) {
+      _beginRestAfterWork();
+      return;
+    }
+    state = state.copyWith(
+      phase: SessionPhase.work,
+      remainingSeconds: work,
+      isPaused: false,
+    );
+    _startTicker();
+    notifyListeners();
+    _noteCountdown(work);
+  }
+
   void togglePause() {
-    if (state.isComplete || state.phase == SessionPhase.setReady) {
+    if (state.isComplete ||
+        state.phase == SessionPhase.setReady ||
+        state.phase == SessionPhase.workReady) {
       return;
     }
     if (!state.isPaused) {
@@ -277,6 +304,7 @@ class WorkoutSessionController extends ChangeNotifier
     if (state.phase != SessionPhase.rest) {
       if (_shouldTick) {
         _startTicker();
+        _noteCountdown(state.remainingSeconds);
       }
       return;
     }
@@ -290,6 +318,7 @@ class WorkoutSessionController extends ChangeNotifier
     }
     _restEndsAt = _now().add(Duration(seconds: state.remainingSeconds));
     _startTicker();
+    _noteCountdown(state.remainingSeconds);
   }
 
   bool get _shouldTick {
@@ -341,6 +370,7 @@ class WorkoutSessionController extends ChangeNotifier
     }
     switch (state.phase) {
       case SessionPhase.work:
+      case SessionPhase.workReady:
         _beginRestAfterWork();
         break;
       case SessionPhase.rest:

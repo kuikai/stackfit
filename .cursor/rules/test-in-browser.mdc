@@ -36,4 +36,4 @@ The separate profile is what makes a real app window. Without it, Chrome just ad
 - After a code change, press `r` in that same terminal. The page stays where it is.
 - Press `R` only when the screen is stuck. Then tap Continue on Home if a workout was already going.
 - Move through a workout with Skip and Skip rest. A one-exercise test workout is enough for the timer.
-- `flutter test` still checks logic. Use the browser when a person would see the change.
+- Use the browser only when a person would see the change. Re-check the one matching row in GUIDE §10. Logic stays on the one test file and `flutter analyze`.

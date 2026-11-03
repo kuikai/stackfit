@@ -35,12 +35,31 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     await _storage.saveSkin(skin);
   }
 
+  /// Sound stays on this phone, so this does not mark the account dirty.
+  Future<void> setSoundEnabled(bool enabled) async {
+    state = state.copyWith(soundEnabled: enabled);
+    await _storage.saveSoundEnabled(enabled);
+  }
+
+  /// [volume] is 0–1. Sound stays on this phone, so this does not sync.
+  Future<void> setSoundVolume(double volume) async {
+    final clamped = volume.clamp(0.0, 1.0).toDouble();
+    state = state.copyWith(soundVolume: clamped);
+    await _storage.saveSoundVolume(clamped);
+  }
+
   /// Applies appearance downloaded for the signed-in account.
+  /// Sound is left as it was on this phone.
   Future<void> applyFromAccount({
     required ThemeMode themeMode,
     required AppSkin skin,
   }) async {
-    state = AppSettings(themeMode: themeMode, skin: skin);
+    state = AppSettings(
+      themeMode: themeMode,
+      skin: skin,
+      soundEnabled: state.soundEnabled,
+      soundVolume: state.soundVolume,
+    );
     await _storage.saveThemeMode(themeMode);
     await _storage.saveSkin(skin);
   }

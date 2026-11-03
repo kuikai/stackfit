@@ -15,6 +15,7 @@ mixin WorkoutSessionPhases on ChangeNotifier {
   VoidCallback get onWorkFinished;
   VoidCallback get onRestFinished;
   VoidCallback get onWorkoutFinished;
+  void Function(int secondsLeft)? get onCountdown;
 
   DateTime _now();
 
@@ -83,12 +84,13 @@ mixin WorkoutSessionPhases on ChangeNotifier {
     }
     _instantSkips = 0;
     if (work > 0) {
+      // A new exercise waits. Later rounds start in [_startNextTimerRound].
       state = state.copyWith(
-        phase: SessionPhase.work,
+        phase: SessionPhase.workReady,
         remainingSeconds: work,
         isPaused: false,
       );
-      _startTicker();
+      _stopTicker();
       notifyListeners();
       return;
     }
@@ -204,6 +206,7 @@ mixin WorkoutSessionPhases on ChangeNotifier {
     );
     _startTicker();
     notifyListeners();
+    _noteCountdown(seconds);
   }
 
   void _startNextTimerRound() {
@@ -223,6 +226,7 @@ mixin WorkoutSessionPhases on ChangeNotifier {
     );
     _startTicker();
     notifyListeners();
+    _noteCountdown(work);
   }
 
   void _completeWorkout() {
@@ -271,10 +275,12 @@ mixin WorkoutSessionPhases on ChangeNotifier {
       if (remaining != state.remainingSeconds) {
         state = state.copyWith(remainingSeconds: remaining);
         notifyListeners();
+        _noteCountdown(remaining);
       }
       return true;
     }
     _finishRest(playAlarm: true);
+    _noteCountdown(0);
     return false;
   }
 
@@ -290,16 +296,29 @@ mixin WorkoutSessionPhases on ChangeNotifier {
       return;
     }
 
-    final next = state.remainingSeconds - 1;
+    final previous = state.remainingSeconds;
+    final next = previous - 1;
     if (next > 0) {
       state = state.copyWith(remainingSeconds: next);
       notifyListeners();
+      _noteCountdown(next);
       return;
     }
 
     state = state.copyWith(remainingSeconds: 0);
     notifyListeners();
     _beginRestAfterWork();
+    if (previous > 0) {
+      _noteCountdown(0);
+    }
+  }
+
+  /// A soft cue while 3, 2, or 1 is on screen, and a landing tone at 0.
+  void _noteCountdown(int seconds) {
+    if (seconds < 0 || seconds > 3) {
+      return;
+    }
+    onCountdown?.call(seconds);
   }
 
   _AfterRest _afterRestFor(StationDestination destination) {

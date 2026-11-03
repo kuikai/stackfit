@@ -11,6 +11,7 @@ import '../../services/revenue_cat_service.dart';
 import '../../widgets/account_settings_card.dart';
 import '../../widgets/collapsible_section.dart';
 import '../../widgets/skin_picker.dart';
+import 'sound_effects_card.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -72,6 +73,8 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
           ),
+          const SizedBox(height: 16),
+          const SoundEffectsCard(),
           const SizedBox(height: 16),
           CollapsibleSection(
             title: 'App Skin',
@@ -227,9 +230,9 @@ class SettingsScreen extends ConsumerWidget {
       PurchaseActionNoPurchase() => 'No purchase found.',
     };
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _restorePurchases(BuildContext context, WidgetRef ref) async {
@@ -243,9 +246,9 @@ class SettingsScreen extends ConsumerWidget {
       PurchaseActionNoPurchase() => 'No previous purchase found.',
     };
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _selectSkin(BuildContext context, WidgetRef ref, AppSkin skin) {

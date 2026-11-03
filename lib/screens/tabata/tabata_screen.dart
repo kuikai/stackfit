@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../models/tabata_clock.dart';
+import '../../providers/sound_provider.dart';
 import '../../services/sound_service.dart';
 import '../../services/workout_session_controller.dart';
 import '../../widgets/number_stepper.dart';
@@ -11,16 +13,16 @@ import '../active_timer/active_timer_card.dart';
 import '../active_timer/timer_controls.dart';
 
 /// Tabata clock. Opens ready at 20/10/8 and does not save a workout.
-class TabataScreen extends StatefulWidget {
+class TabataScreen extends ConsumerStatefulWidget {
   const TabataScreen({super.key});
 
   @override
-  State<TabataScreen> createState() => _TabataScreenState();
+  ConsumerState<TabataScreen> createState() => _TabataScreenState();
 }
 
-class _TabataScreenState extends State<TabataScreen>
+class _TabataScreenState extends ConsumerState<TabataScreen>
     with WidgetsBindingObserver {
-  final _sound = SoundService();
+  late final SoundService _sound;
   WorkoutSessionController? _clock;
   int _work = TabataClock.classicWorkSeconds;
   int _rest = TabataClock.classicRestSeconds;
@@ -29,6 +31,7 @@ class _TabataScreenState extends State<TabataScreen>
   @override
   void initState() {
     super.initState();
+    _sound = ref.read(soundServiceProvider);
     WidgetsBinding.instance.addObserver(this);
     WakelockPlus.enable();
   }
@@ -66,19 +69,22 @@ class _TabataScreenState extends State<TabataScreen>
         _rounds == TabataClock.classicRounds;
   }
 
-  /// The session controller starts counting in its constructor, so it is
-  /// created only when Start is pressed.
+  /// Created only when Start is pressed. The workout clock waits on its own
+  /// Start, so this one begins the first round immediately.
   void _start() {
+    unawaited(_sound.prime());
     final clock = WorkoutSessionController(
       workout: TabataClock.build(
         workSeconds: _work,
         restSeconds: _rest,
         rounds: _rounds,
       ),
-      onWorkFinished: () => unawaited(_sound.playWorkEnd()),
-      onRestFinished: () => unawaited(_sound.playRestEnd()),
+      onWorkFinished: () {},
+      onRestFinished: () {},
+      onCountdown: (seconds) => unawaited(_sound.playCountdown(seconds)),
       onWorkoutFinished: () {},
     );
+    clock.startWork();
     clock.addListener(_onClock);
     setState(() => _clock = clock);
   }
@@ -136,6 +142,7 @@ class _TabataScreenState extends State<TabataScreen>
                 const SizedBox(height: 12),
                 TimerPrimaryAction(
                   state: state,
+                  onStart: () {},
                   onCompleteSet: () {},
                   onSkipRest: clock.skipRest,
                 ),

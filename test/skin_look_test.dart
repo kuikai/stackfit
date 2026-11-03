@@ -88,6 +88,12 @@ void main() {
     expect(AppSkin.dumbbell.mascotRunFrames, hasLength(8));
     expect(AppSkin.classic.mascotRunFrames, isEmpty);
     expect(AppSkin.dumbbell.mascotCelebrateFrames, hasLength(8));
+    expect(AppSkin.dumbbell.mascotCelebratePartnerFrames, hasLength(8));
+    expect(
+      AppSkin.dumbbell.mascotCelebratePartnerFrames.first,
+      contains('mascot-trainer-celebrate'),
+    );
+    expect(AppSkin.classic.mascotCelebratePartnerFrames, isEmpty);
     expect(AppSkin.classic.mascotCelebrateFrames, isEmpty);
     expect(AppSkin.chibi.mascotCelebrateFrames, isEmpty);
     expect(runFrameIndex(elapsedSeconds: 0, frameCount: 6), 0);

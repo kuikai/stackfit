@@ -1,0 +1,287 @@
+{
+  "meta": {
+    "app": "Sprite Sheet Builder",
+    "version": "1.0",
+    "image": "mascot-companion-run.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 7776,
+      "h": 1040
+    },
+    "scale": 1,
+    "pivot": "bottom-center",
+    "cell": {
+      "w": 972,
+      "h": 1040
+    }
+  },
+  "frames": {
+    "run_00": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 972,
+        "h": 1040
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 972,
+        "h": 1040
+      },
+      "sourceSize": {
+        "w": 972,
+        "h": 1040
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "duration": 83
+    },
+    "run_01": {
+      "frame": {
+        "x": 972,
+        "y": 0,
+        "w": 972,
+        "h": 1040
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 972,
+        "h": 1040
+      },
+      "sourceSize": {
+        "w": 972,
+        "h": 1040
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "duration": 83
+    },
+    "run_02": {
+      "frame": {
+        "x": 1944,
+        "y": 0,
+        "w": 972,
+        "h": 1040
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 972,
+        "h": 1040
+      },
+      "sourceSize": {
+        "w": 972,
+        "h": 1040
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "duration": 83
+    },
+    "run_03": {
+      "frame": {
+        "x": 2916,
+        "y": 0,
+        "w": 972,
+        "h": 1040
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 972,
+        "h": 1040
+      },
+      "sourceSize": {
+        "w": 972,
+        "h": 1040
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "duration": 83
+    },
+    "run_04": {
+      "frame": {
+        "x": 3888,
+        "y": 0,
+        "w": 972,
+        "h": 1040
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 972,
+        "h": 1040
+      },
+      "sourceSize": {
+        "w": 972,
+        "h": 1040
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "duration": 83
+    },
+    "run_05": {
+      "frame": {
+        "x": 4860,
+        "y": 0,
+        "w": 972,
+        "h": 1040
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 972,
+        "h": 1040
+      },
+      "sourceSize": {
+        "w": 972,
+        "h": 1040
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "duration": 83
+    },
+    "run_06": {
+      "frame": {
+        "x": 5832,
+        "y": 0,
+        "w": 972,
+        "h": 1040
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 972,
+        "h": 1040
+      },
+      "sourceSize": {
+        "w": 972,
+        "h": 1040
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "duration": 83
+    },
+    "run_07": {
+      "frame": {
+        "x": 6804,
+        "y": 0,
+        "w": 972,
+        "h": 1040
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 972,
+        "h": 1040
+      },
+      "sourceSize": {
+        "w": 972,
+        "h": 1040
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "duration": 83
+    }
+  },
+  "animations": {
+    "run": {
+      "frames": [
+        "run_00",
+        "run_01",
+        "run_02",
+        "run_03",
+        "run_04",
+        "run_05",
+        "run_06",
+        "run_07"
+      ],
+      "rects": [
+        {
+          "x": 0,
+          "y": 0,
+          "w": 972,
+          "h": 1040
+        },
+        {
+          "x": 972,
+          "y": 0,
+          "w": 972,
+          "h": 1040
+        },
+        {
+          "x": 1944,
+          "y": 0,
+          "w": 972,
+          "h": 1040
+        },
+        {
+          "x": 2916,
+          "y": 0,
+          "w": 972,
+          "h": 1040
+        },
+        {
+          "x": 3888,
+          "y": 0,
+          "w": 972,
+          "h": 1040
+        },
+        {
+          "x": 4860,
+          "y": 0,
+          "w": 972,
+          "h": 1040
+        },
+        {
+          "x": 5832,
+          "y": 0,
+          "w": 972,
+          "h": 1040
+        },
+        {
+          "x": 6804,
+          "y": 0,
+          "w": 972,
+          "h": 1040
+        }
+      ],
+      "frameCount": 8,
+      "fps": 12,
+      "loop": true
+    }
+  }
+}

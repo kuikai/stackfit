@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,7 +7,7 @@ import '../../core/utils.dart';
 import '../../models/models.dart';
 import '../../providers/completed_sessions_provider.dart';
 import '../../providers/settings_provider.dart';
-import '../../services/sound_service.dart';
+import '../../providers/sound_provider.dart';
 import '../../widgets/chibi_run.dart';
 import '../../widgets/set_log_list.dart';
 import '../home/home_screen.dart';
@@ -33,14 +35,13 @@ class WorkoutCompleteScreen extends ConsumerStatefulWidget {
 }
 
 class _WorkoutCompleteScreenState extends ConsumerState<WorkoutCompleteScreen> {
-  final _sound = SoundService();
   bool _saved = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _persistSession());
-    _sound.playComplete();
+    unawaited(ref.read(soundServiceProvider).playComplete());
   }
 
   Future<void> _persistSession() async {
@@ -83,18 +84,25 @@ class _WorkoutCompleteScreenState extends ConsumerState<WorkoutCompleteScreen> {
     final skin = ref.watch(settingsProvider).skin;
     final celebrate = skin.mascotCelebrateFrames;
     final frames = celebrate.isNotEmpty ? celebrate : skin.mascotRunFrames;
+    final partner = celebrate.isNotEmpty
+        ? skin.mascotCelebratePartnerFrames
+        : const <String>[];
 
     return Scaffold(
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: _finishColumn(frames, travel: celebrate.isEmpty),
+          child: _finishColumn(frames, partner: partner, travel: celebrate.isEmpty),
         ),
       ),
     );
   }
 
-  Widget _finishColumn(List<String> frames, {required bool travel}) {
+  Widget _finishColumn(
+    List<String> frames, {
+    required List<String> partner,
+    required bool travel,
+  }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final args = widget.args;
@@ -154,7 +162,7 @@ class _WorkoutCompleteScreenState extends ConsumerState<WorkoutCompleteScreen> {
                   const SizedBox(height: 24),
                   SetLogList(logs: args.setLogs, scrollable: false),
                 ],
-                _finishLane(frames, travel: travel),
+                _finishLane(frames, partner: partner, travel: travel),
               ],
             ),
           ),
@@ -162,16 +170,17 @@ class _WorkoutCompleteScreenState extends ConsumerState<WorkoutCompleteScreen> {
         const SizedBox(height: 12),
         SizedBox(
           width: double.infinity,
-          child: FilledButton(
-            onPressed: _goHome,
-            child: const Text('Done'),
-          ),
+          child: FilledButton(onPressed: _goHome, child: const Text('Done')),
         ),
       ],
     );
   }
 
-  Widget _finishLane(List<String> frames, {required bool travel}) {
+  Widget _finishLane(
+    List<String> frames, {
+    required List<String> partner,
+    required bool travel,
+  }) {
     if (frames.isEmpty) {
       return const SizedBox(height: 24);
     }
@@ -179,7 +188,11 @@ class _WorkoutCompleteScreenState extends ConsumerState<WorkoutCompleteScreen> {
       child: SizedBox(
         height: 120,
         width: double.infinity,
-        child: ChibiRun(frames: frames, travel: travel),
+        child: ChibiRun(
+          frames: frames,
+          partnerFrames: partner,
+          travel: travel,
+        ),
       ),
     );
   }

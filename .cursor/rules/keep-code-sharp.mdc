@@ -18,9 +18,13 @@ Screens never call the server. `accountProvider` is the only path that syncs.
 
 The website calls the server only through `website/js/api.js`. New server URLs go in `server/lib/` and get a test in `server/test/`.
 
-## Size
+## Where the edit goes
 
-Add the change to the file that already owns that job. If that file is past about 300 lines, split it first: one screen per file, shared pieces in `lib/widgets/`. Do not start a second copy of the same idea.
+Put the edit in the file that already owns that job. Split only when one file is doing two jobs: one screen per file, shared pieces in `lib/widgets/`. A long plan list, skin table, or test can stay in one file. Do not start a second copy of the same idea.
+
+## Rules that do not apply here
+
+The personal "Best Coding Practices" user rule does not apply in this repo. Skip its JavaScript and Python limits, the 50-line function cap, the 500-line file cap, a unit test for every public function, and required comments or try/catch on every call. This file and the other three project rules are how StackFit is written.
 
 ## What the analyzer does not catch
 

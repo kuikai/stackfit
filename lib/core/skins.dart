@@ -218,6 +218,21 @@ enum AppSkin {
     _ => const [],
   };
 
+  /// Partner hop beside [mascotCelebrateFrames]. Empty skins celebrate alone.
+  List<String> get mascotCelebratePartnerFrames => switch (this) {
+    AppSkin.dumbbell => const [
+      'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-trainer-celebrate-1.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-trainer-celebrate-2.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-trainer-celebrate-3.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-trainer-celebrate-4.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-trainer-celebrate-5.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-trainer-celebrate-6.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-trainer-celebrate-7.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-trainer-celebrate-8.png',
+    ],
+    _ => const [],
+  };
+
   static AppSkin fromStorage(String? value) {
     return AppSkin.values.firstWhere(
       (skin) => skin.name == value,

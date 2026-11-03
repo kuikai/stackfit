@@ -18,6 +18,8 @@ class StorageService {
   static const _isProKey = 'stackfit_is_pro';
   static const _themeModeKey = 'stackfit_theme_mode';
   static const _skinKey = 'stackfit_skin';
+  static const _soundEnabledKey = 'stackfit_sound_enabled';
+  static const _soundVolumeKey = 'stackfit_sound_volume';
   static const _customExercisesKey = 'stackfit_custom_exercises';
 
   // ── Workouts ──────────────────────────────────────────────────────────────
@@ -107,7 +109,12 @@ class StorageService {
   // ── Appearance ────────────────────────────────────────────────────────────
 
   AppSettings loadSettings() {
-    return AppSettings(themeMode: loadThemeMode(), skin: loadSkin());
+    return AppSettings(
+      themeMode: loadThemeMode(),
+      skin: loadSkin(),
+      soundEnabled: loadSoundEnabled(),
+      soundVolume: loadSoundVolume(),
+    );
   }
 
   ThemeMode loadThemeMode() {
@@ -136,6 +143,25 @@ class StorageService {
   Future<void> saveSkin(AppSkin skin) async {
     await _prefs.setString(_skinKey, skin.name);
   }
+
+  /// Missing key means sound is on. Sound is not uploaded with the account.
+  bool loadSoundEnabled() => _prefs.getBool(_soundEnabledKey) ?? true;
+
+  Future<void> saveSoundEnabled(bool enabled) async {
+    await _prefs.setBool(_soundEnabledKey, enabled);
+  }
+
+  /// Missing key means 80%. Values outside 0–1 are pulled back into range.
+  double loadSoundVolume() {
+    final raw = _prefs.getDouble(_soundVolumeKey);
+    return _clampVolume(raw ?? 0.8);
+  }
+
+  Future<void> saveSoundVolume(double volume) async {
+    await _prefs.setDouble(_soundVolumeKey, _clampVolume(volume));
+  }
+
+  double _clampVolume(double volume) => volume.clamp(0.0, 1.0).toDouble();
 
   // ── Custom catalog ────────────────────────────────────────────────────────
 

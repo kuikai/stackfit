@@ -230,10 +230,38 @@ void main() {
     expect(controller.elapsedSeconds, 65);
   });
 
+  test('a timer exercise waits for Start, and the next round does not', () {
+    final clock = _Clock(DateTime.utc(2026, 10, 29, 12));
+    final controller = _controller(workout: _twoTimerWorkout(), clock: clock);
+
+    expect(controller.state.phase, SessionPhase.workReady);
+    expect(controller.state.remainingSeconds, 20);
+    expect(controller.state.currentExercise?.name, 'Plank');
+
+    controller.startWork();
+    expect(controller.state.phase, SessionPhase.work);
+    expect(controller.state.setIndex, 0);
+
+    controller.skipCurrent();
+    expect(controller.state.phase, SessionPhase.rest);
+    controller.skipRest();
+
+    expect(controller.state.phase, SessionPhase.work);
+    expect(controller.state.setIndex, 1);
+    expect(controller.state.currentExercise?.name, 'Plank');
+
+    controller.skipCurrent();
+    expect(controller.state.phase, SessionPhase.workReady);
+    expect(controller.state.remainingSeconds, 15);
+    expect(controller.state.currentExercise?.name, 'Side plank');
+  });
+
   test('a work interval stays put while the app is away', () {
     final clock = _Clock(DateTime.utc(2026, 10, 29, 12));
     final controller = _controller(workout: _timerWorkout(), clock: clock);
 
+    expect(controller.state.phase, SessionPhase.workReady);
+    controller.startWork();
     expect(controller.state.phase, SessionPhase.work);
     expect(controller.state.remainingSeconds, 30);
 
@@ -307,6 +335,34 @@ Workout _setsWorkout() {
           sets: 3,
           reps: 8,
           restSeconds: 60,
+        ),
+      ),
+    ],
+  );
+}
+
+Workout _twoTimerWorkout() {
+  return Workout(
+    id: 'timed',
+    name: 'Core',
+    createdAt: DateTime.utc(2026, 10, 29),
+    updatedAt: DateTime.utc(2026, 10, 29),
+    blocks: [
+      ExerciseBlock(
+        Exercise.timer(
+          id: 'plank',
+          name: 'Plank',
+          workSeconds: 20,
+          restSeconds: 5,
+          sets: 2,
+        ),
+      ),
+      ExerciseBlock(
+        Exercise.timer(
+          id: 'side',
+          name: 'Side plank',
+          workSeconds: 15,
+          restSeconds: 0,
         ),
       ),
     ],

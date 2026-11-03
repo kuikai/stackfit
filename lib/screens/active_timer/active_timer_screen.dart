@@ -7,6 +7,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../models/models.dart';
 import '../../providers/completed_sessions_provider.dart';
 import '../../providers/in_progress_provider.dart';
+import '../../providers/sound_provider.dart';
 import '../../services/previous_set_log.dart';
 import '../../services/sound_service.dart';
 import '../../services/workout_session_controller.dart';
@@ -52,7 +53,7 @@ class ActiveTimerScreen extends ConsumerStatefulWidget {
 class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
     with WidgetsBindingObserver {
   late final WorkoutSessionController _controller;
-  final _sound = SoundService();
+  late final SoundService _sound;
   bool _navigatedToComplete = false;
   bool _finished = false;
   bool _announcedLeave = false;
@@ -74,6 +75,7 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
   void initState() {
     super.initState();
     _inProgress = ref.read(inProgressProvider.notifier);
+    _sound = ref.read(soundServiceProvider);
     WidgetsBinding.instance.addObserver(this);
     WakelockPlus.enable();
     _controller = _createController();
@@ -104,8 +106,9 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
     final resume = progress != null && progress.canResume ? progress : null;
     return WorkoutSessionController(
       workout: widget.workout,
-      onWorkFinished: _sound.playWorkEnd,
-      onRestFinished: _sound.playRestEnd,
+      onWorkFinished: () {},
+      onRestFinished: () {},
+      onCountdown: (seconds) => unawaited(_sound.playCountdown(seconds)),
       onWorkoutFinished: () {},
       resumeState: resume == null
           ? null
@@ -426,6 +429,10 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
                 const SizedBox(height: 12),
                 TimerPrimaryAction(
                   state: state,
+                  onStart: () {
+                    unawaited(_sound.prime());
+                    _controller.startWork();
+                  },
                   onCompleteSet: _completeSet,
                   onSkipRest: _controller.skipRest,
                 ),

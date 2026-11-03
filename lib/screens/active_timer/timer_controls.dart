@@ -25,24 +25,32 @@ const _restPoseWidth = 260.0;
 /// Sitting pair beside Skip rest. Kept low so they stay near the button.
 const _restSitSize = 56.0;
 
-/// Done / Skip rest, shown under the countdown.
+/// Start, Done, or Skip rest, shown under the countdown.
 class TimerPrimaryAction extends ConsumerWidget {
   const TimerPrimaryAction({
     super.key,
     required this.state,
+    required this.onStart,
     required this.onCompleteSet,
     required this.onSkipRest,
   });
 
   final WorkoutSessionState state;
+  final VoidCallback onStart;
   final VoidCallback onCompleteSet;
   final VoidCallback onSkipRest;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final skin = ref.watch(settingsProvider).skin;
+    if (state.phase == SessionPhase.workReady) {
+      return _markedButton(context, skin, 'Start', onStart);
+    }
     if (state.phase == SessionPhase.setReady) {
-      return _doneButton(context, skin);
+      final label = state.setNumber >= state.totalSets
+          ? 'Done'
+          : 'Done / Next Set';
+      return _markedButton(context, skin, label, onCompleteSet);
     }
     if (state.phase == SessionPhase.rest) {
       return _skipRestButton(skin);
@@ -50,19 +58,27 @@ class TimerPrimaryAction extends ConsumerWidget {
     return const SizedBox.shrink();
   }
 
-  /// One mascot perches on the right of Done. A pair stands on either side.
-  Widget _doneButton(BuildContext context, AppSkin skin) {
+  /// One mascot perches on the right of Start or Done. A pair stands on either side.
+  Widget _markedButton(
+    BuildContext context,
+    AppSkin skin,
+    String label,
+    VoidCallback onPressed,
+  ) {
     final theme = Theme.of(context);
     final onPrimary = theme.colorScheme.onPrimary;
-    final label = state.setNumber >= state.totalSets
-        ? 'Done'
-        : 'Done / Next Set';
     if (skin.mascotSeatPartnerAsset != null) {
       return _donePair(
-        Expanded(child: _actionButton(label, onPrimary, theme, onCompleteSet)),
+        Expanded(child: _actionButton(label, onPrimary, theme, onPressed)),
       );
     }
-    return _doneSolo(label, onPrimary, theme, skin.mascotSeatAsset != null);
+    return _doneSolo(
+      label,
+      onPrimary,
+      theme,
+      skin.mascotSeatAsset != null,
+      onPressed,
+    );
   }
 
   /// Full-width bar. The mascot overlaps the top-right edge.
@@ -71,6 +87,7 @@ class TimerPrimaryAction extends ConsumerWidget {
     Color onPrimary,
     ThemeData theme,
     bool seated,
+    VoidCallback onPressed,
   ) {
     return Padding(
       padding: EdgeInsets.only(top: seated ? _seatLift : 0),
@@ -81,7 +98,7 @@ class TimerPrimaryAction extends ConsumerWidget {
           clipBehavior: Clip.none,
           children: [
             Positioned.fill(
-              child: _actionButton(label, onPrimary, theme, onCompleteSet),
+              child: _actionButton(label, onPrimary, theme, onPressed),
             ),
             if (seated)
               const Positioned(
@@ -235,7 +252,8 @@ class TimerSecondaryControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (state.phase == SessionPhase.setReady) {
+    if (state.phase == SessionPhase.setReady ||
+        state.phase == SessionPhase.workReady) {
       return Row(
         children: [
           Expanded(

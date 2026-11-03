@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/models.dart';
 import '../../providers/in_progress_provider.dart';
+import '../../providers/sound_provider.dart';
 import '../../providers/workouts_provider.dart';
 import '../active_timer/active_timer_screen.dart';
 import '../history/workout_history_screen.dart';
@@ -26,6 +29,7 @@ Future<void> startHomeWorkout(
     return;
   }
 
+  unawaited(ref.read(soundServiceProvider).prime());
   final progress = await _progressForStart(ref, workout, fresh: fresh);
   if (!context.mounted) {
     return;
@@ -44,6 +48,7 @@ Future<void> openInProgressRun(
   InProgressWorkout run, {
   bool fresh = false,
 }) async {
+  unawaited(ref.read(soundServiceProvider).prime());
   if (fresh) {
     await ref.read(inProgressProvider.notifier).discard(run.workout.id);
   }

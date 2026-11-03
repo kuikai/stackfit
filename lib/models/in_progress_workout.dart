@@ -40,7 +40,7 @@ class InProgressWorkout {
   final int exerciseIndex;
   final int setIndex;
 
-  /// `work`, `rest`, or `setReady`.
+  /// `workReady`, `work`, `rest`, or `setReady`.
   final String phase;
   final int remainingSeconds;
   final bool isPaused;
@@ -67,7 +67,10 @@ class InProgressWorkout {
   }
 
   bool get canResume {
-    return phase == 'work' || phase == 'rest' || phase == 'setReady';
+    return phase == 'workReady' ||
+        phase == 'work' ||
+        phase == 'rest' ||
+        phase == 'setReady';
   }
 
   /// False at the first station with nothing logged and under a second elapsed.

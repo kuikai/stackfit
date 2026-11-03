@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,6 +8,7 @@ import '../../core/utils.dart';
 import '../../models/models.dart';
 import '../../providers/in_progress_provider.dart';
 import '../../providers/pro_provider.dart';
+import '../../providers/sound_provider.dart';
 import '../../providers/workouts_provider.dart';
 import '../../services/plan_workout_builder.dart';
 import '../../widgets/empty_state.dart';
@@ -121,6 +124,7 @@ class PlanDetailScreen extends ConsumerWidget {
     if (!_requirePro(context, ref)) {
       return;
     }
+    unawaited(ref.read(soundServiceProvider).prime());
     final origin = InProgressWorkout.planOrigin(plan.id, day.name);
     final saved = ref.read(inProgressProvider.notifier).forOrigin(origin);
     final resume = saved != null && saved.canResume ? saved : null;

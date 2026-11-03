@@ -88,7 +88,7 @@ flowchart TB
     CCP[customCatalogProvider<br/>exercises you added]
     CP[completedSessionsProvider<br/>history]
     IP[inProgressProvider<br/>unfinished run]
-    SP[settingsProvider<br/>theme + skin]
+    SP[settingsProvider<br/>theme, skin, sound]
     PP[isProProvider<br/>Free or Pro]
     AP[accountProvider<br/>signed in? saved?]
   end
@@ -276,7 +276,7 @@ pubspec.yaml          Flutter dependencies
 analysis_options.yaml House style the phone app is checked against
 .cursor/rules/
   keep-guide-current.mdc   Tells the AI agent to update this file whenever it adds, moves, or removes code
-  keep-code-sharp.mdc      Tells the AI agent to keep screens, providers, services, and models in their own layers
+  keep-code-sharp.mdc      Tells the AI agent to keep the four layers, edit the file that owns the job, and ignore the personal JavaScript coding rule here
   test-in-browser.mdc      Tells the AI agent to open the phone app at http://127.0.0.1:8181
   debug-playbook.mdc       Tells the AI agent to follow Section 10 when debugging or checking that the app still feels smooth
 ```
@@ -326,7 +326,7 @@ models/                           Data shapes. Saved ones have toJson / fromJson
   set_log.dart                    Reps and kg for one set, saved on a finished session, with the circuit round
   catalog_exercise.dart           One catalog row, the built-in list, and search
   custom_catalog.dart             Adds an exercise you made under Custom, or updates that name
-  app_settings.dart               Theme mode + skin
+  app_settings.dart               Theme, skin, and sound. Sound stays on this phone
   account_snapshot.dart           The snapshot: workouts, deletions, sessions, deleted sessions, custom exercises, appearance. What syncs.
   workout_plan.dart               A read-only built-in plan and its days
   plans/
@@ -346,7 +346,8 @@ providers/                        Riverpod state. Screens read from here.
   custom_catalog_provider.dart    Exercises you added, listed in the catalog under Custom
   completed_sessions_provider.dart  History list, newest first, free cap of 10, plus per-workout history. Can drop one exercise, delete a session, or clear all history
   in_progress_provider.dart       Unfinished workouts on the phone. Not uploaded with the account
-  settings_provider.dart          Theme and skin
+  settings_provider.dart          Theme, skin, and sound. Sound stays on this phone
+  sound_provider.dart             One beep player shared by the timer, Tabata, and Settings
   pro_provider.dart               Free or Pro flag, plus purchase and restore through RevenueCat
   account_state.dart              Signed in or not, saving/offline/error, and whether old device data is waiting
   account_provider.dart           Sign up, sign in, reset password, sign out, delete account, and "move my workouts"
@@ -354,13 +355,13 @@ providers/                        Riverpod state. Screens read from here.
 
 services/                         Does the work the providers ask for.
   storage_service.dart            Reads and writes workouts, history, unfinished runs, custom exercises, Pro, and settings
-  workout_session_state.dart      Where the timer is: block, round, exercise, work/rest/set, seconds left, paused
+  workout_session_state.dart      Where the timer is: block, round, exercise, ready/work/rest/set, seconds left, paused
   session_set_log.dart            Reps and kg typed in while a workout is still running
   previous_set_log.dart           Last time's reps and kg, on the log and in the add fields
   station_exit.dart               Rest between circuit stations and between rounds
-  workout_session_controller.dart Pause, skip, reset, and Done. Rest keeps counting if you leave the app
-  workout_session_phases.dart     Work, rest, circuits, and ticks. Rest follows the wall clock
-  sound_service.dart              Beeps and haptics on phase changes
+  workout_session_controller.dart Start, pause, skip, reset, and Done. Rest keeps counting if you leave the app
+  workout_session_phases.dart     Work, rest, circuits, and ticks. A new timer exercise waits for Start. Rest follows the wall clock
+  sound_service.dart              Soft beeps on the last 3 seconds of work and of rest, and a tone when the clock hits 0
   revenue_cat_service.dart        Talks to RevenueCat: start, buy Pro, restore, and read the entitlement
   plan_workout_builder.dart       Turns a plan day into a workout; multi-day plans share a section
   account/
@@ -377,15 +378,16 @@ screens/                          One folder per screen.
   exercise_editor/exercise_editor_screen.dart Create or edit one exercise (timer or sets)
   catalog/catalog_screen.dart     Searchable catalog: built-in exercises plus ones you added
   active_timer/active_timer_screen.dart       The big timer. Saves an unfinished run and can continue it.
-  active_timer/timer_controls.dart            Done, skip rest, pause, skip, reset, and stop. Logging hides pause and skip
-  active_timer/active_timer_card.dart         WORK and REST countdown, drawn on the background
-  active_timer/workout_complete_screen.dart   Done screen. Saves the session, plays a celebrate hop when the skin has one, and always returns to Home.
+  active_timer/timer_controls.dart            Start, Done, skip rest, pause, skip, reset, and stop. Logging hides pause and skip
+  active_timer/active_timer_card.dart         READY, WORK, and REST countdown, drawn on the background
+  active_timer/workout_complete_screen.dart   Done screen. Saves the session, plays a celebrate jump for the mascot and her partner when the skin has both, and always returns to Home.
   tabata/tabata_screen.dart       Tabata clock. Opens on 20/10/8, then start, pause, skip a work round, skip rest, and stop. Not a saved workout
   history/history_screen.dart     Completed sessions across every workout. Clear wipes history after confirm
   history/workout_history_screen.dart  Past sessions of one workout
   plans/plan_library_screen.dart  Browse built-in plans by category or search
   plans/plan_detail_screen.dart   Days of one plan. Start continues an unfinished day. Add is Pro
-  settings/settings_screen.dart   Theme, everyday skins, Pro skins, buy or restore Pro. Account card stays hidden until accounts ship
+  settings/settings_screen.dart   Theme, sound, everyday skins, Pro skins, buy or restore Pro. Account card stays hidden until accounts ship
+  settings/sound_effects_card.dart Sound effects switch and volume. Saved on this phone only
   account/account_screen.dart     Decides sign up, sign in, and reset. Does not call the server itself
   account/account_auth_form.dart  The email, password, and reset-code fields
   account/delete_account_dialog.dart  Password confirm before an account is deleted
@@ -406,7 +408,7 @@ widgets/                          Reusable pieces used by several screens.
   skin_picker.dart                Grid of skins in Settings
   collapsible_section.dart        A settings card that stays closed until you tap Show
   skin_artwork.dart               Big picture on Home, empty gym behind dark anime screens, skin mascots
-  chibi_run.dart                  Mascot run across workout complete, or an in-place hop when the skin has celebrate frames
+  chibi_run.dart                  Mascot run across workout complete, or an in-place jump. A partner list hops beside her
   skin_panel.dart                 Holder: solid on everyday skins, Home-style glass on anime skins
   account_settings_card.dart      Account box for Settings. Hidden while accountsEnabled is false. Email, save status, sign out, delete, move data
   empty_state.dart                Centered "nothing here yet" message
@@ -463,7 +465,7 @@ themes/README.md                  Shared recipe for the four Pro anime themes
 themes/bold-sports/               Bold Sports art. Home is girl-standing.jpg. background.jpg behind other dark screens. Mascot is mascots/mascot-power.png (sit / rest / run-1..8)
 themes/chibi/                     Chibi art. Home is girl-standing.jpg. background.jpg behind other dark screens. Mascot is mascots/mascot-pastel.png (sit / rest / run-1..8)
 themes/cyberpunk/                 Cyberpunk art. Home is girl-standing.jpg. The night gym in background.jpg sits behind every other dark screen. Home mascot is mascots/mascot-chibi.png. She sits on Done, rests on Skip rest, and the run frames in mascots/animation/running/ cross workout complete.
-themes/dumbbell/                  Dumbbell art. Home is girl-standing.jpg. background.jpg behind other dark screens. Home shows mascot-companion.png beside mascot-trainer.png. Done has mascot-companion-set.png on the left and mascot-trainer-set.png on the right. Skip rest has mascot-companion-rest.png on the left and mascot-trainer-rest.png on the right. She hops on workout complete (celebrate-1..8) and can still run (run-1..8)
+themes/dumbbell/                  Dumbbell art. Home is girl-standing.jpg. background.jpg behind other dark screens. Home shows mascot-companion.png beside mascot-trainer.png. Done has mascot-companion-set.png on the left and mascot-trainer-set.png on the right. Skip rest has mascot-companion-rest.png on the left and mascot-trainer-rest.png on the right. Celebrate jump is mascots/animation/celebrate/ for both the companion and the trainer. New run cycle is mascots/animation/run/. Older run-1..8 still sit in mascots/animation/running/.
 ```
 
 ### `test/` – phone app tests
@@ -481,11 +483,13 @@ set_log_list_test.dart            Workout summary wraps a long reps and kg line,
 workout_complete_test.dart        Done leaves the finish screen and lands on a tappable Home
 previous_set_log_test.dart        Last-time reps come from this workout, the newest match, and the same round
 set_tracker_test.dart             The log shows last time's reps on each set
-portrait_timer_layout_test.dart   A phone held upright keeps the set log clear of the mascot and the rest clock
+portrait_timer_layout_test.dart   Phone layout for the set log, and a timer exercise shows Start before the clock runs
 circuit_session_test.dart         Circuits loop, and rest keeps counting while you are away
 workout_editor_test.dart          Saving an exercise inside a circuit writes the workout
 in_progress_workout_test.dart     A saved run keeps its place. A live rest keeps counting while closed
 skin_look_test.dart               Each skin's corners, spacing, and typeface
+sound_settings_test.dart          Sound on/off and volume save on this phone, and account appearance leaves them alone
+countdown_beep_test.dart          The last 3 seconds and the zero of work and of rest each beep once, and a jump to 2 beeps once
 ```
 
 ---
@@ -508,6 +512,7 @@ skin_look_test.dart               Each skin's corners, spacing, and typeface
 | **Token** (share) | The random part of a share link, `/s/<token>`. Not secret, just hard to guess. |
 | **Section** | A named folder on Home that groups workouts (for example Bro Split → Chest, Back). Stored on each workout. |
 | **Circuit** | A box in a workout. The exercises inside play in order, then the box repeats. Exercises outside the box run once. |
+| **Work ready** | A timer exercise just opened. The time is on screen and the clock waits until Start. The next round of that same exercise starts on its own after rest. |
 | **Tabata clock** | A round timer opened from Home. Classic is 20 seconds on, 10 off, 8 rounds. It is not a saved workout. |
 | **Pro skin** | A fun theme, such as anime, listed under Pro skins. Everyday skins stay available without Pro. |
 | **Unmoved data** | Workouts made on the phone before signing in, waiting for "Move to my account". |
@@ -577,22 +582,24 @@ Do these in order. Do not skip ahead to a guess.
 1. **Reproduce once** — same taps, same workout if you can. Write down what
    you expected and what happened.
 2. **Classify** — screen stuck, wrong data, sync, look (skin), or crash.
-3. **Pick the layer** — logic goes to `flutter test` (or `cd server && dart
-   test`). Something a person sees goes to the phone app at
+3. **Pick the layer** — logic goes to the one test file (or one `dart test`
+   file on the server). Something a person sees goes to the phone app at
    http://127.0.0.1:8181 — never the website at 8787 for a phone screen.
 4. **Fix in the owning file** — screens, providers, services, and models stay
    in their own layers.
-5. **Prove it** — a failing test or the smoke step that showed the bug first
-   if that helps, then the same path again after the fix. Hot-reload with `r`.
+5. **Prove it** — the same test file or the one matching row below. Hot-reload
+   with `r` on the open 8181 window. Then the "Before you call it done" gate.
 
 ### Before you call it done
 
-Every change, same gate:
-
-- `flutter analyze` (and `cd server && dart analyze` if the server changed)
-- `flutter test` (or the one test file for that change)
-- Browser smoke for the path a person would see (full list or focused list
-  below)
+- **Logic only** (no screen a person would notice): the one test file for that
+  change, then `flutter analyze`. If the server changed, `cd server && dart
+  analyze` and the one `dart test` file. Leave the browser closed.
+- **A screen a person sees**: the one matching row in the table below, on the
+  phone app already open at http://127.0.0.1:8181. Then `flutter analyze`. If
+  that behavior already has a test, run that one test file too.
+- **The full-app list** only when you are told the whole app feels rough, or
+  asked to debug everything.
 
 ### Full-app smoke (phone at 8181)
 
@@ -620,7 +627,7 @@ full list — not only the last file that changed.
 
 ### After a focused change
 
-Re-run only the smoke that matches what you touched:
+This table is the whole browser check. One row.
 
 | You changed… | Re-check |
 |--------------|----------|
@@ -761,7 +768,7 @@ For 1.0 only:
 ### Explicitly not required for 1.0
 
 - Accounts, sync, or a live website coupled to the phone (next big feature)
-- Custom sound assets (system sounds + haptics are enough)
+- Extra sound packs beyond the built-in work and rest beeps (volume and off are in Settings)
 - Local notifications
 - Apple / Google sign-in
 - Homemade “type this secret in Settings” unlock keys (use store promo

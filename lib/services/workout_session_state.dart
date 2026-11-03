@@ -1,6 +1,9 @@
 import '../models/models.dart';
 
 enum SessionPhase {
+  /// Timer exercise just opened. The clock shows the time and waits for Start.
+  workReady,
+
   /// Timer exercise: work countdown.
   work,
 

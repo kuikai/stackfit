@@ -26,6 +26,27 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('a timer exercise waits on Start', (tester) async {
+    await _openTimer(tester);
+
+    expect(find.text('READY'), findsOneWidget);
+    expect(find.text('Start'), findsOneWidget);
+    expect(find.text('0:20'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.text('0:20'), findsOneWidget);
+
+    await tester.tap(find.text('Start'));
+    await tester.pump();
+    expect(find.text('WORK'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('0:19'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('portrait rest puts a short clock above the log', (tester) async {
     await _openPortrait(tester);
 
@@ -45,7 +66,49 @@ void main() {
   });
 }
 
+Future<void> _openTimer(WidgetTester tester) async {
+  await _pumpWorkout(
+    tester,
+    Workout(
+      id: 'timed',
+      name: 'Core',
+      createdAt: DateTime(2026, 10, 29),
+      updatedAt: DateTime(2026, 10, 29),
+      exercises: [
+        Exercise.timer(
+          id: 'plank',
+          name: 'Plank',
+          workSeconds: 20,
+          restSeconds: 5,
+          sets: 2,
+        ),
+      ],
+    ),
+  );
+}
+
 Future<void> _openPortrait(WidgetTester tester) async {
+  await _pumpWorkout(
+    tester,
+    Workout(
+      id: 'w',
+      name: 'Test',
+      createdAt: DateTime(2026, 10, 29),
+      updatedAt: DateTime(2026, 10, 29),
+      exercises: [
+        Exercise.sets(
+          id: 'bench',
+          name: 'Bench Press',
+          sets: 3,
+          reps: 8,
+          restSeconds: 60,
+        ),
+      ],
+    ),
+  );
+}
+
+Future<void> _pumpWorkout(WidgetTester tester, Workout workout) async {
   tester.view.physicalSize = const Size(390, 700);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -53,30 +116,13 @@ Future<void> _openPortrait(WidgetTester tester) async {
 
   SharedPreferences.setMockInitialValues({'stackfit_skin': 'chibi'});
   final prefs = await SharedPreferences.getInstance();
-  final now = DateTime(2026, 10, 29);
 
   await tester.pumpWidget(
     ProviderScope(
       overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
       child: MaterialApp(
         theme: AppTheme.light(AppSkin.chibi),
-        home: ActiveTimerScreen(
-          workout: Workout(
-            id: 'w',
-            name: 'Test',
-            createdAt: now,
-            updatedAt: now,
-            exercises: [
-              Exercise.sets(
-                id: 'bench',
-                name: 'Bench Press',
-                sets: 3,
-                reps: 8,
-                restSeconds: 60,
-              ),
-            ],
-          ),
-        ),
+        home: ActiveTimerScreen(workout: workout),
       ),
     ),
   );

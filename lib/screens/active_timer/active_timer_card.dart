@@ -24,6 +24,7 @@ class ActiveTimerCard extends StatelessWidget {
     final exercise = state.currentExercise;
 
     final phaseLabel = switch (state.phase) {
+      SessionPhase.workReady => 'READY',
       SessionPhase.work => 'WORK',
       SessionPhase.rest => 'REST',
       SessionPhase.setReady => 'SET',
@@ -38,7 +39,9 @@ class ActiveTimerCard extends StatelessWidget {
     final showRound =
         exercise?.type == ExerciseType.timer &&
         state.totalSets > 1 &&
-        (state.phase == SessionPhase.work || state.phase == SessionPhase.rest);
+        (state.phase == SessionPhase.workReady ||
+            state.phase == SessionPhase.work ||
+            state.phase == SessionPhase.rest);
     final showSetRest =
         exercise?.type == ExerciseType.sets && state.phase == SessionPhase.rest;
 

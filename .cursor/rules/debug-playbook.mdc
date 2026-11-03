@@ -12,16 +12,16 @@ smooth, follow **GUIDE.md Section 10**. Do not invent a different process.
 
 1. Reproduce once (expected vs actual).
 2. Classify (stuck screen, wrong data, sync, skin, crash).
-3. Pick the layer: logic → `flutter test` / `dart test`; something a person
-   sees → http://127.0.0.1:8181 (never 8787 for phone screens).
-4. Fix in the owning layer (screens / providers / services / models).
-5. Prove it with the same path, then the before-done gate in Section 10.
-
-## Smoke
-
-- Broad “app feels rough” or “debug everything” → full-app smoke checklist
-  in GUIDE §10, not only the last file touched.
-- Focused change → the matching row in the “After a focused change” table.
+3. Fix in the owning layer (screens / providers / services / models).
+4. Prove it. The matching row is the whole browser check.
+   - Logic only: the one test file for that change, then `flutter analyze`.
+     If the server changed, `dart analyze` and the one `dart test` file.
+     Do not open the browser.
+   - A screen a person sees: the single matching row in GUIDE §10, on the
+     8181 window that is already open. Then `flutter analyze`. Run the one
+     test file too when that behavior already has a test.
+   - The full-app list in GUIDE §10 only when the user says the whole app
+     feels rough, or asks to debug everything.
 
 How to open the phone app (port 8181, one run, Chrome app window) stays in
 `test-in-browser.mdc`. This rule owns the checklist process, not the port.

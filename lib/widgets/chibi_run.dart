@@ -17,9 +17,17 @@ int runFrameIndex({
 
 /// Plays a run cycle. With [travel] she walks left to right; without it she hops in place.
 class ChibiRun extends StatefulWidget {
-  const ChibiRun({super.key, required this.frames, this.travel = true});
+  const ChibiRun({
+    super.key,
+    required this.frames,
+    this.partnerFrames = const [],
+    this.travel = true,
+  });
 
   final List<String> frames;
+
+  /// Second mascot hopping beside [frames]. Used when a workout is finished.
+  final List<String> partnerFrames;
 
   /// False keeps her in the middle for a celebrate hop.
   final bool travel;
@@ -55,7 +63,7 @@ class _ChibiRunState extends State<ChibiRun>
     }
     try {
       await Future.wait([
-        for (final path in widget.frames)
+        for (final path in [...widget.frames, ...widget.partnerFrames])
           precacheImage(AssetImage(path), context),
       ]);
     } catch (_) {
@@ -84,17 +92,26 @@ class _ChibiRunState extends State<ChibiRun>
       return const SizedBox.expand();
     }
     final elapsed = _run.value * _lap.inMilliseconds / 1000;
-    final frame = runFrameIndex(
-      elapsedSeconds: elapsed,
-      frameCount: widget.frames.length,
-      framesPerSecond: _framesPerSecond,
-    );
+    final frame = _frameAt(widget.frames, elapsed);
+    final partner = _frameAt(widget.partnerFrames, elapsed);
     return LayoutBuilder(
-      builder: (context, constraints) => _sprite(frame, constraints.maxWidth),
+      builder: (context, constraints) =>
+          _sprite(frame, partner, constraints.maxWidth),
     );
   }
 
-  Widget _sprite(int frame, double laneWidth) {
+  int _frameAt(List<String> frames, double elapsed) {
+    return runFrameIndex(
+      elapsedSeconds: elapsed,
+      frameCount: frames.length,
+      framesPerSecond: _framesPerSecond,
+    );
+  }
+
+  Widget _sprite(int frame, int partner, double laneWidth) {
+    if (widget.partnerFrames.isNotEmpty && !widget.travel) {
+      return _pair(frame, partner);
+    }
     const offscreen = 72.0;
     final span = laneWidth + offscreen * 2;
     final left = widget.travel
@@ -107,18 +124,37 @@ class _ChibiRunState extends State<ChibiRun>
           left: left,
           bottom: 0,
           child: IgnorePointer(
-            child: Image.asset(
-              widget.frames[frame],
-              height: _spriteHeight,
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.medium,
-              // Keep the pose that is already on screen until the next one
-              // is ready, so a late decode cannot flash the gym through her.
-              gaplessPlayback: true,
-            ),
+            child: _mascot(widget.frames[frame]),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _pair(int frame, int partner) {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          _mascot(widget.frames[frame]),
+          const SizedBox(width: 12),
+          _mascot(widget.partnerFrames[partner]),
+        ],
+      ),
+    );
+  }
+
+  Widget _mascot(String path) {
+    return Image.asset(
+      path,
+      height: _spriteHeight,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.medium,
+      // Keep the pose that is already on screen until the next one
+      // is ready, so a late decode cannot flash the gym through her.
+      gaplessPlayback: true,
     );
   }
 }
