@@ -229,6 +229,10 @@ enum AppSkin {
       'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-trainer-celebrate-6.png',
       'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-trainer-celebrate-7.png',
       'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-trainer-celebrate-8.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-trainer-celebrate-9.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-trainer-celebrate-10.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-trainer-celebrate-11.png',
+      'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-trainer-celebrate-12.png',
     ],
     _ => const [],
   };

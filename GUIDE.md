@@ -285,6 +285,8 @@ analysis_options.yaml House style the phone app is checked against
 
 ```
 icon.png              Home-screen icon picture. Pixel guy deadlifting green plates, 1024×1024
+stackfit-pro-iap.png  App Store picture for the StackFit Pro in-app purchase, 1024×1024
+stackfit-pro-review-screenshot.jpg  App Review screenshot of Unlock Pro in Settings, 640×920
 app-store-header.png  App Store header and search image. Older blue dumbbell art, 5244×2950
 concepts/             Draft icon ideas (not used by the app until copied to icon.png)
 ```
@@ -465,7 +467,7 @@ themes/README.md                  Shared recipe for the four Pro anime themes
 themes/bold-sports/               Bold Sports art. Home is girl-standing.jpg. background.jpg behind other dark screens. Mascot is mascots/mascot-power.png (sit / rest / run-1..8)
 themes/chibi/                     Chibi art. Home is girl-standing.jpg. background.jpg behind other dark screens. Mascot is mascots/mascot-pastel.png (sit / rest / run-1..8)
 themes/cyberpunk/                 Cyberpunk art. Home is girl-standing.jpg. The night gym in background.jpg sits behind every other dark screen. Home mascot is mascots/mascot-chibi.png. She sits on Done, rests on Skip rest, and the run frames in mascots/animation/running/ cross workout complete.
-themes/dumbbell/                  Dumbbell art. Home is girl-standing.jpg. background.jpg behind other dark screens. Home shows mascot-companion.png beside mascot-trainer.png. Done has mascot-companion-set.png on the left and mascot-trainer-set.png on the right. Skip rest has mascot-companion-rest.png on the left and mascot-trainer-rest.png on the right. Celebrate jump is mascots/animation/celebrate/ for both the companion and the trainer. New run cycle is mascots/animation/run/. Older run-1..8 still sit in mascots/animation/running/.
+themes/dumbbell/                  Dumbbell art. Home is girl-standing.jpg. background.jpg behind other dark screens. Home shows mascot-companion.png beside mascot-trainer.png. Done has mascot-companion-set.png on the left and mascot-trainer-set.png on the right. Skip rest has mascot-companion-rest.png on the left and mascot-trainer-rest.png on the right. Celebrate jump is mascots/animation/celebrate/ for both the companion and the trainer (her 8 frames, his 12). New run cycle is mascots/animation/run/. Older run-1..8 still sit in mascots/animation/running/.
 ```
 
 ### `test/` – phone app tests
@@ -699,9 +701,9 @@ use promo codes or TestFlight, not that button.
 
 - [ ] App Store Connect: one-time Pro product (about $1.99) for
   `com.dix.stackfit`
-- [ ] RevenueCat project + iOS app + entitlement matching
+- [x] RevenueCat project + iOS app + entitlement matching
   `AppConstants.proEntitlementId` / product id
-- [ ] Wire `purchases_flutter`: purchase, restore, and reflect Pro in
+- [x] Wire `purchases_flutter`: purchase, restore, and reflect Pro in
   `isProProvider` (not a local bool alone)
 - [ ] Settings **Restore Purchase** works on a TestFlight build
 - [ ] Paid features gated only when entitlement is active: unlimited

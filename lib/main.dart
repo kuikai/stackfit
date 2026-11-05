@@ -67,6 +67,7 @@ class _StackFitAppState extends ConsumerState<StackFitApp>
 
     return MaterialApp(
       title: AppConstants.appName,
+      debugShowCheckedModeBanner: false,
       theme: AppTheme.light(settings.skin),
       darkTheme: AppTheme.dark(settings.skin),
       themeMode: settings.themeMode,
