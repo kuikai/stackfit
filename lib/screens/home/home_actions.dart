@@ -333,3 +333,17 @@ Future<void> createHomeSection(
     await notifier.moveToSection(workout.id, name);
   }
 }
+
+Future<void> moveHomeRow(WidgetRef ref, int index, int direction) {
+  return ref.read(workoutsProvider.notifier).moveHomeGroupBy(index, direction);
+}
+
+Future<void> moveHomeWorkoutInSection(
+  WidgetRef ref,
+  Workout workout,
+  int direction,
+) {
+  return ref
+      .read(workoutsProvider.notifier)
+      .moveWorkoutWithinSection(workout.id, direction);
+}

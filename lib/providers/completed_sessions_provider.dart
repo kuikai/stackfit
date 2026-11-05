@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants.dart';
 import '../models/models.dart';
+import '../services/account/account_storage.dart';
 import '../services/storage_service.dart';
 import 'app_providers.dart';
 import 'pro_provider.dart';
@@ -10,7 +11,10 @@ final completedSessionsProvider =
     StateNotifierProvider<CompletedSessionsNotifier, List<CompletedSession>>((
       ref,
     ) {
-      return CompletedSessionsNotifier(ref.watch(storageServiceProvider));
+      return CompletedSessionsNotifier(
+        ref.watch(storageServiceProvider),
+        ref.watch(accountStorageProvider),
+      );
     });
 
 /// History list respecting the free-tier cap when the user is not Pro.
@@ -33,10 +37,11 @@ final sessionsForWorkoutProvider =
     });
 
 class CompletedSessionsNotifier extends StateNotifier<List<CompletedSession>> {
-  CompletedSessionsNotifier(this._storage)
+  CompletedSessionsNotifier(this._storage, this._accountStorage)
     : super(_sorted(_storage.loadCompletedSessions()));
 
   final StorageService _storage;
+  final AccountStorage _accountStorage;
 
   static List<CompletedSession> _sorted(List<CompletedSession> sessions) {
     final copy = [...sessions];
@@ -50,6 +55,17 @@ class CompletedSessionsNotifier extends StateNotifier<List<CompletedSession>> {
 
   Future<void> addSession(CompletedSession session) async {
     state = _sorted([session, ...state]);
+    await _persist();
+  }
+
+  /// Removes one finished workout. The deletion is recorded first so the next
+  /// sync does not bring that session back from the other device.
+  Future<void> removeSession(String id) async {
+    await _accountStorage.addSessionDeletion(id, DateTime.now().toUtc());
+    state = [
+      for (final session in state)
+        if (session.id != id) session,
+    ];
     await _persist();
   }
 

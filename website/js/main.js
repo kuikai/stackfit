@@ -1,3 +1,4 @@
+import { hideAppearance, installAppearance } from './appearance.js';
 import { AccountApi } from './api.js';
 import { installAuth } from './auth.js';
 import { renderLibrary as drawLibrary } from './library.js';
@@ -8,13 +9,9 @@ import {
   readWorkoutDraft,
   workoutError,
 } from './editor.js';
-import { installSession } from './session.js';
+import { openPublicShare } from './share_page.js';
+import { installSharing, shareTokenFromPath } from './sharing.js';
 import { cloneSnapshot, emptySnapshot } from './snapshot.js';
-import {
-  installSharing,
-  openPublicShare,
-  shareTokenFromPath,
-} from './sharing.js';
 import { installTabata, isTabataPath, openTabata, stopTabata } from './tabata.js';
 import { installWorkoutRun, stopWorkout } from './workout_run.js';
 
@@ -24,18 +21,21 @@ const account = loadAccount();
 const signedOut = document.querySelector('#signed-out');
 const signedIn = document.querySelector('#signed-in');
 const library = document.querySelector('#library');
-const sessionEditor = document.querySelector('#session-editor');
 
 document.querySelector('#refresh').addEventListener('click', () => refresh());
 document.querySelector('#new-workout').addEventListener('click', onCreateWorkout);
 document.querySelector('#workout-form').addEventListener('submit', onSaveWorkout);
 document.querySelector('#cancel-editor').addEventListener('click', showLibrary);
 document.querySelector('#delete-workout').addEventListener('click', onDeleteWorkout);
-document.querySelector('#cancel-session').addEventListener('click', showLibrary);
 document.querySelector('#show-sign-up').addEventListener('click', () => showAuth('sign-up-panel'));
 document.querySelector('#show-sign-in').addEventListener('click', () => showAuth('sign-in-panel'));
 document.querySelector('#show-reset').addEventListener('click', () => showAuth('reset-panel'));
 document.querySelector('#reset-back').addEventListener('click', () => showAuth('sign-in-panel'));
+document.querySelector('#open-import').addEventListener('click', openImport);
+document.querySelector('#close-import').addEventListener('click', () => {
+  document.querySelector('#receive').hidden = true;
+});
+document.addEventListener('click', closeMenus);
 bindExerciseActions();
 
 const sharingApp = {
@@ -58,10 +58,15 @@ const sharingApp = {
   showSignedOut,
   storeAccount,
   refresh,
+  stopTimers() {
+    stopTabata();
+    stopWorkout();
+  },
+  returnFromAppearance,
 };
 installAuth(sharingApp);
+installAppearance(sharingApp);
 installSharing(sharingApp);
-installSession(sharingApp);
 installTabata(sharingApp);
 installWorkoutRun(sharingApp);
 
@@ -80,7 +85,7 @@ if (isTabataPath()) {
 }
 
 async function refresh() {
-  const editing = !document.querySelector('#editor').hidden || !sessionEditor.hidden;
+  const editing = !document.querySelector('#editor').hidden;
   const running = !document.querySelector('#workout-run').hidden;
   if (editing && !window.confirm('Discard this edit and refresh?')) {
     return;
@@ -175,24 +180,40 @@ async function persist(snapshot, notice) {
 function openEditor(workout) {
   clearBanner();
   library.hidden = true;
-  sessionEditor.hidden = true;
   document.querySelector('#share-link-box').hidden = true;
+  document.querySelector('#receive').hidden = true;
   openWorkoutEditor(workout);
+}
+
+function openImport() {
+  showLibrary();
+  document.querySelector('#receive').hidden = false;
+  document.querySelector('#receive-link').focus();
+}
+
+/// A menu closes when you pick an item in it or click anywhere outside it.
+function closeMenus(event) {
+  for (const menu of document.querySelectorAll('details.menu[open]')) {
+    if (!menu.contains(event.target) || event.target.closest('.menu-item')) {
+      menu.open = false;
+    }
+  }
 }
 
 function showLibrary() {
   stopTabata();
   stopWorkout();
   closeWorkoutEditor();
-  sessionEditor.hidden = true;
   library.hidden = false;
-  document.querySelector('#receive').hidden = false;
+  document.querySelector('#receive').hidden = true;
   document.querySelector('#share-view').hidden = true;
   document.querySelector('#tabata').hidden = true;
+  hideAppearance();
   document.querySelector('#progress-picker').hidden = true;
   signedIn.hidden = false;
   signedOut.hidden = true;
   document.querySelector('#account-bar').hidden = false;
+  document.title = 'StackFit';
 }
 
 function promptSignIn(message) {
@@ -218,11 +239,30 @@ function showSignedOut(message) {
   signedIn.hidden = true;
   document.querySelector('#share-view').hidden = true;
   document.querySelector('#tabata').hidden = true;
+  hideAppearance();
   document.querySelector('#account-bar').hidden = true;
   showAuth('sign-in-panel');
   if (message) {
     showBanner(message);
   }
+}
+
+function returnFromAppearance() {
+  const share = shareTokenFromPath();
+  if (isTabataPath()) {
+    openTabata(sharingApp);
+    return;
+  }
+  if (share) {
+    openPublicShare(share, sharingApp);
+    return;
+  }
+  if (account.token) {
+    showLibrary();
+    drawLibrary(account, sharingApp);
+    return;
+  }
+  showSignedOut('');
 }
 
 function storeAccount(data) {
@@ -255,7 +295,9 @@ function clearAccount() {
 }
 
 function setStatus(text) {
-  document.querySelector('#save-status').textContent = text;
+  const status = document.querySelector('#save-status');
+  status.textContent = text;
+  status.dataset.state = { Saved: 'ok', 'Not saved': 'error' }[text] || 'busy';
 }
 
 function showBanner(message, kind = 'error') {

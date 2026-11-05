@@ -17,7 +17,9 @@ void main() {
     final website = await Directory.systemTemp.createTemp(
       'stackfit-share-site',
     );
-    await File('${website.path}/index.html').writeAsString('<p>StackFit</p>');
+    await File('${website.path}/index.html').writeAsString(
+      '<html><head><title>StackFit</title></head><body><p>StackFit</p></body></html>',
+    );
     final accounts = AccountStore(File('${directory.path}/accounts.json'));
     final shares = ShareStore(File('${directory.path}/shares.json'));
     await accounts.load();
@@ -92,6 +94,45 @@ void main() {
     );
     expect(hidden.statusCode, 404);
     expect(hidden.body, contains('This link is turned off.'));
+  });
+
+  test('a pasted workout link shows its name in the preview', () async {
+    final client = http.Client();
+    addTearDown(client.close);
+
+    final created = await _post(client, '$baseUrl/v1/auth/signup', {
+      'email': 'mia@example.com',
+      'password': 'password1',
+    });
+    final token = _json(created)['token'] as String;
+    final snapshot = _snapshot();
+    ((snapshot['workouts'] as List).single as Map)['name'] = 'Mia\'s "push" & pull';
+    await _put(client, '$baseUrl/v1/sync', token, {
+      'baseRevision': 0,
+      'snapshot': snapshot,
+    });
+    final shared = await _post(client, '$baseUrl/v1/shares', {
+      'kind': 'workout',
+      'workoutId': 'w1',
+    }, token: token);
+    final shareToken = _json(shared)['token'] as String;
+
+    final page = await client.get(Uri.parse('$baseUrl/s/$shareToken'));
+    expect(page.statusCode, 200);
+    expect(
+      page.body,
+      contains('<meta property="og:title" content="Mia&#39;s &quot;push&quot; &amp; pull">'),
+    );
+    expect(page.body, contains('1 exercise: Bench press. Open it in StackFit.'));
+    expect(page.body, contains('$baseUrl/icons/app-icon-512.png'));
+    expect(page.body, contains('<title>Mia&#39;s &quot;push&quot; &amp; pull · StackFit</title>'));
+    expect(page.body, isNot(contains('mia@example.com')));
+
+    await _post(client, '$baseUrl/v1/shares/$shareToken/disable', {}, token: token);
+    final off = await client.get(Uri.parse('$baseUrl/s/$shareToken'));
+    expect(off.statusCode, 200);
+    expect(off.body, contains('<meta property="og:title" content="StackFit">'));
+    expect(off.body, isNot(contains('Bench press')));
   });
 
   test('a shared circuit keeps its rounds', () async {

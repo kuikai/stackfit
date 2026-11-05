@@ -1,12 +1,6 @@
-import {
-  estimatedWorkoutSeconds,
-  formatDuration,
-  formatSessionDate,
-  newId,
-  workoutBlocks,
-  workoutLines,
-  workoutStations,
-} from './snapshot.js';
+import { parseRoutineText, routineError } from './routine_check.js';
+import { showLocalWorkout } from './share_page.js';
+import { formatDuration, formatSessionDate, newId } from './snapshot.js';
 
 const phoneNote = 'The app shows it the next time it syncs.';
 
@@ -59,40 +53,6 @@ export function workoutShareButtons(workout, app) {
   return row;
 }
 
-export async function openPublicShare(token, app) {
-  app.clearBanner();
-  app.localWorkout = null;
-  document.querySelector('#signed-in').hidden = true;
-  document.querySelector('#signed-out').hidden = true;
-  document.querySelector('#share-view').hidden = false;
-  if (app.account.token) {
-    document.querySelector('#account-bar').hidden = false;
-    document.querySelector('#account-email').textContent = app.account.email;
-    await app.loadAccountData().catch(() => {
-      app.clearAccount();
-      document.querySelector('#account-bar').hidden = true;
-    });
-  }
-  try {
-    fillShareView(await app.api.readShare(token));
-  } catch (error) {
-    fillShareError(error.message);
-  }
-}
-
-export function showLocalWorkout(workout, app) {
-  app.localWorkout = workout;
-  document.querySelector('#signed-in').hidden = true;
-  document.querySelector('#signed-out').hidden = true;
-  document.querySelector('#share-view').hidden = false;
-  fillShareView({
-    kind: 'workout',
-    name: workout.name,
-    exercises: workout.exercises,
-    blocks: workout.blocks,
-  });
-}
-
 export function workoutFromShare(share) {
   const now = new Date().toISOString();
   const blocks = copyShareBlocks(share);
@@ -110,59 +70,6 @@ export function workoutFromShare(share) {
     workout.blocks = blocks;
   }
   return workout;
-}
-
-export function parseRoutineText(raw) {
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return { error: 'That file is not a StackFit routine.' };
-  }
-  const error = routineError(parsed);
-  if (error) {
-    return { error };
-  }
-  const workout = {
-    name: String(parsed.name).trim(),
-    exercises: parsed.exercises,
-  };
-  if (Array.isArray(parsed.blocks) && parsed.blocks.length > 0) {
-    workout.blocks = parsed.blocks;
-  }
-  return { workout };
-}
-
-export function routineError(workout) {
-  if (!workout || typeof workout.name !== 'string' || !workout.name.trim()) {
-    return 'A routine needs a name.';
-  }
-  const blocks = workoutBlocks(workout);
-  if (workoutStations(workout).length === 0) {
-    return 'A routine needs at least one exercise.';
-  }
-  for (const block of blocks) {
-    if (block.type === 'circuit') {
-      const rounds = block.rounds;
-      const rest = block.restBetweenRoundsSeconds ?? 0;
-      if (!Number.isInteger(rounds) || rounds < 1) {
-        return 'Circuit rounds must be at least 1.';
-      }
-      if (!Number.isInteger(rest) || rest < 0) {
-        return 'Enter a valid rest between rounds.';
-      }
-      if (!Array.isArray(block.exercises) || block.exercises.length === 0) {
-        return 'A circuit needs at least one exercise.';
-      }
-    }
-    for (const exercise of block.type === 'circuit' ? block.exercises : [block.exercise]) {
-      const error = exerciseError(exercise);
-      if (error) {
-        return error;
-      }
-    }
-  }
-  return '';
 }
 
 function copyShareBlocks(share) {
@@ -283,7 +190,7 @@ async function shareWorkout(workout, app) {
 function openProgressPicker(app) {
   const sessions = [...(app.account.snapshot.sessions || [])];
   if (sessions.length === 0) {
-    app.showBanner('Log a session before sharing progress.');
+    app.showBanner('Finish a workout before sharing progress.');
     return;
   }
   sessions.sort((a, b) => Date.parse(b.completedAt) - Date.parse(a.completedAt));
@@ -331,56 +238,6 @@ function progressChoice(session) {
   return label;
 }
 
-function fillShareView(payload) {
-  document.querySelector('#share-view').hidden = false;
-  document.querySelector('#share-error').hidden = true;
-  document.querySelector('#share-content').hidden = false;
-  const progress = payload.kind === 'progress';
-  document.querySelector('#share-kicker').textContent = progress
-    ? 'Progress summary'
-    : 'Shared workout';
-  document.querySelector('#share-title').textContent = progress
-    ? 'Training progress'
-    : payload.name;
-  document.querySelector('#share-add').hidden = progress;
-  document.querySelector('#share-note').textContent = progress
-    ? 'This is only the sessions that were shared. It is not added to your history.'
-    : 'Adding this makes a copy on your account. Later edits stay where they were made.';
-  const summary = document.querySelector('#share-summary');
-  const body = document.querySelector('#share-body');
-  body.replaceChildren();
-  if (progress) {
-    const sessionCount = payload.sessions.length;
-    summary.textContent = sessionCount === 1 ? '1 session' : `${sessionCount} sessions`;
-    for (const session of payload.sessions) {
-      body.append(line(
-        `${session.workoutName} · ${formatSessionDate(session.completedAt)} · ${formatDuration(session.durationSeconds)}`,
-      ));
-    }
-    return;
-  }
-  const stations = workoutStations(payload);
-  const duration = formatDuration(estimatedWorkoutSeconds(payload));
-  summary.textContent = `${stations.length === 1 ? '1 exercise' : `${stations.length} exercises`} · ${duration}`;
-  for (const text of workoutLines(payload)) {
-    body.append(line(text));
-  }
-}
-
-function fillShareError(message) {
-  document.querySelector('#share-content').hidden = true;
-  const error = document.querySelector('#share-error');
-  error.hidden = false;
-  error.textContent = message;
-}
-
-function line(text) {
-  const row = document.createElement('p');
-  row.className = 'meta';
-  row.textContent = text;
-  return row;
-}
-
 function showLinkBox(token, label) {
   const box = document.querySelector('#share-link-box');
   box.hidden = false;
@@ -410,7 +267,8 @@ function turnOffButton(token, app) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'text';
-  button.textContent = 'Turn off link';
+  button.textContent = 'Unshare';
+  button.title = 'Turn off this link';
   button.addEventListener('click', () => disableToken(token, app));
   return button;
 }
@@ -439,31 +297,4 @@ async function copyText(value) {
   } catch {
     return false;
   }
-}
-
-function exerciseError(exercise) {
-  if (!exercise || typeof exercise.name !== 'string' || !exercise.name.trim()) {
-    return 'Each exercise needs a name.';
-  }
-  if (exercise.type === 'timer') {
-    return numberError(exercise.workSeconds, 1, 'Work time must be at least 1 second.')
-      || numberError(exercise.restSeconds, 0, 'Enter a valid rest time.')
-      || numberError(exercise.sets, 1, 'Sets must be at least 1.');
-  }
-  if (exercise.type !== 'sets') {
-    return 'Each exercise must be timer or sets.';
-  }
-  const reps = exercise.reps;
-  if (reps != null && (!Number.isInteger(reps) || reps < 1)) {
-    return 'Reps must be a positive number.';
-  }
-  return numberError(exercise.sets, 1, 'Sets must be at least 1.')
-    || numberError(exercise.restSeconds, 0, 'Enter a valid rest time.');
-}
-
-function numberError(value, minimum, message) {
-  if (!Number.isInteger(value) || value < minimum) {
-    return message;
-  }
-  return '';
 }

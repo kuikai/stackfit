@@ -140,6 +140,20 @@ The phone app and the site read and write the same saved data. A workout edited 
 
 The Tabata page runs a work and rest countdown in the browser. A signed-in person can save that workout and the finished session to the account.
 
+### Public host
+
+When this leaves the local machine, it runs on **Fly.io**.
+
+- One small machine runs the Dart server in `server/`. That process serves the website and the account API together.
+- The account files (`data/stackfit_accounts.json` and `data/stackfit_shares.json`) live on a Fly volume. A deploy replaces the program and leaves that volume in place.
+- One machine only. A second copy would write the same files.
+- HTTPS is on our domain. Release builds of the phone app use `--dart-define=STACKFIT_ACCOUNT_URL=https://…`.
+- A normal update is `fly deploy`.
+- Fly keeps daily snapshots of the volume. Also keep our own copy of the two JSON files.
+- Password reset still needs email delivery before real users rely on it. Until then, codes only show in the server log.
+
+The App Store privacy page can be a simple hosted page before this machine exists. Once Fly.io is up, that URL is `/privacy.html` on the same domain.
+
 ---
 
 ## 7. Later: sharing
@@ -194,6 +208,12 @@ There is no feed, no followers, and no public profile in this step. A link is th
 - [x] Visitor can copy a shared workout into their own account
 - [x] Owner can turn a link off
 - [x] Shared pages do not show email or other private account data
+
+### Public host
+
+- [ ] The website and API run on one Fly.io machine, with the account files on a volume
+- [ ] The phone's release build uses that HTTPS address (`STACKFIT_ACCOUNT_URL`)
+- [ ] A copy of the two JSON files is kept off the machine
 
 ---
 

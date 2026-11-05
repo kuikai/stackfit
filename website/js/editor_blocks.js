@@ -1,11 +1,14 @@
-import { newId } from './snapshot.js';
+import { blockNode, stepNumber } from './editor_cards.js';
+import { blockStations, newId } from './snapshot.js';
 
 export function bindBlockEditor() {
   document.querySelector('#add-exercise').addEventListener('click', () => {
     renderBlocks([...readBlocks(), exerciseBlock(blankExercise())]);
+    focusLastName();
   });
   document.querySelector('#add-circuit').addEventListener('click', () => {
     renderBlocks([...readBlocks(), blankCircuit()]);
+    focusLastName();
   });
   document.querySelector('#exercise-list').addEventListener('click', onListClick);
 }
@@ -22,24 +25,17 @@ export function readBlocks() {
   return [...document.querySelectorAll('#exercise-list > .block')].map(readBlock);
 }
 
-export function stationsFromBlocks(blocks) {
-  return blocks.flatMap((block) => blockStations(block));
-}
-
-export function blocksProblem(blocks) {
-  if (stationsFromBlocks(blocks).length === 0) {
-    return 'Add at least one exercise.';
-  }
-  for (const block of blocks) {
-    const problem = blockProblem(block);
-    if (problem) {
-      return problem;
-    }
-  }
-  return '';
+function focusLastName() {
+  const names = document.querySelectorAll('#exercise-list .exercise-name');
+  names[names.length - 1]?.focus();
 }
 
 function onListClick(event) {
+  const step = event.target.closest('[data-step]');
+  if (step) {
+    stepNumber(step);
+    return;
+  }
   const type = event.target.closest('[data-type]')?.dataset.type;
   const action = event.target.closest('[data-action]')?.dataset.action;
   if (!type && !action) {
@@ -58,6 +54,9 @@ function onListClick(event) {
   if (action === 'add-station') {
     blocks[place.blockIndex].exercises.push(blankStation());
     renderBlocks(blocks);
+    const box = document.querySelectorAll('#exercise-list > .block')[place.blockIndex];
+    const names = box.querySelectorAll('.exercise-name');
+    names[names.length - 1]?.focus();
     return;
   }
   if (action === 'block-up' || action === 'block-down' || action === 'remove-block') {
@@ -116,151 +115,6 @@ function moveStation(blocks, place, action) {
   writeStations(block, stations);
 }
 
-function blockNode(block, index, count) {
-  if (block.type === 'circuit') {
-    return circuitNode(block, index, count);
-  }
-  const section = document.createElement('section');
-  section.className = 'block';
-  section.dataset.kind = 'exercise';
-  section.append(exerciseCard(block.exercise, index, count, false));
-  return section;
-}
-
-function circuitNode(block, index, count) {
-  const section = document.createElement('section');
-  section.className = 'block circuit-box';
-  section.dataset.kind = 'circuit';
-  section.dataset.id = block.id;
-  const stations = document.createElement('div');
-  stations.className = 'stations';
-  (block.exercises || []).forEach((exercise, stationIndex) => {
-    stations.append(exerciseCard(exercise, stationIndex, block.exercises.length, true));
-  });
-  section.append(
-    circuitHeading(index, count),
-    circuitNote(),
-    labeledInput('Rounds', 'circuit-rounds', block.rounds ?? 3, 'number'),
-    labeledInput('Rest between rounds (seconds)', 'circuit-rest', block.restBetweenRoundsSeconds ?? 60, 'number'),
-    stations,
-    actionButton('Add station', 'add-station', false),
-  );
-  return section;
-}
-
-function circuitHeading(index, count) {
-  const row = document.createElement('div');
-  row.className = 'circuit-head';
-  const heading = document.createElement('h3');
-  heading.textContent = 'Circuit';
-  row.append(
-    heading,
-    actionButton('Up', 'block-up', index === 0),
-    actionButton('Down', 'block-down', index === count - 1),
-    actionButton('Remove', 'remove-block', false),
-  );
-  return row;
-}
-
-function circuitNote() {
-  const note = document.createElement('p');
-  note.className = 'meta';
-  note.textContent = 'These exercises run in order, then repeat.';
-  return note;
-}
-
-function exerciseCard(exercise, index, count, inCircuit) {
-  const card = document.createElement('article');
-  card.className = 'exercise';
-  card.dataset.id = exercise.id;
-  card.append(
-    cardHeading(index, inCircuit),
-    typeSwitch(exercise.type),
-    labeledInput('Name', 'exercise-name', exercise.name, 'text'),
-    ...typeFields(exercise, inCircuit),
-    cardButtons(index, count),
-  );
-  return card;
-}
-
-function cardHeading(index, inCircuit) {
-  const heading = document.createElement('h3');
-  heading.textContent = inCircuit ? `Station ${index + 1}` : `Exercise ${index + 1}`;
-  return heading;
-}
-
-function typeSwitch(type) {
-  const group = document.createElement('div');
-  group.className = 'segment';
-  group.append(typeButton('sets', 'Sets', type), typeButton('timer', 'Timer', type));
-  return group;
-}
-
-function typeButton(type, label, selected) {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'ghost';
-  button.dataset.type = type;
-  button.textContent = label;
-  button.setAttribute('aria-pressed', String(type === selected));
-  return button;
-}
-
-function typeFields(exercise, inCircuit) {
-  const restLabel = inCircuit ? 'Rest before next station (seconds)' : 'Rest (seconds)';
-  if (exercise.type === 'timer') {
-    return [
-      labeledInput('Work (seconds)', 'work', exercise.workSeconds ?? 40, 'number'),
-      labeledInput(restLabel, 'rest', exercise.restSeconds ?? 15, 'number'),
-      labeledInput('Sets / rounds', 'rounds', exercise.sets ?? (inCircuit ? 1 : 3), 'number'),
-    ];
-  }
-  const setsRest = inCircuit ? restLabel : 'Rest between sets (seconds)';
-  return [
-    labeledInput('Sets', 'sets', exercise.sets ?? (inCircuit ? 1 : 3), 'number'),
-    labeledInput('Reps (optional)', 'reps', exercise.reps ?? '', 'number'),
-    labeledInput(setsRest, 'rest', exercise.restSeconds ?? (inCircuit ? 15 : 60), 'number'),
-  ];
-}
-
-function labeledInput(labelText, className, value, type) {
-  const label = document.createElement('label');
-  label.className = 'field';
-  const span = document.createElement('span');
-  span.textContent = labelText;
-  const input = document.createElement('input');
-  input.className = className;
-  input.type = type;
-  input.value = value;
-  if (type === 'number') {
-    input.min = className === 'reps' || className === 'rest' || className === 'circuit-rest' ? '0' : '1';
-    input.step = '1';
-  }
-  label.append(span, input);
-  return label;
-}
-
-function cardButtons(index, count) {
-  const row = document.createElement('div');
-  row.className = 'card-actions';
-  row.append(
-    actionButton('Up', 'up', index === 0),
-    actionButton('Down', 'down', index === count - 1),
-    actionButton('Remove', 'remove', false),
-  );
-  return row;
-}
-
-function actionButton(label, action, disabled) {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'ghost';
-  button.dataset.action = action;
-  button.textContent = label;
-  button.disabled = disabled;
-  return button;
-}
-
 function readBlock(block) {
   if (block.dataset.kind === 'circuit') {
     return {
@@ -309,63 +163,6 @@ function setsExercise(card, id, name) {
   };
 }
 
-function blockProblem(block) {
-  if (block.type === 'circuit') {
-    if (!Number.isInteger(block.rounds) || block.rounds < 1) {
-      return 'Circuit rounds must be at least 1.';
-    }
-    if (!Number.isInteger(block.restBetweenRoundsSeconds) || block.restBetweenRoundsSeconds < 0) {
-      return 'Enter a valid rest between rounds.';
-    }
-    if (!block.exercises.length) {
-      return 'Add at least one exercise to the circuit.';
-    }
-  }
-  for (const exercise of blockStations(block)) {
-    const problem = exerciseProblem(exercise);
-    if (problem) {
-      return problem;
-    }
-  }
-  return '';
-}
-
-function exerciseProblem(exercise) {
-  if (!exercise.name) {
-    return 'Enter an exercise name.';
-  }
-  if (exercise.type === 'timer') {
-    return timerProblem(exercise);
-  }
-  return setsProblem(exercise);
-}
-
-function timerProblem(exercise) {
-  if (!Number.isInteger(exercise.workSeconds) || exercise.workSeconds < 1) {
-    return 'Work time must be at least 1 second.';
-  }
-  if (!Number.isInteger(exercise.restSeconds) || exercise.restSeconds < 0) {
-    return 'Enter a valid rest time.';
-  }
-  if (!Number.isInteger(exercise.sets) || exercise.sets < 1) {
-    return 'Sets must be at least 1.';
-  }
-  return '';
-}
-
-function setsProblem(exercise) {
-  if (!Number.isInteger(exercise.sets) || exercise.sets < 1) {
-    return 'Sets must be at least 1.';
-  }
-  if (!Number.isInteger(exercise.restSeconds) || exercise.restSeconds < 0) {
-    return 'Enter a valid rest time.';
-  }
-  if (exercise.reps != null && (!Number.isInteger(exercise.reps) || exercise.reps < 1)) {
-    return 'Reps must be a positive number.';
-  }
-  return '';
-}
-
 function withType(exercise, type) {
   return {
     ...exercise,
@@ -395,13 +192,6 @@ function writeStations(block, stations) {
 
 function exerciseAt(blocks, place) {
   return blockStations(blocks[place.blockIndex])[place.stationIndex];
-}
-
-function blockStations(block) {
-  if (block.type === 'circuit') {
-    return block.exercises || [];
-  }
-  return block.exercise ? [block.exercise] : [];
 }
 
 function placeOf(target) {

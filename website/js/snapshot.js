@@ -8,10 +8,12 @@ export function emptySnapshot() {
     workouts: [],
     deletedWorkouts: [],
     sessions: [],
+    deletedSessions: [],
     customExercises: [],
     themeMode: 'system',
     skin: 'classic',
     appearanceUpdatedAt: '1970-01-01T00:00:00.000Z',
+    homeOrderUpdatedAt: '1970-01-01T00:00:00.000Z',
   };
 }
 
@@ -27,6 +29,9 @@ export function ensureSnapshot(raw) {
       ? snapshot.deletedWorkouts
       : [],
     sessions: Array.isArray(snapshot.sessions) ? snapshot.sessions : [],
+    deletedSessions: Array.isArray(snapshot.deletedSessions)
+      ? snapshot.deletedSessions
+      : [],
     customExercises: Array.isArray(snapshot.customExercises)
       ? snapshot.customExercises
       : [],
@@ -34,17 +39,21 @@ export function ensureSnapshot(raw) {
     skin: snapshot.skin || 'classic',
     appearanceUpdatedAt:
       snapshot.appearanceUpdatedAt || '1970-01-01T00:00:00.000Z',
+    homeOrderUpdatedAt:
+      snapshot.homeOrderUpdatedAt || '1970-01-01T00:00:00.000Z',
   };
 }
 
 /// Same rules as lib/services/account/snapshot_merge.dart.
 export function mergeSnapshots(local, remote) {
   const workouts = mergeWorkouts(local, remote);
+  const history = mergeSessions(local, remote);
   const appearance = newerAppearance(local, remote);
   return {
     workouts: workouts.workouts,
     deletedWorkouts: workouts.deletions,
-    sessions: mergeSessions(local.sessions, remote.sessions),
+    sessions: history.sessions,
+    deletedSessions: history.deletions,
     customExercises: mergeCustomExercises(
       local.customExercises,
       remote.customExercises,
@@ -52,6 +61,7 @@ export function mergeSnapshots(local, remote) {
     themeMode: appearance.themeMode,
     skin: appearance.skin,
     appearanceUpdatedAt: appearance.appearanceUpdatedAt,
+    homeOrderUpdatedAt: workouts.homeOrderUpdatedAt,
   };
 }
 
@@ -163,11 +173,6 @@ export function workoutLines(workout) {
   return lines;
 }
 
-export function dateTimeLocalValue(date) {
-  const pad = (value) => String(value).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
 function mergeWorkouts(local, remote) {
   const workouts = new Map();
   const deletions = new Map();
@@ -190,8 +195,56 @@ function mergeWorkouts(local, remote) {
       keptWorkouts.push(workout);
     }
   }
-  keptWorkouts.sort((a, b) => a.name.localeCompare(b.name));
-  return { workouts: keptWorkouts, deletions: keptDeletions };
+  const order = newerHomeOrder(local, remote);
+  return {
+    workouts: arrangeWorkouts(keptWorkouts, order),
+    deletions: keptDeletions,
+    homeOrderUpdatedAt: order.updatedAt,
+  };
+}
+
+const homeOrderEpoch = '1970-01-01T00:00:00.000Z';
+
+function newerHomeOrder(local, remote) {
+  const localAt = local?.homeOrderUpdatedAt || homeOrderEpoch;
+  const remoteAt = remote?.homeOrderUpdatedAt || homeOrderEpoch;
+  if (isBefore(remoteAt, localAt)) {
+    return {
+      updatedAt: localAt,
+      primary: local?.workouts || [],
+      secondary: remote?.workouts || [],
+    };
+  }
+  return {
+    updatedAt: remoteAt,
+    primary: remote?.workouts || [],
+    secondary: local?.workouts || [],
+  };
+}
+
+function arrangeWorkouts(kept, order) {
+  if (!(Date.parse(order.updatedAt) > Date.parse(homeOrderEpoch))) {
+    return [...kept].sort((left, right) => left.name.localeCompare(right.name));
+  }
+  const byId = new Map(kept.map((workout) => [workout.id, workout]));
+  const ordered = [];
+  const seen = new Set();
+  for (const source of [order.primary, order.secondary]) {
+    for (const workout of source) {
+      const match = byId.get(workout.id);
+      if (match && !seen.has(match.id)) {
+        seen.add(match.id);
+        ordered.push(match);
+      }
+    }
+  }
+  for (const workout of kept) {
+    if (!seen.has(workout.id)) {
+      seen.add(workout.id);
+      ordered.push(workout);
+    }
+  }
+  return ordered;
 }
 
 function keepWorkouts(workouts, incoming) {
@@ -238,15 +291,38 @@ function mergeCustomExercises(local, remote) {
 }
 
 function mergeSessions(local, remote) {
+  const deletions = new Map();
+  keepDeletions(deletions, local.deletedSessions);
+  keepDeletions(deletions, remote.deletedSessions);
   const byId = new Map();
-  for (const session of [...(local || []), ...(remote || [])]) {
-    if (!byId.has(session.id)) {
-      byId.set(session.id, session);
-    }
+  for (const session of [...(local.sessions || []), ...(remote.sessions || [])]) {
+    const existing = byId.get(session.id);
+    byId.set(session.id, existing ? sharedSetLogs(existing, session) : session);
   }
-  return [...byId.values()].sort(
+  const keptDeletions = [];
+  for (const [id, deletedAt] of deletions) {
+    byId.delete(id);
+    keptDeletions.push({ id, deletedAt });
+  }
+  const sessions = [...byId.values()].sort(
     (a, b) => Date.parse(b.completedAt) - Date.parse(a.completedAt),
   );
+  return { sessions, deletions: keptDeletions };
+}
+
+function sharedSetLogs(first, second) {
+  const keys = new Set((second.setLogs || []).map(setLogKey));
+  const logs = first.setLogs || [];
+  const shared = logs.filter((log) => keys.has(setLogKey(log)));
+  if (shared.length === logs.length) {
+    return first;
+  }
+  return { ...first, setLogs: shared };
+}
+
+function setLogKey(log) {
+  const round = log.round == null ? 1 : log.round;
+  return `${log.exerciseId}|${round}|${log.setNumber}`;
 }
 
 function newerAppearance(local, remote) {

@@ -1,11 +1,6 @@
+import { bindBlockEditor, readBlocks, renderBlocks } from './editor_blocks.js';
+import { blocksProblem, stationsFromBlocks } from './editor_checks.js';
 import { newId } from './snapshot.js';
-import {
-  bindBlockEditor,
-  blocksProblem,
-  readBlocks,
-  renderBlocks,
-  stationsFromBlocks,
-} from './editor_blocks.js';
 
 let draftId = '';
 let createdAt = '';
@@ -24,6 +19,7 @@ export function openWorkoutEditor(workout) {
   remove.hidden = !workout;
   renderBlocks(blocksForEditor(workout));
   editor.hidden = false;
+  window.scrollTo({ top: 0 });
 }
 
 export function closeWorkoutEditor() {

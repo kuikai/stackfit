@@ -116,6 +116,31 @@ class AccountStore {
     });
   }
 
+  /// The local website account. Created once, then reused. Its password is
+  /// random, so the normal sign-in form cannot open it.
+  Future<StoredUser> developerAccount() async {
+    const email = 'dev@stackfit.local';
+    try {
+      return await signUp(
+        email: email,
+        password: randomHex(24),
+        displayName: 'Developer',
+      );
+    } on AccountStoreException {
+      final existing = await _userByEmail(email);
+      if (existing == null) {
+        rethrow;
+      }
+      return existing;
+    }
+  }
+
+  Future<StoredUser?> _userByEmail(String email) {
+    return _sync(() async {
+      return _usersById[_userIdByEmail[normalizeEmail(email)]]?.view();
+    });
+  }
+
   Future<String> issueToken(String userId) {
     return _sync(() async {
       final token = randomHex(32);

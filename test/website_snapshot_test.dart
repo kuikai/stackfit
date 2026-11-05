@@ -65,6 +65,7 @@ void main() {
     expect(snapshot.workouts.single.exercises.first.type, ExerciseType.sets);
     expect(snapshot.workouts.single.exercises.last.workSeconds, 45);
     expect(snapshot.sessions.single.durationSeconds, 1500);
+    expect(snapshot.deletedSessions, isEmpty);
     expect(snapshot.themeMode, 'system');
     expect(snapshot.customExercises.single.name, 'Farmer Carry');
     expect(snapshot.customExercises.single.sets, 4);

@@ -10,7 +10,7 @@ import 'set_log_list.dart';
 
 /// One finished session: date, duration, and a sets/reps/kg summary.
 /// Tapping a session with logged sets opens them in a bottom sheet.
-class SessionTile extends StatelessWidget {
+class SessionTile extends ConsumerWidget {
   const SessionTile({
     super.key,
     required this.session,
@@ -34,7 +34,7 @@ class SessionTile extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final date = AppUtils.formatSessionDate(session.completedAt);
@@ -64,7 +64,29 @@ class SessionTile extends StatelessWidget {
         onTap: session.hasSetLogs
             ? () => showSessionSetLogs(context, session)
             : null,
-        trailing: Column(
+        trailing: _SessionTrailing(
+          session: session,
+          onDelete: () => _confirmDeleteSession(context, ref, session),
+        ),
+      ),
+    );
+  }
+}
+
+class _SessionTrailing extends StatelessWidget {
+  const _SessionTrailing({required this.session, required this.onDelete});
+
+  final CompletedSession session;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
@@ -82,9 +104,45 @@ class SessionTile extends StatelessWidget {
             ),
           ],
         ),
-      ),
+        IconButton(
+          tooltip: 'Delete session',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.delete_outline_rounded),
+          onPressed: onDelete,
+        ),
+      ],
     );
   }
+}
+
+Future<void> _confirmDeleteSession(
+  BuildContext context,
+  WidgetRef ref,
+  CompletedSession session,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('Delete session?'),
+        content: Text('"${session.workoutName}" will be removed from history.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      );
+    },
+  );
+  if (confirmed != true || !context.mounted) {
+    return;
+  }
+  await ref.read(completedSessionsProvider.notifier).removeSession(session.id);
 }
 
 /// Bottom sheet with every logged set of [session], grouped by exercise.

@@ -4,6 +4,7 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
 import 'account_store.dart';
+import 'dev_sign_in.dart';
 import 'share_routes.dart';
 import 'share_store.dart';
 
@@ -24,6 +25,10 @@ Handler createAccountHandler(
     ..get('/v1/health', _health)
     ..post('/v1/auth/signup', (Request request) => _signUp(request, store))
     ..post('/v1/auth/signin', (Request request) => _signIn(request, store))
+    ..post(
+      '/v1/auth/dev-signin',
+      (Request request) => devSignIn(request, store),
+    )
     ..post('/v1/auth/signout', (Request request) => _signOut(request, store))
     ..post(
       '/v1/auth/request-reset',

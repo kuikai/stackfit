@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:stackfit_server/account_handler.dart';
 import 'package:stackfit_server/account_store.dart';
@@ -175,6 +176,58 @@ void main() {
     );
     expect(otherData.statusCode, 200);
   });
+
+  test('developer sign in opens the same local account', () async {
+    final client = http.Client();
+    addTearDown(client.close);
+
+    final first = await client.post(Uri.parse('$baseUrl/v1/auth/dev-signin'));
+    expect(first.statusCode, 200);
+    final firstBody = _json(first);
+    expect((firstBody['user'] as Map)['email'], 'dev@stackfit.local');
+    final token = firstBody['token'] as String;
+
+    final second = await client.post(Uri.parse('$baseUrl/v1/auth/dev-signin'));
+    expect(second.statusCode, 200);
+    expect(
+      (_json(second)['user'] as Map)['id'],
+      (firstBody['user'] as Map)['id'],
+    );
+
+    final guessed = await _post(client, '$baseUrl/v1/auth/signin', {
+      'email': 'dev@stackfit.local',
+      'password': 'password1',
+    });
+    expect(guessed.statusCode, 401);
+
+    final data = await client.get(
+      Uri.parse('$baseUrl/v1/sync'),
+      headers: {'authorization': 'Bearer $token'},
+    );
+    expect(data.statusCode, 200);
+  });
+
+  test('developer sign in is refused from another computer', () async {
+    final directory = await Directory.systemTemp.createTemp('stackfit-dev');
+    final store = AccountStore(File('${directory.path}/accounts.json'));
+    await store.load();
+    addTearDown(() => directory.delete(recursive: true));
+    final handler = createAccountHandler(store);
+    final remote = InternetAddress('203.0.113.8');
+
+    final missing = await handler(
+      Request('POST', Uri.parse('http://127.0.0.1/v1/auth/dev-signin')),
+    );
+    final away = await handler(
+      Request(
+        'POST',
+        Uri.parse('http://127.0.0.1/v1/auth/dev-signin'),
+        context: {'shelf.io.connection_info': _RemoteConnection(remote)},
+      ),
+    );
+    expect(missing.statusCode, 404);
+    expect(away.statusCode, 404);
+  });
 }
 
 Future<http.Response> _post(
@@ -248,6 +301,19 @@ Future<http.Response> _delete(
     },
     body: jsonEncode(body),
   );
+}
+
+class _RemoteConnection implements HttpConnectionInfo {
+  _RemoteConnection(this.remoteAddress);
+
+  @override
+  final InternetAddress remoteAddress;
+
+  @override
+  int get localPort => 8787;
+
+  @override
+  int get remotePort => 9;
 }
 
 Map<String, dynamic> _workoutSnapshot() {

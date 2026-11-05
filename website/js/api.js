@@ -13,6 +13,10 @@ export class AccountApi {
     });
   }
 
+  async devSignIn() {
+    return this.#send('POST', '/v1/auth/dev-signin');
+  }
+
   async signOut(token) {
     await this.#send('POST', '/v1/auth/signout', { token });
   }

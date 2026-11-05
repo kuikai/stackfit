@@ -1,9 +1,23 @@
-import { formatDuration, newId } from './snapshot.js';
+import { hideAppearance } from './appearance.js';
+import { formatDuration } from './snapshot.js';
+import {
+  addFinishedTabata,
+  classicTabata,
+  nextTabataStep,
+  setupError,
+  tabataNextLabel,
+  tabataTotalSeconds,
+} from './tabata_rules.js';
+import {
+  formatClock,
+  keepAwake,
+  letSleep,
+  playTone,
+  prepareSound,
+  setPhaseBar,
+  setTimerOpen,
+} from './timer_screen.js';
 
-const classicTabata = { work: 20, rest: 10, rounds: 8 };
-
-let audio;
-let wakeLock;
 let run;
 
 export function isTabataPath() {
@@ -16,6 +30,7 @@ export function installTabata(app) {
     event.preventDefault();
     startFromForm(app);
   });
+  document.querySelector('#tabata-form').addEventListener('input', showTotal);
   document.querySelector('#tabata-pause').addEventListener('click', togglePause);
   document.querySelector('#tabata-stop').addEventListener('click', () => stopToSetup());
   document.querySelector('#tabata-again').addEventListener('click', () => stopToSetup());
@@ -28,6 +43,7 @@ export function openTabata(app) {
   document.querySelector('#signed-in').hidden = true;
   document.querySelector('#signed-out').hidden = true;
   document.querySelector('#share-view').hidden = true;
+  hideAppearance();
   document.querySelector('#tabata').hidden = false;
   document.querySelector('#tabata-save').hidden = !app.account.token;
   document.querySelector('#tabata-signin').hidden = Boolean(app.account.token);
@@ -48,17 +64,17 @@ export function stopTabata() {
   stopClock();
 }
 
-export function nextTabataStep(current) {
-  if (current.phase === 'work' && !isLastRound(current) && current.rest > 0) {
-    return { ...current, phase: 'rest', remaining: current.rest };
-  }
-  return nextRound(current);
-}
-
 function fillClassic() {
   document.querySelector('#tabata-work').value = String(classicTabata.work);
   document.querySelector('#tabata-rest').value = String(classicTabata.rest);
   document.querySelector('#tabata-rounds').value = String(classicTabata.rounds);
+  showTotal();
+}
+
+function showTotal() {
+  const setup = readSetup();
+  const total = document.querySelector('#tabata-total');
+  total.textContent = setupError(setup) ? '' : `Total ${formatClock(tabataTotalSeconds(setup))}`;
 }
 
 function startFromForm(app) {
@@ -83,19 +99,6 @@ function readSetup() {
 
 function wholeNumber(selector) {
   return Number(document.querySelector(selector).value);
-}
-
-function setupError(setup) {
-  if (!Number.isInteger(setup.work) || setup.work < 1 || setup.work > 3600) {
-    return 'Work time must be between 1 second and 60 minutes.';
-  }
-  if (!Number.isInteger(setup.rest) || setup.rest < 0 || setup.rest > 600) {
-    return 'Rest time must be between 0 and 10 minutes.';
-  }
-  if (!Number.isInteger(setup.rounds) || setup.rounds < 1 || setup.rounds > 99) {
-    return 'Rounds must be between 1 and 99.';
-  }
-  return '';
 }
 
 function beginRun(setup) {
@@ -140,23 +143,6 @@ function onTick() {
   renderRun();
 }
 
-function isLastRound(current) {
-  return current.roundIndex >= current.rounds - 1;
-}
-
-function nextRound(current) {
-  const roundIndex = current.roundIndex + 1;
-  if (roundIndex >= current.rounds) {
-    return { ...current, phase: 'done', remaining: 0 };
-  }
-  return {
-    ...current,
-    phase: 'work',
-    roundIndex,
-    remaining: current.work,
-  };
-}
-
 function togglePause() {
   if (!run || run.phase === 'done') {
     return;
@@ -166,6 +152,7 @@ function togglePause() {
     run.endsAt = Date.now() + run.remaining * 1000;
   }
   document.querySelector('#tabata-pause').textContent = run.paused ? 'Resume' : 'Pause';
+  renderRun();
 }
 
 function onTimerKey(event) {
@@ -179,16 +166,20 @@ function onTimerKey(event) {
 
 function renderRun() {
   const phase = run.phase === 'rest' ? 'Rest' : 'Work';
-  document.querySelector('#tabata-phase').textContent = phase;
+  const total = run.phase === 'rest' ? run.rest : run.work;
+  document.querySelector('#tabata-phase').textContent = run.paused ? 'Paused' : phase;
   document.querySelector('#tabata-clock').textContent = formatClock(run.remaining);
   document.querySelector('#tabata-round').textContent = `Round ${run.roundIndex + 1} of ${run.rounds}`;
   document.querySelector('#tabata-exercise').textContent = run.name;
-  document.querySelector('#tabata-run').className = `panel tabata-run ${run.phase}`;
+  document.querySelector('#tabata-next').textContent = tabataNextLabel(run);
+  document.querySelector('#tabata-run').className = `timer-screen ${run.phase}${run.paused ? ' paused' : ''}`;
+  setPhaseBar(document.querySelector('#tabata-bar'), run.remaining, total);
   document.title = `${formatClock(run.remaining)} ${phase}`;
 }
 
 function finishRun() {
   stopClock();
+  setTimerOpen(false);
   document.querySelector('#tabata-run').hidden = true;
   document.querySelector('#tabata-done').hidden = false;
   document.querySelector('#tabata-done-time').textContent = formatDuration(run.elapsed);
@@ -202,10 +193,12 @@ function stopToSetup() {
 }
 
 function showSetup() {
+  setTimerOpen(false);
   document.querySelector('#tabata-setup').hidden = false;
   document.querySelector('#tabata-run').hidden = true;
   document.querySelector('#tabata-done').hidden = true;
   document.title = 'StackFit';
+  showTotal();
 }
 
 function showRun() {
@@ -213,6 +206,7 @@ function showRun() {
   document.querySelector('#tabata-done').hidden = true;
   document.querySelector('#tabata-run').hidden = false;
   document.querySelector('#tabata-pause').textContent = 'Pause';
+  setTimerOpen(true);
 }
 
 function stopClock() {
@@ -220,45 +214,7 @@ function stopClock() {
     window.clearInterval(run.timer);
     run.timer = 0;
   }
-  wakeLock?.release?.().catch(() => {});
-  wakeLock = null;
-}
-
-function formatClock(totalSeconds) {
-  const safe = Math.max(0, totalSeconds);
-  const minutes = Math.floor(safe / 60);
-  const seconds = safe % 60;
-  return `${minutes}:${String(seconds).padStart(2, '0')}`;
-}
-
-function prepareSound() {
-  const Context = window.AudioContext || window.webkitAudioContext;
-  if (!Context || audio) {
-    return;
-  }
-  audio = new Context();
-}
-
-function playTone(frequency) {
-  if (!audio) {
-    return;
-  }
-  const tone = audio.createOscillator();
-  const gain = audio.createGain();
-  tone.frequency.value = frequency;
-  gain.gain.value = 0.04;
-  tone.connect(gain);
-  gain.connect(audio.destination);
-  tone.start();
-  tone.stop(audio.currentTime + 0.12);
-}
-
-async function keepAwake() {
-  try {
-    wakeLock = await navigator.wakeLock?.request('screen');
-  } catch {
-    wakeLock = null;
-  }
+  letSleep();
 }
 
 async function saveFinished(app) {
@@ -280,36 +236,4 @@ async function saveFinished(app) {
   } catch (error) {
     app.showBanner(error.message);
   }
-}
-
-function addFinishedTabata(snapshot, finished) {
-  const now = new Date().toISOString();
-  const workoutId = newId();
-  snapshot.workouts.push({
-    id: workoutId,
-    name: finished.name,
-    createdAt: now,
-    updatedAt: now,
-    exercises: [timerExercise(finished)],
-  });
-  snapshot.sessions.push({
-    id: newId(),
-    workoutId,
-    workoutName: finished.name,
-    completedAt: now,
-    durationSeconds: Math.max(1, finished.elapsed),
-    totalExercises: 1,
-  });
-}
-
-function timerExercise(finished) {
-  return {
-    id: newId(),
-    name: finished.name,
-    type: 'timer',
-    workSeconds: finished.work,
-    restSeconds: finished.rest,
-    sets: finished.rounds,
-    reps: null,
-  };
 }

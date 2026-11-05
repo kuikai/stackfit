@@ -11,12 +11,12 @@ import '../../providers/workouts_provider.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/plan_library_tile.dart';
 import '../../widgets/skin_artwork.dart';
-import '../../widgets/skin_panel.dart';
 import '../../widgets/workout_limit_banner.dart';
 import '../../widgets/workout_section_card.dart';
 import '../../widgets/workout_tile.dart';
 import '../history/history_screen.dart';
 import '../settings/settings_screen.dart';
+import 'continue_run_row.dart';
 import 'home_actions.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -161,7 +161,7 @@ class HomeScreen extends ConsumerWidget {
   }) {
     if (index < looseRuns.length) {
       final run = looseRuns[index];
-      return _ContinueRunRow(
+      return ContinueRunRow(
         run: run,
         onContinue: () => openInProgressRun(context, ref, run),
         onStartOver: () => openInProgressRun(context, ref, run, fresh: true),
@@ -174,10 +174,13 @@ class HomeScreen extends ConsumerWidget {
     if (rest == 0) {
       return PlanLibraryTile(onTap: () => openHomePlans(context));
     }
+    final groupIndex = rest - 1;
     return _buildGroup(
       context,
       ref,
-      groups[rest - 1],
+      groups[groupIndex],
+      groupIndex: groupIndex,
+      groupCount: groups.length,
       runs: runs,
       isPro: isPro,
     );
@@ -187,9 +190,13 @@ class HomeScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     WorkoutHomeGroup group, {
+    required int groupIndex,
+    required int groupCount,
     required List<InProgressWorkout> runs,
     required bool isPro,
   }) {
+    final canMoveUp = groupIndex > 0;
+    final canMoveDown = groupIndex < groupCount - 1;
     if (!group.isSection) {
       final workout = group.workouts.single;
       final inProgress = _matchesRun(runs, workout);
@@ -204,6 +211,10 @@ class HomeScreen extends ConsumerWidget {
         onHistory: () => openHomeWorkoutHistory(context, workout),
         onDelete: () => deleteHomeWorkout(context, ref, workout),
         onMoveToSection: () => moveHomeWorkout(context, ref, workout),
+        onMoveUp: () => moveHomeRow(ref, groupIndex, -1),
+        onMoveDown: () => moveHomeRow(ref, groupIndex, 1),
+        canMoveUp: canMoveUp,
+        canMoveDown: canMoveDown,
         onDuplicate: isPro
             ? () => duplicateHomeWorkout(context, ref, workout)
             : null,
@@ -225,6 +236,12 @@ class HomeScreen extends ConsumerWidget {
       onDissolve: () => dissolveHomeSection(context, ref, group.section!),
       onAddWorkout: () =>
           createHomeWorkout(context, ref, section: group.section),
+      onMoveUp: () => moveHomeRow(ref, groupIndex, -1),
+      onMoveDown: () => moveHomeRow(ref, groupIndex, 1),
+      canMoveUp: canMoveUp,
+      canMoveDown: canMoveDown,
+      onMoveWorkoutUp: (workout) => moveHomeWorkoutInSection(ref, workout, -1),
+      onMoveWorkoutDown: (workout) => moveHomeWorkoutInSection(ref, workout, 1),
       onDuplicate: isPro
           ? (workout) => duplicateHomeWorkout(context, ref, workout)
           : null,
@@ -263,69 +280,4 @@ List<InProgressWorkout> _runsNotOnHome(
     for (final run in runs)
       if (run.canResume && !ids.contains(run.workout.id)) run,
   ];
-}
-
-/// A plan day left unfinished, shown because it is not in the workout list.
-class _ContinueRunRow extends StatelessWidget {
-  const _ContinueRunRow({
-    required this.run,
-    required this.onContinue,
-    required this.onStartOver,
-  });
-
-  final InProgressWorkout run;
-  final VoidCallback onContinue;
-  final VoidCallback onStartOver;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final look = context.skinLook;
-    return SkinPanel(
-      margin: EdgeInsets.only(bottom: look.listGap),
-      overPortrait: true,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              run.workout.name,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'In progress',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton(
-                    onPressed: onContinue,
-                    child: const Text('Continue'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: onStartOver,
-                    child: const Text('Start over'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

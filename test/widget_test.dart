@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -78,5 +80,44 @@ void main() {
       find.textContaining('everything stays on this device'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('History deletes a finished session, including one with no sets', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'stackfit_completed_sessions': jsonEncode([
+        {
+          'id': 'session-1',
+          'workoutId': 'w1',
+          'workoutName': 'Push day',
+          'completedAt': '2026-10-31T18:00:00.000Z',
+          'durationSeconds': 600,
+          'totalExercises': 1,
+        },
+      ]),
+    });
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+        child: const StackFitApp(),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('History'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Push day'), findsOneWidget);
+    await tester.tap(find.byTooltip('Delete session'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete session?'), findsOneWidget);
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No sessions yet'), findsOneWidget);
+    expect(prefs.getString('stackfit_deleted_sessions'), contains('session-1'));
   });
 }

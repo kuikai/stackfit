@@ -1,0 +1,163 @@
+.circuit-box {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  margin: var(--space-3) 0;
+  background: var(--raised);
+}
+
+.circuit-box .exercise { background: var(--surface); }
+.circuit-box .meta { margin: var(--space-1) 0 0; }
+
+.editor { max-width: 720px; margin-left: auto; margin-right: auto; }
+.editor .exercise { padding: var(--space-4); margin: var(--space-3) 0; }
+
+.card-head { display: flex; gap: var(--space-2); align-items: center; }
+.card-head h3 { margin-right: auto; }
+
+.card-head .segment { margin: 0 auto 0 0; }
+
+.exercise .exercise-name {
+  width: 100%;
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-3);
+  font-weight: 700;
+}
+
+.step-badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--soft);
+  color: var(--accent-ink);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.icon-buttons { display: flex; gap: 2px; flex: none; }
+
+.icon-button {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.icon-button:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
+.icon-button:disabled { opacity: 0.3; cursor: default; }
+.icon-button[data-action^="remove"]:hover { color: var(--danger); background: var(--danger-soft); }
+
+.number-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  align-items: end;
+  margin-top: var(--space-3);
+}
+
+.number-row.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.number-field { margin: 0; gap: var(--space-1); font-size: 13px; color: var(--muted); }
+
+.stepper {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--field);
+  overflow: hidden;
+}
+
+.stepper input {
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-3) 0;
+  border: 0;
+  border-radius: 0;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  -moz-appearance: textfield;
+}
+
+.stepper input::-webkit-outer-spin-button,
+.stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.stepper button {
+  flex: none;
+  width: 34px;
+  padding: 0;
+  border-radius: 0;
+  background: var(--raised);
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.stepper button:active { background: var(--pressed); }
+
+.add-row { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-2) 0 var(--space-1); }
+
+.add-button {
+  flex: 1;
+  border: 1.5px dashed var(--line-strong);
+  background: transparent;
+  color: var(--accent-ink);
+}
+
+.add-button:hover { background: var(--raised); }
+.circuit-box .add-button { width: 100%; margin-top: var(--space-1); }
+
+.editor-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  margin: var(--space-4) calc(-1 * var(--panel-pad)) calc(-1 * var(--panel-pad));
+  padding: var(--space-3) var(--panel-pad) calc(var(--space-3) + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: var(--bar);
+  backdrop-filter: blur(6px);
+}
+
+.editor-bar .primary { min-width: 160px; }
+.danger-text { color: var(--danger); }
+
+.segment {
+  display: inline-flex;
+  gap: 2px;
+  margin-top: var(--space-3);
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--hover);
+}
+
+.segment button {
+  padding: 7px var(--space-4);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.segment button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(18, 32, 24, 0.12);
+}
+
+@media (max-width: 640px) {
+  .editor-bar button { flex: 1; }
+  .editor-bar .primary { min-width: 0; }
+  .editor .exercise, .circuit-box { padding: var(--space-3); }
+  .number-row { gap: var(--space-2); }
+  .stepper button { width: 28px; }
+}

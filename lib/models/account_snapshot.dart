@@ -4,7 +4,8 @@ import 'catalog_exercise.dart';
 import 'completed_session.dart';
 import 'workout.dart';
 
-/// A workout removed on one device. The newer timestamp wins against edits.
+/// A workout or finished session removed on one device.
+/// The newer timestamp wins against a later edit of that workout.
 class WorkoutDeletion {
   const WorkoutDeletion({required this.id, required this.deletedAt});
 
@@ -27,21 +28,25 @@ class WorkoutDeletion {
 ///
 /// Pro is intentionally absent. It stays a store purchase on the device.
 class AccountSnapshot {
-  const AccountSnapshot({
+  // DateTime.utc is not a constant here, so this constructor stays non-const.
+  AccountSnapshot({
     required this.workouts,
     required this.deletedWorkouts,
     required this.sessions,
     required this.themeMode,
     required this.skin,
     required this.appearanceUpdatedAt,
+    this.deletedSessions = const [],
     this.customExercises = const [],
-  });
+    DateTime? homeOrderUpdatedAt,
+  }) : homeOrderUpdatedAt = homeOrderUpdatedAt ?? DateTime.utc(1970);
 
   factory AccountSnapshot.empty() {
     return AccountSnapshot(
       workouts: const [],
       deletedWorkouts: const [],
       sessions: const [],
+      deletedSessions: const [],
       customExercises: const [],
       themeMode: 'system',
       skin: 'classic',
@@ -53,6 +58,9 @@ class AccountSnapshot {
   final List<WorkoutDeletion> deletedWorkouts;
   final List<CompletedSession> sessions;
 
+  /// Finished sessions removed on one device. A deletion always wins.
+  final List<WorkoutDeletion> deletedSessions;
+
   /// Exercises the user added. Shown in the catalog under Custom.
   final List<CatalogExercise> customExercises;
 
@@ -61,23 +69,30 @@ class AccountSnapshot {
   final String skin;
   final DateTime appearanceUpdatedAt;
 
+  /// When Home was last rearranged. The 1970 default means "still alphabetical".
+  final DateTime homeOrderUpdatedAt;
+
   AccountSnapshot copyWith({
     List<Workout>? workouts,
     List<WorkoutDeletion>? deletedWorkouts,
     List<CompletedSession>? sessions,
+    List<WorkoutDeletion>? deletedSessions,
     List<CatalogExercise>? customExercises,
     String? themeMode,
     String? skin,
     DateTime? appearanceUpdatedAt,
+    DateTime? homeOrderUpdatedAt,
   }) {
     return AccountSnapshot(
       workouts: workouts ?? this.workouts,
       deletedWorkouts: deletedWorkouts ?? this.deletedWorkouts,
       sessions: sessions ?? this.sessions,
+      deletedSessions: deletedSessions ?? this.deletedSessions,
       customExercises: customExercises ?? this.customExercises,
       themeMode: themeMode ?? this.themeMode,
       skin: skin ?? this.skin,
       appearanceUpdatedAt: appearanceUpdatedAt ?? this.appearanceUpdatedAt,
+      homeOrderUpdatedAt: homeOrderUpdatedAt ?? this.homeOrderUpdatedAt,
     );
   }
 
@@ -91,12 +106,16 @@ class AccountSnapshot {
           .map((deletion) => deletion.toJson())
           .toList(),
       'sessions': sessions.map((session) => session.toJson()).toList(),
+      'deletedSessions': deletedSessions
+          .map((deletion) => deletion.toJson())
+          .toList(),
       'customExercises': customExercises
           .map((exercise) => exercise.toJson())
           .toList(),
       'themeMode': themeMode,
       'skin': skin,
       'appearanceUpdatedAt': appearanceUpdatedAt.toIso8601String(),
+      'homeOrderUpdatedAt': homeOrderUpdatedAt.toIso8601String(),
     };
   }
 
@@ -106,6 +125,7 @@ class AccountSnapshot {
     _sortById(json['workouts'] as List<dynamic>);
     _sortById(json['deletedWorkouts'] as List<dynamic>);
     _sortById(json['sessions'] as List<dynamic>);
+    _sortById(json['deletedSessions'] as List<dynamic>);
     _sortById(json['customExercises'] as List<dynamic>);
     return jsonEncode(json);
   }
@@ -118,6 +138,10 @@ class AccountSnapshot {
         WorkoutDeletion.fromJson,
       ),
       sessions: _mapList(json['sessions'], CompletedSession.fromJson),
+      deletedSessions: _mapList(
+        json['deletedSessions'],
+        WorkoutDeletion.fromJson,
+      ),
       customExercises: _mapList(
         json['customExercises'],
         CatalogExercise.fromJson,
@@ -126,6 +150,9 @@ class AccountSnapshot {
       skin: json['skin'] as String? ?? 'classic',
       appearanceUpdatedAt:
           DateTime.tryParse(json['appearanceUpdatedAt'] as String? ?? '') ??
+          DateTime.utc(1970),
+      homeOrderUpdatedAt:
+          DateTime.tryParse(json['homeOrderUpdatedAt'] as String? ?? '') ??
           DateTime.utc(1970),
     );
   }

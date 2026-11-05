@@ -4,26 +4,45 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>StackFit</title>
+    <script src="/js/appearance_boot.js"></script>
+    <link rel="icon" href="/icons/app-mark.png" type="image/png">
+    <link rel="apple-touch-icon" href="/icons/app-icon-180.png">
+    <meta name="theme-color" content="#0c0c0c">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/theme.css">
+    <link rel="stylesheet" href="/skins.css">
     <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/library.css">
+    <link rel="stylesheet" href="/share.css">
+    <link rel="stylesheet" href="/timer.css">
+    <link rel="stylesheet" href="/editor.css">
+    <link rel="stylesheet" href="/appearance.css">
+    <link rel="stylesheet" href="/states.css">
   </head>
   <body>
     <header class="topbar">
-      <div>
-        <p class="brand">StackFit</p>
-        <p class="tagline">Custom workouts. Clean timers.</p>
-      </div>
-      <div class="toolbar-actions">
-        <a class="ghost" href="/tabata">Tabata</a>
-        <a class="ghost" href="/privacy.html">Privacy</a>
-        <div id="account-bar" hidden>
-        <span id="account-email"></span>
-        <button id="delete-account" class="ghost" type="button">Delete account</button>
-        <button id="sign-out" class="ghost" type="button">Sign out</button>
-        </div>
-      </div>
+      <a class="brand" href="/">
+        <img class="brand-mark" src="/icons/app-mark.png" alt="" width="28" height="28">
+        <span>StackFit</span>
+        <span class="tagline">Custom workouts. Clean timers.</span>
+      </a>
+      <nav class="topbar-actions">
+        <a class="nav-link" href="/tabata">Tabata</a>
+        <button id="open-appearance" class="nav-link" type="button">Appearance</button>
+        <details id="account-bar" class="menu" hidden>
+          <summary class="avatar" aria-label="Account menu">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="currentColor"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" fill="currentColor"/></svg>
+          </summary>
+          <div class="menu-panel">
+            <p id="account-email" class="menu-label"></p>
+            <a class="menu-item" href="/privacy.html">Privacy</a>
+            <button id="sign-out" class="menu-item" type="button">Sign out</button>
+            <button id="delete-account" class="menu-item menu-danger" type="button">Delete account</button>
+          </div>
+        </details>
+      </nav>
     </header>
 
     <p id="banner" class="banner" role="alert" hidden></p>
@@ -44,6 +63,10 @@
         <div class="link-row">
           <button id="show-sign-up" class="text" type="button">Create account</button>
           <button id="show-reset" class="text" type="button">Forgot password</button>
+        </div>
+        <div id="dev-sign-in-row" hidden>
+          <button id="dev-sign-in" class="primary" type="button">Developer sign in</button>
+          <p class="lede">This computer only. Same local account each time.</p>
         </div>
       </section>
 
@@ -91,59 +114,98 @@
       </section>
     </main>
 
-    <main id="share-view" class="wrap" hidden>
+    <main id="appearance" class="wrap" hidden>
       <section class="panel">
-        <p id="share-error" class="lede" hidden></p>
-        <div id="share-content">
-          <p id="share-kicker" class="lede"></p>
-          <h1 id="share-title"></h1>
-          <p id="share-summary" class="lede"></p>
-          <div id="share-body"></div>
-          <p id="share-note" class="lede"></p>
-          <div class="button-row">
-            <button id="share-add" class="primary" type="button">Add to my account</button>
-            <button id="share-copy" class="ghost" type="button">Copy link</button>
-            <a class="text" href="/">My workouts</a>
-          </div>
+        <div class="section-head">
+          <h1>Appearance</h1>
+          <button id="close-appearance" class="text" type="button">Close</button>
+        </div>
+        <p class="lede">This computer only. The phone keeps its own skins.</p>
+        <h2>Skin</h2>
+        <div id="skin-choices" class="skin-grid"></div>
+        <h2>Brightness</h2>
+        <div id="theme-choices" class="segment" role="group" aria-label="Brightness">
+          <button type="button" data-theme="dark" aria-pressed="true">Dark</button>
+          <button type="button" data-theme="light" aria-pressed="false">Light</button>
+          <button type="button" data-theme="system" aria-pressed="false">System</button>
         </div>
       </section>
+    </main>
+
+    <main id="share-view" class="wrap share-wrap" hidden>
+      <a id="share-home" class="text back-link" href="/" hidden>← My workouts</a>
+      <section class="panel share-panel">
+        <div id="share-error" hidden>
+          <h1>Link not available</h1>
+          <p id="share-error-text" class="lede"></p>
+          <a class="primary button-link" href="/">Open StackFit</a>
+        </div>
+        <div id="share-content">
+          <p id="share-kicker" class="kicker"></p>
+          <h1 id="share-title"></h1>
+          <p id="share-summary" class="meta"></p>
+          <div id="share-body" class="share-body"></div>
+          <div class="button-row share-actions">
+            <button id="share-add" class="primary" type="button">Add to my workouts</button>
+            <button id="share-copy" class="ghost" type="button">Copy link</button>
+          </div>
+          <p id="share-note" class="meta share-note"></p>
+        </div>
+      </section>
+      <aside class="app-promo">
+        <img src="/icons/app-mark.png" alt="" width="48" height="48">
+        <div>
+          <strong>Made with StackFit</strong>
+          <p class="meta">Build workouts once, then run them with a big timer on your phone or in the browser.</p>
+          <a id="get-app" class="primary button-link" href="#" target="_blank" rel="noopener" hidden>Get the app</a>
+        </div>
+      </aside>
     </main>
 
     <main id="tabata" class="wrap" hidden>
       <section class="panel" id="tabata-setup">
         <h1>Tabata</h1>
         <p class="lede">Set the work, rest, and rounds, then start. Rest is skipped after the last round.</p>
-        <button id="tabata-classic" class="ghost" type="button">Classic 20 / 10 × 8</button>
         <form id="tabata-form">
           <label class="field">Exercise
             <input id="tabata-name" type="text" value="Tabata" maxlength="80">
           </label>
           <div class="tabata-fields">
-            <label class="field">Work seconds
-              <input id="tabata-work" type="number" min="1" max="3600" value="20" required>
+            <label class="field">Work (s)
+              <input id="tabata-work" type="number" inputmode="numeric" min="1" max="3600" value="20" required>
             </label>
-            <label class="field">Rest seconds
-              <input id="tabata-rest" type="number" min="0" max="600" value="10" required>
+            <label class="field">Rest (s)
+              <input id="tabata-rest" type="number" inputmode="numeric" min="0" max="600" value="10" required>
             </label>
             <label class="field">Rounds
-              <input id="tabata-rounds" type="number" min="1" max="99" value="8" required>
+              <input id="tabata-rounds" type="number" inputmode="numeric" min="1" max="99" value="8" required>
             </label>
           </div>
+          <div class="tabata-summary">
+            <p id="tabata-total" class="tabata-total">Total 4:00</p>
+            <button id="tabata-classic" class="text" type="button">Reset to classic 20 / 10 × 8</button>
+          </div>
           <div class="button-row">
-            <button class="primary" type="submit">Start</button>
+            <button class="primary wide" type="submit">Start</button>
             <a class="text" href="/">My workouts</a>
           </div>
         </form>
       </section>
 
-      <section class="panel tabata-run" id="tabata-run" hidden>
-        <p id="tabata-phase" class="tabata-phase">Work</p>
-        <p id="tabata-clock" class="tabata-clock">0:20</p>
-        <p id="tabata-round" class="lede">Round 1 of 8</p>
-        <p id="tabata-exercise" class="lede"></p>
-        <div class="button-row">
-          <button id="tabata-pause" class="primary" type="button">Pause</button>
-          <button id="tabata-stop" class="danger" type="button">Stop</button>
+      <section class="timer-screen" id="tabata-run" hidden>
+        <div class="timer-top">
+          <button id="tabata-stop" class="timer-close" type="button">End</button>
+          <p id="tabata-round" class="timer-progress">Round 1 of 8</p>
+        </div>
+        <div class="timer-body">
+          <p id="tabata-phase" class="tabata-phase">Work</p>
+          <h2 id="tabata-exercise" class="timer-name"></h2>
+          <p id="tabata-clock" class="tabata-clock">0:20</p>
+          <div class="timer-bar"><span id="tabata-bar"></span></div>
+          <p id="tabata-next" class="timer-next"></p>
+        </div>
+        <div class="timer-controls">
+          <button id="tabata-pause" class="timer-button main-action" type="button">Pause</button>
         </div>
       </section>
 
@@ -161,25 +223,36 @@
 
     <main id="signed-in" class="wrap" hidden>
       <div class="toolbar">
-        <p id="save-status">Saved</p>
+        <p id="save-status" class="save-status" data-state="ok">Saved</p>
         <div class="toolbar-actions">
-          <button id="refresh" class="ghost" type="button">Refresh</button>
-          <button id="log-session" class="ghost" type="button">Log session</button>
           <button id="new-workout" class="primary" type="button">Create workout</button>
+          <details class="menu">
+            <summary class="ghost menu-button">More</summary>
+            <div class="menu-panel">
+              <button id="open-import" class="menu-item" type="button">Import a workout</button>
+              <button id="refresh" class="menu-item" type="button">Refresh</button>
+            </div>
+          </details>
         </div>
       </div>
 
-      <section id="workout-run" class="panel tabata-run" hidden>
-        <p id="run-progress" class="lede"></p>
-        <h2 id="run-name"></h2>
-        <p id="run-phase" class="tabata-phase">Work</p>
-        <p id="run-clock" class="tabata-clock">0:00</p>
-        <p id="run-detail" class="lede"></p>
-        <div class="button-row">
-          <button id="run-primary" class="primary" type="button">Done</button>
-          <button id="run-pause" class="ghost" type="button">Pause</button>
-          <button id="run-skip" class="ghost" type="button">Skip</button>
-          <button id="run-stop" class="danger" type="button">Stop</button>
+      <section id="workout-run" class="timer-screen" hidden>
+        <div class="timer-top">
+          <button id="run-stop" class="timer-close" type="button">End</button>
+          <p id="run-progress" class="timer-progress"></p>
+        </div>
+        <div class="timer-body">
+          <p id="run-phase" class="tabata-phase">Work</p>
+          <h2 id="run-name" class="timer-name"></h2>
+          <p id="run-clock" class="tabata-clock">0:00</p>
+          <div class="timer-bar"><span id="run-bar"></span></div>
+          <p id="run-detail" class="timer-detail"></p>
+          <p id="run-next" class="timer-next"></p>
+        </div>
+        <div class="timer-controls">
+          <button id="run-pause" class="timer-button" type="button">Pause</button>
+          <button id="run-skip" class="timer-button" type="button">Skip</button>
+          <button id="run-primary" class="timer-button main-action" type="button">Done</button>
         </div>
       </section>
 
@@ -192,8 +265,11 @@
         </div>
       </section>
 
-      <section class="panel" id="receive">
-        <h2>Add a workout</h2>
+      <section class="panel" id="receive" hidden>
+        <div class="section-head">
+          <h2>Import a workout</h2>
+          <button id="close-import" class="text" type="button">Close</button>
+        </div>
         <p class="lede">Paste a StackFit link, or choose a routine file from another site.</p>
         <form id="receive-link-form" class="receive-row">
           <label class="field">Link or code
@@ -217,6 +293,7 @@
             <h2>History</h2>
             <button id="share-progress" class="text" type="button">Share</button>
           </div>
+          <div id="history-stats" class="stats"></div>
           <div id="history-list"></div>
         </section>
       </div>
@@ -231,48 +308,31 @@
         </div>
       </section>
 
-      <section id="editor" class="panel" hidden>
-        <h2 id="editor-title">Create workout</h2>
+      <section id="editor" class="panel editor" hidden>
+        <div class="section-head">
+          <h2 id="editor-title">Create workout</h2>
+          <button id="delete-workout" class="text danger-text" type="button" hidden>Delete workout</button>
+        </div>
         <form id="workout-form">
           <label class="field">Workout name
-            <input id="workout-name" name="name" type="text" required>
+            <input id="workout-name" name="name" type="text" placeholder="Push day" required>
           </label>
           <div id="exercise-list"></div>
-          <div class="button-row">
-            <button id="add-exercise" class="ghost" type="button">Add exercise</button>
-            <button id="add-circuit" class="ghost" type="button">Add circuit</button>
-            <button id="save-workout" class="primary" type="submit">Save workout</button>
+          <div class="add-row">
+            <button id="add-exercise" class="add-button" type="button">+ Add exercise</button>
+            <button id="add-circuit" class="add-button" type="button">+ Add circuit</button>
+          </div>
+          <div class="editor-bar">
             <button id="cancel-editor" class="ghost" type="button">Cancel</button>
-            <button id="delete-workout" class="danger" type="button" hidden>Delete workout</button>
-          </div>
-        </form>
-      </section>
-
-      <section id="session-editor" class="panel" hidden>
-        <h2>Log session</h2>
-        <p class="lede">Add a finished workout by hand. The phone picks it up the next time it syncs.</p>
-        <form id="session-form">
-          <label class="field">Workout
-            <select id="session-workout" required></select>
-          </label>
-          <label class="field">When
-            <input id="session-when" type="datetime-local" required>
-          </label>
-          <div class="split">
-            <label class="field">Minutes
-              <input id="session-minutes" type="number" min="0" value="0" required>
-            </label>
-            <label class="field">Seconds
-              <input id="session-seconds" type="number" min="0" max="59" value="0" required>
-            </label>
-          </div>
-          <div class="button-row">
-            <button class="primary" type="submit">Add session</button>
-            <button id="cancel-session" class="ghost" type="button">Cancel</button>
+            <button id="save-workout" class="primary" type="submit">Save workout</button>
           </div>
         </form>
       </section>
     </main>
+
+    <footer class="site-footer">
+      <a href="/privacy.html">Privacy</a>
+    </footer>
 
     <div id="delete-account-panel" class="delete-dialog" hidden>
       <section class="panel">

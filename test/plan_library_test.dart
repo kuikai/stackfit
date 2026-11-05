@@ -153,6 +153,58 @@ void main() {
       expect(groups[2].workouts.single.id, 'core');
     });
 
+    test('moves a section past the loose workout below it', () {
+      final workouts = [
+        fake('push'),
+        fake('chest', section: 'Bro Split'),
+        fake('core'),
+        fake('back', section: 'Bro Split'),
+      ];
+      final moved = moveHomeGroup(workouts, 1, 2);
+      expect(moved.map((workout) => workout.id), [
+        'push',
+        'core',
+        'chest',
+        'back',
+      ]);
+      expect(moved[2].section, 'Bro Split');
+      expect(moved[2].updatedAt, workouts[1].updatedAt);
+    });
+
+    test('swaps two workouts inside a section', () {
+      final workouts = [
+        fake('push'),
+        fake('chest', section: 'Bro Split'),
+        fake('core'),
+        fake('back', section: 'Bro Split'),
+      ];
+      final moved = moveWorkoutInsideSection(workouts, 'back', -1);
+      expect(moved.map((workout) => workout.id), [
+        'push',
+        'back',
+        'chest',
+        'core',
+      ]);
+      expect(
+        moved
+            .where((workout) => workout.section == 'Bro Split')
+            .map((w) => w.id),
+        ['back', 'chest'],
+      );
+    });
+
+    test('a move past the end leaves the list alone', () {
+      final workouts = [
+        fake('chest', section: 'Bro Split'),
+        fake('back', section: 'Bro Split'),
+      ];
+      expect(
+        identical(moveWorkoutInsideSection(workouts, 'chest', -1), workouts),
+        isTrue,
+      );
+      expect(identical(moveHomeGroup(workouts, 0, -1), workouts), isTrue);
+    });
+
     test('omits section from JSON when ungrouped', () {
       final workout = fake('solo');
       expect(workout.toJson().containsKey('section'), isFalse);

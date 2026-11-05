@@ -1,0 +1,44 @@
+/* Night is the default. Other skins live in skins.css. */
+:root {
+  color-scheme: dark;
+  --primary: #f2f2f2;
+  --primary-ink: #111111;
+  --accent-ink: #f2f2f2;
+  --background: #0c0c0c;
+  --surface: #171717;
+  --field: #111111;
+  --raised: #1c1c1c;
+  --soft: #222222;
+  --hover: #242424;
+  --pressed: #2c2c2c;
+  --ink: #f2f2f2;
+  --muted: #9a9a9a;
+  --line: #2a2a2a;
+  --line-strong: #3a3a3a;
+  --danger: #ff8a80;
+  --danger-soft: #3a1c19;
+  --warning: #f2c94c;
+  --timer-work: #222222;
+  --timer-work-ink: #ffffff;
+  --timer-rest: #050505;
+  --timer-rest-ink: #ffffff;
+  --timer-rest-accent: #c8c8c8;
+  --timer-action: #ffffff;
+  --timer-action-ink: #111111;
+  --overlay: rgba(0, 0, 0, 0.6);
+  --bar: rgba(23, 23, 23, 0.96);
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --shadow-menu: 0 16px 40px rgba(0, 0, 0, 0.5);
+  --focus: #f2f2f2;
+  --focus-soft: rgba(242, 242, 242, 0.25);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --radius: 18px;
+  font-family: "Plus Jakarta Sans", sans-serif;
+}

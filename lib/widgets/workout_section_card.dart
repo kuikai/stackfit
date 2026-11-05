@@ -20,6 +20,12 @@ class WorkoutSectionCard extends StatelessWidget {
     required this.onRename,
     required this.onDissolve,
     required this.onAddWorkout,
+    required this.onMoveUp,
+    required this.onMoveDown,
+    required this.canMoveUp,
+    required this.canMoveDown,
+    required this.onMoveWorkoutUp,
+    required this.onMoveWorkoutDown,
     this.onDuplicate,
     this.onStartOver,
     this.isInProgress,
@@ -35,6 +41,12 @@ class WorkoutSectionCard extends StatelessWidget {
   final VoidCallback onRename;
   final VoidCallback onDissolve;
   final VoidCallback onAddWorkout;
+  final VoidCallback onMoveUp;
+  final VoidCallback onMoveDown;
+  final bool canMoveUp;
+  final bool canMoveDown;
+  final void Function(Workout workout) onMoveWorkoutUp;
+  final void Function(Workout workout) onMoveWorkoutDown;
   final void Function(Workout workout)? onDuplicate;
   final void Function(Workout workout)? onStartOver;
   final bool Function(Workout workout)? isInProgress;
@@ -88,22 +100,36 @@ class WorkoutSectionCard extends StatelessWidget {
             switch (action) {
               case _SectionMenuAction.add:
                 onAddWorkout();
+              case _SectionMenuAction.moveUp:
+                onMoveUp();
+              case _SectionMenuAction.moveDown:
+                onMoveDown();
               case _SectionMenuAction.rename:
                 onRename();
               case _SectionMenuAction.dissolve:
                 onDissolve();
             }
           },
-          itemBuilder: (context) => const [
-            PopupMenuItem(
+          itemBuilder: (context) => [
+            const PopupMenuItem(
               value: _SectionMenuAction.add,
               child: Text('Add workout'),
             ),
             PopupMenuItem(
+              value: _SectionMenuAction.moveUp,
+              enabled: canMoveUp,
+              child: const Text('Move up'),
+            ),
+            PopupMenuItem(
+              value: _SectionMenuAction.moveDown,
+              enabled: canMoveDown,
+              child: const Text('Move down'),
+            ),
+            const PopupMenuItem(
               value: _SectionMenuAction.rename,
               child: Text('Rename section'),
             ),
-            PopupMenuItem(
+            const PopupMenuItem(
               value: _SectionMenuAction.dissolve,
               child: Text('Ungroup'),
             ),
@@ -121,6 +147,10 @@ class WorkoutSectionCard extends StatelessWidget {
               onHistory: () => onHistory(workouts[i]),
               onDelete: () => onDelete(workouts[i]),
               onMoveToSection: () => onMoveToSection(workouts[i]),
+              onMoveUp: () => onMoveWorkoutUp(workouts[i]),
+              onMoveDown: () => onMoveWorkoutDown(workouts[i]),
+              canMoveUp: i > 0,
+              canMoveDown: i < workouts.length - 1,
               onDuplicate: onDuplicate == null
                   ? null
                   : () => onDuplicate!(workouts[i]),
@@ -133,4 +163,4 @@ class WorkoutSectionCard extends StatelessWidget {
   }
 }
 
-enum _SectionMenuAction { add, rename, dissolve }
+enum _SectionMenuAction { add, moveUp, moveDown, rename, dissolve }

@@ -183,3 +183,72 @@ List<WorkoutHomeGroup> groupWorkoutsForHome(List<Workout> workouts) {
   }
   return groups;
 }
+
+/// Moves the Home row at [from] so it lands at [to].
+///
+/// A row is one section or one ungrouped workout. Out-of-range indexes leave
+/// the list as it is. Sections come out as contiguous blocks.
+List<Workout> moveHomeGroup(List<Workout> workouts, int from, int to) {
+  final groups = groupWorkoutsForHome(workouts);
+  if (from < 0 ||
+      to < 0 ||
+      from >= groups.length ||
+      to >= groups.length ||
+      from == to) {
+    return workouts;
+  }
+  final next = [...groups];
+  final moved = next.removeAt(from);
+  next.insert(to, moved);
+  return _flattenHomeGroups(next);
+}
+
+/// Moves [workoutId] up or down inside its section.
+///
+/// [direction] is -1 or 1. An ungrouped workout, or a move past either end,
+/// leaves the list as it is. Sections come out as contiguous blocks.
+List<Workout> moveWorkoutInsideSection(
+  List<Workout> workouts,
+  String workoutId,
+  int direction,
+) {
+  final groups = groupWorkoutsForHome(workouts);
+  final next = <WorkoutHomeGroup>[];
+  var changed = false;
+  for (final group in groups) {
+    final reordered = _shiftInsideSection(group, workoutId, direction);
+    if (reordered == null) {
+      next.add(group);
+      continue;
+    }
+    next.add(reordered);
+    changed = true;
+  }
+  if (!changed) {
+    return workouts;
+  }
+  return _flattenHomeGroups(next);
+}
+
+WorkoutHomeGroup? _shiftInsideSection(
+  WorkoutHomeGroup group,
+  String workoutId,
+  int direction,
+) {
+  if (!group.isSection) {
+    return null;
+  }
+  final index = group.workouts.indexWhere((workout) => workout.id == workoutId);
+  final target = index + direction;
+  if (index < 0 || target < 0 || target >= group.workouts.length) {
+    return null;
+  }
+  final reordered = [...group.workouts];
+  final moved = reordered.removeAt(index);
+  reordered.insert(target, moved);
+  return WorkoutHomeGroup(section: group.section, workouts: reordered);
+}
+
+List<Workout> _flattenHomeGroups(List<WorkoutHomeGroup> groups) {
+  return [for (final group in groups) ...group.workouts];
+}

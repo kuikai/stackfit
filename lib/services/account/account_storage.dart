@@ -61,7 +61,9 @@ class AccountStorage {
   static const _originKey = 'stackfit_data_origin';
   static const _unmovedKey = 'stackfit_unmoved_device_snapshot';
   static const _deletionsKey = 'stackfit_deleted_workouts';
+  static const _sessionDeletionsKey = 'stackfit_deleted_sessions';
   static const _appearanceUpdatedAtKey = 'stackfit_appearance_updated_at';
+  static const _homeOrderUpdatedAtKey = 'stackfit_home_order_updated_at';
 
   AccountSession? loadSession() {
     final raw = _prefs.getString(_sessionKey);
@@ -106,8 +108,41 @@ class AccountStorage {
     );
   }
 
-  List<WorkoutDeletion> loadDeletions() {
-    final raw = _prefs.getString(_deletionsKey);
+  DateTime loadHomeOrderUpdatedAt() {
+    final raw = _prefs.getString(_homeOrderUpdatedAtKey);
+    return DateTime.tryParse(raw ?? '') ?? DateTime.utc(1970);
+  }
+
+  Future<void> setHomeOrderUpdatedAt(DateTime updatedAt) async {
+    await _prefs.setString(
+      _homeOrderUpdatedAtKey,
+      updatedAt.toUtc().toIso8601String(),
+    );
+  }
+
+  List<WorkoutDeletion> loadDeletions() => _readDeletions(_deletionsKey);
+
+  List<WorkoutDeletion> loadSessionDeletions() =>
+      _readDeletions(_sessionDeletionsKey);
+
+  Future<void> addDeletion(String id, DateTime deletedAt) {
+    return _addDeletion(_deletionsKey, id, deletedAt);
+  }
+
+  Future<void> addSessionDeletion(String id, DateTime deletedAt) {
+    return _addDeletion(_sessionDeletionsKey, id, deletedAt);
+  }
+
+  Future<void> replaceDeletions(List<WorkoutDeletion> deletions) {
+    return _writeDeletions(_deletionsKey, deletions);
+  }
+
+  Future<void> replaceSessionDeletions(List<WorkoutDeletion> deletions) {
+    return _writeDeletions(_sessionDeletionsKey, deletions);
+  }
+
+  List<WorkoutDeletion> _readDeletions(String key) {
+    final raw = _prefs.getString(key);
     if (raw == null || raw.isEmpty) {
       return const [];
     }
@@ -120,13 +155,13 @@ class AccountStorage {
           )
           .toList();
     } catch (_) {
-      // Saved deletions were unreadable. Keep the workouts that are still here.
+      // Saved deletions were unreadable. Keep the items that are still here.
       return const [];
     }
   }
 
-  Future<void> addDeletion(String id, DateTime deletedAt) async {
-    final deletions = [...loadDeletions()];
+  Future<void> _addDeletion(String key, String id, DateTime deletedAt) async {
+    final deletions = [..._readDeletions(key)];
     final existingIndex = deletions.indexWhere((item) => item.id == id);
     final deletion = WorkoutDeletion(id: id, deletedAt: deletedAt.toUtc());
     if (existingIndex >= 0) {
@@ -137,16 +172,19 @@ class AccountStorage {
     } else {
       deletions.add(deletion);
     }
-    await replaceDeletions(deletions);
+    await _writeDeletions(key, deletions);
   }
 
-  Future<void> replaceDeletions(List<WorkoutDeletion> deletions) async {
+  Future<void> _writeDeletions(
+    String key,
+    List<WorkoutDeletion> deletions,
+  ) async {
     if (deletions.isEmpty) {
-      await _prefs.remove(_deletionsKey);
+      await _prefs.remove(key);
       return;
     }
     await _prefs.setString(
-      _deletionsKey,
+      key,
       jsonEncode(deletions.map((item) => item.toJson()).toList()),
     );
   }

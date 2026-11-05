@@ -1,0 +1,79 @@
+/* Keyboard focus. :focus-visible leaves mouse and touch clicks alone. */
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+input:focus-visible, select:focus-visible {
+  outline: none;
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px var(--focus-soft);
+}
+
+.stepper:focus-within {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px var(--focus-soft);
+}
+
+.stepper input:focus-visible { box-shadow: none; }
+.stepper button:focus-visible { outline-offset: -3px; }
+.segment button:focus-visible, .icon-button:focus-visible { outline-offset: 0; }
+
+.timer-screen.work :focus-visible,
+.timer-screen.rest :focus-visible { outline-color: #fff; }
+
+/* Screen changes. A CSS animation restarts whenever an element goes from
+   display: none to shown, so un-hiding a panel is enough to play it. */
+@media (prefers-reduced-motion: no-preference) {
+  .panel, #library, .app-promo, .banner { animation: rise-in 220ms ease-out; }
+  .timer-screen { animation: fade-in 180ms ease-out; }
+  details.menu[open] > .menu-panel { animation: pop-in 140ms ease-out; transform-origin: top right; }
+  button:active:not(:disabled) { transform: scale(0.98); }
+  button { transition: background-color 0.15s ease, transform 0.1s ease; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.96); }
+}
+
+/* Empty lists. */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-5);
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+.empty-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: var(--space-1);
+  border-radius: 50%;
+  background: var(--soft);
+  color: var(--accent-ink);
+}
+
+.empty-state h3 { margin: 0; font-size: 18px; }
+.empty-state .meta { max-width: 320px; margin: 0; }
+.empty-state .button-row { justify-content: center; margin-top: var(--space-3); }

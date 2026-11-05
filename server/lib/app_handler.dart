@@ -5,6 +5,7 @@ import 'package:shelf_static/shelf_static.dart';
 
 import 'account_handler.dart';
 import 'account_store.dart';
+import 'share_preview.dart';
 import 'share_store.dart';
 
 /// Account API plus the static site in `website/`, when that folder is present.
@@ -29,7 +30,7 @@ Handler createAppHandler(
       .addHandler(
         createStaticHandler(directory.path, defaultDocument: 'index.html'),
       );
-  final site = Cascade().add(_sharePage(directory)).add(files).handler;
+  final site = Cascade().add(_sharePage(directory, shares)).add(files).handler;
   return (Request request) {
     if (_isApiPath(request.url.path)) {
       return api(request);
@@ -54,14 +55,20 @@ Directory? findWebsiteDirectory() {
   return null;
 }
 
-Handler _sharePage(Directory website) {
+Handler _sharePage(Directory website, ShareStore? shares) {
   final index = File.fromUri(website.uri.resolve('index.html'));
   return (Request request) async {
-    if (!_isClientPage(request.url.path) || !index.existsSync()) {
+    final path = request.url.path;
+    if (!_isClientPage(path) || !index.existsSync()) {
       return Response.notFound('');
     }
+    var html = await index.readAsString();
+    if (path.startsWith('s/')) {
+      final share = await shares?.publicShare(path.substring(2));
+      html = withSharePreview(html, request, share);
+    }
     return Response.ok(
-      await index.readAsString(),
+      html,
       headers: const {
         'content-type': 'text/html; charset=utf-8',
         'cache-control': 'no-cache',

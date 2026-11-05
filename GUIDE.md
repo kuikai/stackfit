@@ -26,7 +26,7 @@ flowchart LR
 
   subgraph Server["🖥 Server · server/"]
     direction TB
-    B1["/v1/auth/* and /v1/account<br/>sign up · sign in · reset · delete"]
+    B1["/v1/auth/* and /v1/account<br/>sign up · sign in · reset · delete<br/>developer sign-in on this computer"]
     B2["/v1/sync<br/>read + write snapshot"]
     B3["/v1/shares<br/>links"]
     B4[(data/stackfit_accounts.json)]
@@ -61,7 +61,9 @@ What each part is:
 | Website | Plain HTML + JS | `website/index.html` | Server |
 
 The phone app works with no server and no account. The server and website are
-only for keeping data on an account and sharing it.
+only for keeping data on an account and sharing it. On this computer the
+website sign-in page has **Developer sign in**, which opens `dev@stackfit.local`.
+That button does nothing from another machine.
 
 ---
 
@@ -202,7 +204,8 @@ in `website/js/snapshot.js`:
 | Data | Rule |
 |------|------|
 | Workouts | newer `updatedAt` wins; a deletion wins if it is as new as the edit |
-| History | union by id, so the same session is never stored twice |
+| Home order | newer `homeOrderUpdatedAt` wins; workouts only the other device has are added at the end. With no reorder yet, workouts stay alphabetical |
+| History | one row per session id. A deletion removes it. A set log stays only if both sides still have it |
 | Custom exercises | union by name, ignoring case; the local copy is kept when both have it |
 | Theme + skin | newer `appearanceUpdatedAt` wins |
 | Pro | not in the snapshot at all; it stays a store purchase on the phone |
@@ -222,17 +225,23 @@ sequenceDiagram
   SV-->>O: token abc123…
   O->>F: sends link  /s/abc123…
   F->>SV: GET /s/abc123…
-  SV-->>F: index.html (website)
+  SV-->>F: index.html with link-preview tags<br/>(workout name, exercise list, app icon)
   F->>SV: GET /v1/shares/abc123…
   SV-->>F: workout name + exercises (no email, no Pro)
-  F->>F: "Add to my account" → sign in
+  F->>F: "Add to my workouts" → sign in
   F->>SV: PUT /v1/sync with the copied workout (new ids)
   O->>SV: POST /v1/shares/abc123…/disable
   Note over SV,F: link stops opening. Copies already added stay.
 ```
 
 Progress links (`kind: progress`) work the same way but are read-only: no
-"Add to my account" button.
+"Add to my workouts" button.
+
+Chat apps (WhatsApp, Messages) build a link preview without running
+JavaScript, so `server/lib/share_preview.dart` writes the workout name and
+exercises into the page's `<head>` before sending it. A turned-off link gets a
+plain "StackFit" preview. The share page never shows the account menu, even
+when you are signed in.
 
 ---
 
@@ -243,18 +252,20 @@ Progress links (`kind: progress`) work the same way but are read-only: no
 ```mermaid
 flowchart LR
   URL{URL} -- "/tabata" --> Tab[Tabata timer<br/>js/tabata.js]
-  URL -- "/s/&lt;token&gt;" --> Share[Public share page<br/>js/sharing.js]
+  URL -- "/s/&lt;token&gt;" --> Share[Public share page<br/>js/share_page.js]
   URL -- "/ and signed in" --> Lib[Library: workouts + history<br/>js/main.js]
   URL -- "/ and signed out" --> Auth[Sign in / Sign up / Reset<br/>js/main.js]
+  URL -- "#appearance" --> Look[Appearance: skins and brightness<br/>js/appearance.js]
   Lib --> Edit[Workout editor<br/>js/editor.js]
   Lib --> Run[Run a workout<br/>js/workout_run.js]
-  Lib --> Log[Log a session by hand<br/>js/session.js]
   Lib --> Share
 ```
 
 The server (`server/lib/app_handler.dart`) decides: anything under `/v1/` is
 API, `/tabata` and `/s/…` return `index.html`, everything else is a static file
 from `website/`. `privacy.html` is the privacy policy, at `/privacy.html`.
+`POST /v1/auth/dev-signin` signs in the local developer account, and only when
+the request comes from this computer.
 
 ---
 
@@ -267,7 +278,7 @@ One line per file. Folders are in the order you will usually need them.
 ```
 README.md             How to run the app, server, and website
 GUIDE.md              This file
-NEXT_VERSION.md       Plan + acceptance criteria for accounts and sync
+NEXT_VERSION.md       Plan + acceptance criteria for accounts, sync, and the Fly.io host
 SHARING_PLAN.md       Plan + acceptance criteria for share links
 pubspec.yaml          Flutter dependencies
 analysis_options.yaml House style the phone app is checked against
@@ -321,7 +332,7 @@ models/                           Data shapes. Every one has toJson / fromJson.
   catalog_exercise.dart           One catalog row, the built-in list, and search
   custom_catalog.dart             Adds an exercise you made under Custom, or updates that name
   app_settings.dart               Theme mode + skin
-  account_snapshot.dart           The snapshot: workouts, deletions, sessions, custom exercises, appearance. What syncs.
+  account_snapshot.dart           The snapshot: workouts, deleted workouts, history, deleted sessions, custom exercises, appearance, home order. What syncs.
   workout_plan.dart               A read-only built-in plan and its days
   plans/
     plan_library.dart             Lists every built-in plan, by category, with search
@@ -336,9 +347,9 @@ models/                           Data shapes. Every one has toJson / fromJson.
 
 providers/                        Riverpod state. Screens read from here.
   app_providers.dart              Wires SharedPreferences, StorageService, AccountStorage, AccountApiClient
-  workouts_provider.dart          The workout list + add/edit/delete/duplicate + sections + the free-limit check
+  workouts_provider.dart          The workout list + add/edit/delete/duplicate + sections + moving rows + the free-limit check
   custom_catalog_provider.dart    Exercises you added, listed in the catalog under Custom
-  completed_sessions_provider.dart  History list, newest first, free cap of 10, plus per-workout history. Can drop one exercise from a session
+  completed_sessions_provider.dart  History list, newest first, free cap of 10, plus per-workout history. Can delete a session or one exercise
   in_progress_provider.dart       Unfinished workouts on the phone. Not uploaded with the account
   settings_provider.dart          Theme and skin
   pro_provider.dart               Free or Pro flag
@@ -358,12 +369,13 @@ services/                         Does the work the providers ask for.
   plan_workout_builder.dart       Turns a plan day into a workout; multi-day plans share a section
   account/
     account_api_client.dart       HTTP calls to the server (/v1/auth, /v1/account, /v1/sync, /v1/profile)
-    account_storage.dart          Saves who is signed in, plus sync bookkeeping (deletions, unmoved data)
+    account_storage.dart          Saves who is signed in, plus sync bookkeeping (deletions, unmoved data, home-order time)
     snapshot_merge.dart           The merge rules from section 4
 
 screens/                          One folder per screen.
   home/home_screen.dart           Workout list grouped into sections, continue rows, + button, Plans / History / Settings
-  home/home_actions.dart          Start or continue, start over, create, delete, duplicate, and section changes
+  home/continue_run_row.dart      A plan day left unfinished, shown on Home because it is not in the workout list
+  home/home_actions.dart          Start or continue, start over, create, delete, duplicate, section changes, and moving rows
   home/section_dialogs.dart       Name a section, move workouts in, pick which days to group
   workout_editor/workout_editor_screen.dart   Create or edit a workout, including a circuit box. Saving one exercise writes the workout
   workout_editor/workout_editor_actions.dart  Add an exercise or a circuit, and edit the stations inside it
@@ -395,7 +407,7 @@ widgets/                          Reusable pieces used by several screens.
   set_tracker_rows.dart           One set row: today's reps, and what that set was last time
   log_row_swipe.dart              Short swipe that removes one exercise log, like marking a task done
   set_log_list.dart               Finished sets grouped by exercise. History swipes one exercise away
-  session_tile.dart               One history row. Tap opens that session's sets
+  session_tile.dart               One history row. Tap opens that session's sets. Delete removes the session
   skin_picker.dart                Grid of skins in Settings
   collapsible_section.dart        A settings card that stays closed until you tap Show
   skin_artwork.dart               Big girl on Home, empty gym behind dark anime screens, skin mascot
@@ -413,8 +425,10 @@ analysis_options.yaml             House style the server is checked against
 bin/server.dart                   Start here. Loads the two JSON files, serves API + website on :8787
 lib/
   app_handler.dart                Decides: /v1/* → API, /tabata and /s/… → index.html, else static file
+  share_preview.dart              Writes the link-preview tags into a /s/… page so a pasted link shows the workout
   account_handler.dart            The /v1/auth/*, /v1/account, /v1/profile, /v1/sync routes. Validates input.
   account_store.dart              Sign up, sign in, tokens, reset codes, delete account, and saving a snapshot
+  dev_sign_in.dart                One-click local sign-in for website work. Refuses other computers.
   account_records.dart            How a user, a reset code, and a snapshot are written in the JSON file
   share_routes.dart               The /v1/shares routes: create, list, read public, disable
   share_store.dart                Saved share links. Removed when that account is deleted.
@@ -423,8 +437,8 @@ data/
   stackfit_accounts.json          Everything account_store holds (local dev data)
   stackfit_shares.json            Everything share_store holds
 test/
-  account_server_test.dart        Sign up, sign in, sync, conflicts, delete account
-  share_server_test.dart          Create, open, disable links
+  account_server_test.dart        Sign up, sign in, developer sign-in, sync, conflicts, delete account
+  share_server_test.dart          Create, open, disable links, and the preview a pasted link shows
   website_server_test.dart        Website is served and does not hide the API
 ```
 
@@ -433,20 +447,43 @@ test/
 ```
 index.html                        All the panels (sign in, library, editor, run, share, tabata). JS shows/hides them.
 privacy.html                      Privacy policy, and how to delete an account. Served at /privacy.html
-styles.css                        Styling
+icons/app-mark.png                The phone app's icon, cropped: browser tab icon and the mark in the header
+icons/app-icon-180.png            The phone app's icon for "Add to Home Screen" on a phone
+icons/app-icon-512.png            The picture in a shared link's preview
+theme.css                         Night colours (the default) and the spacing scale. Load it first
+skins.css                         Iron, Steel, Studio, and Night in light. Chosen in Appearance
+styles.css                        Page frame, header, menus, forms, and buttons
+library.css                       Workout cards, the history column, and its stat tiles
+share.css                         The public share page and its "Made with StackFit" box
+appearance.css                    The Appearance page: skin cards and the brightness switch
+states.css                        Keyboard focus outline, panels easing in (off when the device asks for less motion), empty screens
+timer.css                         Full-screen workout and Tabata timers
+editor.css                        Workout editor cards, number steppers, and the Save bar
 js/
-  main.js                         Start here. Picks a view from the URL and wires the library buttons
-  auth.js                         Sign in, sign up, reset password, sign out, and delete account
-  library.js                      Draws workouts, grouped into sections, and the history list
-  workout_run_view.js             The on-screen clock, phase name, and beep while a workout runs
+  main.js                         Start here. Picks a view from the URL, wires the library buttons and the header menus
+  appearance.js                   Appearance page: Night, Iron, Steel, Studio, and Dark / Light / System
+  appearance_boot.js              Reads the saved skin before the page paints, so the mint flash stays gone
+  auth.js                         Sign in, developer sign-in, sign up, reset password, sign out, and delete account
+  library.js                      Draws the workout cards in a grid, grouped into sections
+  exercise_rows.js                The exercise list and "3 exercises · ≈ 17 min" line, used on cards and the share page
+  empty_state.js                  The picture, title, and button shown when a list is empty ("Create your first workout")
+  history.js                      History column: this week's totals, day streak, sessions grouped by week, and delete
+  timer_screen.js                 Shared by both timers: full-screen mode, clock text, progress bar, beep, screen awake
+  workout_run_view.js             The full-screen workout timer: exercise name, clock, and what comes next
   api.js                          fetch() calls to the server. Same endpoints as account_api_client.dart
   snapshot.js                     Empty snapshot, merge rules (including custom exercises), circuit blocks, id and date helpers
   editor.js                       Workout editor form: open, read the draft, validate
-  editor_blocks.js                Exercise cards and circuit boxes in the workout editor
-  session.js                      "Log a session" form
-  workout_run.js                  Run a workout in the browser, including circuits
-  tabata.js                       The /tabata page: classic 20/10 × 8 timer, savable when signed in
-  sharing.js                      Share buttons, the public /s/… page, "Add to my account", paste-a-routine
+  editor_blocks.js                Handles clicks in the editor list and reads the cards back into a workout
+  editor_cards.js                 Builds the editor's exercise cards, circuit boxes, and + / − number steppers
+  editor_checks.js                Checks a workout draft before saving and names the first problem
+  workout_run.js                  Run a workout in the browser: the clock, the buttons, and saving the session
+  workout_steps.js                What comes after each set, rest, timer round, and circuit station
+  tabata.js                       The /tabata page: the form, the full-screen run, and saving when signed in
+  tabata_rules.js                 Tabata rules: total time, round order, the "Next" line, form limits, the saved workout
+  app_links.js                    The App Store link. Empty until the app is live, which hides "Get the app"
+  sharing.js                      Share and Unshare buttons, "Add to my workouts", paste a link or a routine file
+  share_page.js                   The public /s/… page: shared workout or progress, and the "link not available" state
+  routine_check.js                Checks a routine file from another site before it can be added
 ```
 
 ### `StackFitWeb/` – anime theme art
@@ -459,14 +496,14 @@ themes/cyberpunk/                 Cyberpunk art. Home is girl-standing.jpg. The 
 themes/dumbbell/                  Dumbbell art. Home is girl-standing.jpg. background.jpg behind other dark screens. Mascot is mascots/mascot-companion.png (sit / rest / run-1..8)
 ```
 
-### `test/` – phone app tests
+### `test/` – phone app tests, plus website logic in `test/website/`
 
 ```
-widget_test.dart                  Home screen renders
+widget_test.dart                  Home screen renders, and History can delete a finished session
 snapshot_merge_test.dart          Merge rules
 custom_catalog_test.dart          A custom exercise joins the catalog, and sync keeps one copy of each name
 website_snapshot_test.dart        Phone can read a snapshot the website wrote
-plan_library_test.dart            Plans have unique ids, and Home sections group plan days
+plan_library_test.dart            Plans have unique ids, Home sections group plan days, and rows can move
 set_log_test.dart                 Set logging, kg, and history JSON
 set_log_list_test.dart            Workout summary wraps a long reps and kg line, and a swipe removes one exercise
 workout_complete_test.dart        Done leaves the finish screen and lands on a tappable Home
@@ -476,6 +513,12 @@ circuit_session_test.dart         Circuits loop, then the rest of the workout co
 workout_editor_test.dart          Saving an exercise inside a circuit writes the workout
 in_progress_workout_test.dart     Closing a workout keeps the place, sets, and time for next time
 skin_look_test.dart               Each skin's corners, spacing, and typeface
+website/
+  history_test.mjs                Website history: week start, weekly totals, day streak, week groups, short dates
+  snapshot_test.mjs               Website merge: Home order, and a deleted session or set log stays gone
+  appearance_test.mjs             Saved skin falls back to Night; system brightness follows the computer
+  workout_steps_test.mjs          Website run order: sets and rests, timer rounds, circuits, skipping an empty circuit
+  tabata_rules_test.mjs           Tabata total time, round order, "Next" text, form limits, what gets saved
 ```
 
 ---
@@ -484,7 +527,8 @@ skin_look_test.dart               Each skin's corners, spacing, and typeface
 
 | Word | Means |
 |------|-------|
-| **Snapshot** | Everything on one account in one JSON object: workouts, deleted workout ids, sessions, custom exercises, theme, skin. |
+| **Snapshot** | Everything on one account in one JSON object: workouts, deleted workout ids, sessions, deleted session ids, custom exercises, theme, skin, and when Home was last rearranged. |
+| **Home order** | The order of workouts and sections on Home. `homeOrderUpdatedAt` says which device arranged them last. Until someone moves a row, sync keeps the list alphabetical. |
 | **Custom exercise** | An exercise you typed yourself, including its timer or sets. Listed in the catalog under Custom. |
 | **Session** (history) | One finished workout: `CompletedSession`. |
 | **In-progress workout** | A run you left before it finished. Stored on the phone only, so you can continue. Reset or Start over clears it. |
@@ -526,10 +570,12 @@ flutter run
 cd server
 dart pub get
 dart run bin/server.dart          # then open http://127.0.0.1:8787
+                                  # Developer sign in skips the password
 
 # tests
 flutter test                      # phone app
 cd server && dart test            # server
+node --test test/website/*.mjs    # website logic (Node 22 or newer)
 
 # style and mistakes (the rules in analysis_options.yaml)
 flutter analyze                   # phone app
@@ -694,7 +740,14 @@ use promo codes or TestFlight, not that button.
 Deferred until the next big feature (website + phone accounts). Do not block
 the first App Store submit on these.
 
-- [ ] *(Later)* Public HTTPS host for the API + website
+The public host is **Fly.io**. One small machine runs this same Dart server,
+so the website and the `/v1/` API stay together. The two JSON files sit on a
+Fly volume; a deploy resets the rest of the machine and must not wipe them.
+One machine only, because those files have a single writer. HTTPS is on our
+domain. A normal update is `fly deploy`. Keep our own copy of the two JSON
+files as well as Fly's daily snapshots. See `NEXT_VERSION.md`.
+
+- [ ] *(Later)* Fly.io app: one machine, one volume for `data/`, HTTPS on our domain
 - [ ] *(Later)* Release builds use `--dart-define=STACKFIT_ACCOUNT_URL=https://…`
 - [ ] *(Later)* Sign up, sign in, sync, delete account; password reset by email
 - [ ] *(Later)* Turn account UI back on in the phone app and point privacy /
@@ -705,8 +758,8 @@ For 1.0 only:
 - [ ] Account / sign-in UI hidden or clearly unavailable in the Release build
   (no dead “server offline” path for reviewers)
 - [ ] Privacy policy live at a **public HTTPS URL** even without accounts
-  (device data only). Can be a simple hosted page; `/privacy.html` is fine
-  once the site is on HTTPS, or a short standalone page
+  (device data only). A simple hosted page is enough for 1.0. When the
+  Fly.io server is up, that URL is this site's `/privacy.html`
 - [ ] Support URL or email Apple can show on the product page
 
 ### Apple account and signing
@@ -720,8 +773,9 @@ For 1.0 only:
 
 ### Store listing
 
-- [ ] App name and subtitle (display name today is `Stackfit` in
-  `ios/Runner/Info.plist` — decide on **StackFit** and make it consistent)
+- [x] App name is **StackFit** everywhere: iPhone and Android home screen,
+  Windows window title, website, and privacy page
+- [ ] Subtitle for the App Store listing
 - [ ] Description, keywords, category, age rating
 - [ ] Screenshots for the required iPhone sizes (and iPad if you check iPad)
 - [ ] App Privacy “nutrition labels” match 1.0 (no ads; data on device only;
@@ -740,6 +794,8 @@ For 1.0 only:
   redeem it on a Free install
 - [ ] No crash on cold start, background during a run, or after Done
 - [ ] Submit for App Review with the listing and privacy URL complete
+- [ ] Once the app is live: paste its App Store link into
+  `website/js/app_links.js`. That shows "Get the app" on shared-link pages
 
 ### Explicitly not required for 1.0
 

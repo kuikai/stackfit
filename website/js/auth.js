@@ -1,9 +1,15 @@
-import { shareTokenFromPath, showLocalWorkout } from './sharing.js';
+import { showLocalWorkout } from './share_page.js';
+import { shareTokenFromPath } from './sharing.js';
 
 export function installAuth(app) {
   document.querySelector('#sign-in-form').addEventListener('submit', (event) => {
     onSignIn(event, app);
   });
+  const devSignIn = document.querySelector('#dev-sign-in');
+  if (isThisComputer()) {
+    document.querySelector('#dev-sign-in-row').hidden = false;
+    devSignIn.addEventListener('click', () => onDevSignIn(app));
+  }
   document.querySelector('#sign-up-form').addEventListener('submit', (event) => {
     onSignUp(event, app);
   });
@@ -24,6 +30,15 @@ export function installAuth(app) {
 async function onSignIn(event, app) {
   event.preventDefault();
   await authenticate(app, () => app.api.signIn(formValues(event.target)));
+}
+
+async function onDevSignIn(app) {
+  await authenticate(app, () => app.api.devSignIn());
+}
+
+function isThisComputer() {
+  const host = window.location.hostname;
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1';
 }
 
 async function onSignUp(event, app) {

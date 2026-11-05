@@ -1,0 +1,99 @@
+.tabata-phase {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tabata-clock {
+  margin: var(--space-2) 0;
+  font-size: clamp(72px, 18vw, 140px);
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabata-clock.set-prompt {
+  font-size: clamp(36px, 8vw, 56px);
+  letter-spacing: -0.03em;
+  font-variant-numeric: normal;
+}
+
+body.timer-open { overflow: hidden; }
+
+.timer-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  padding: max(16px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+  background: var(--surface);
+  color: var(--ink);
+  transition: background-color 0.3s ease;
+}
+
+.timer-screen.work { background: var(--timer-work); color: var(--timer-work-ink); }
+.timer-screen.rest { background: var(--timer-rest); color: var(--timer-rest-ink); }
+
+.timer-top, .timer-body, .timer-controls { width: min(720px, 100%); margin: 0 auto; }
+.timer-top { display: flex; gap: var(--space-3); align-items: center; }
+
+.timer-progress {
+  margin: 0 0 0 auto;
+  font-weight: 600;
+  opacity: 0.85;
+  text-align: right;
+}
+
+.timer-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  text-align: center;
+}
+
+.timer-name { margin: 0; font-size: clamp(26px, 6vw, 40px); }
+.timer-screen .tabata-clock { margin: var(--space-3) 0; font-size: clamp(96px, 30vw, 220px); }
+.timer-screen .tabata-clock.set-prompt { font-size: clamp(44px, 12vw, 80px); }
+.timer-screen.set .tabata-phase { color: var(--primary); }
+.timer-screen.rest .tabata-phase, .timer-screen.rest .timer-bar span { color: var(--timer-rest-accent); }
+.timer-screen.paused .tabata-clock { opacity: 0.55; }
+
+.timer-bar {
+  width: min(420px, 80%);
+  height: 8px;
+  border-radius: 999px;
+  background: var(--soft);
+  overflow: hidden;
+}
+
+.timer-bar span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: currentColor;
+  transition: width 0.25s linear;
+}
+
+.timer-detail, .timer-next { margin: 0; font-size: 18px; font-weight: 600; opacity: 0.9; }
+.timer-next { margin-top: var(--space-3); font-size: 22px; opacity: 1; }
+
+.timer-controls { display: flex; gap: var(--space-3); }
+
+.timer-button, .timer-close { background: var(--soft); color: inherit; }
+.timer-button { flex: 1; min-height: 64px; border-radius: 18px; font-size: 18px; }
+.timer-button.main-action { background: var(--primary); color: var(--primary-ink); }
+
+.timer-screen.work .timer-button, .timer-screen.work .timer-close,
+.timer-screen.rest .timer-button, .timer-screen.rest .timer-close,
+.timer-screen.work .timer-bar, .timer-screen.rest .timer-bar { background: rgba(255, 255, 255, 0.18); }
+
+.timer-screen.work .timer-button.main-action,
+.timer-screen.rest .timer-button.main-action { background: var(--timer-action); color: var(--timer-action-ink); }
