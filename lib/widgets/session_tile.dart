@@ -15,12 +15,16 @@ class SessionTile extends ConsumerWidget {
     super.key,
     required this.session,
     this.showWorkoutName = true,
+    this.embedded = false,
   });
 
   final CompletedSession session;
 
-  /// False on the per-workout history page, where the name is the title.
+  /// False when the workout name is already the section title.
   final bool showWorkoutName;
+
+  /// True inside a history section, where that section is the card.
+  final bool embedded;
 
   /// "3 sets · 24 reps logged", or with " · 1440 kg total" when weighted.
   static String setSummary(CompletedSession session) {
@@ -48,28 +52,30 @@ class SessionTile extends ConsumerWidget {
       if (session.hasSetLogs) setSummary(session),
     ];
 
-    return Card(
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        title: Text(
-          title,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        subtitle: subtitleLines.isEmpty
-            ? null
-            : Text(subtitleLines.join('\n'), style: mutedStyle),
-        isThreeLine: subtitleLines.length > 1,
-        onTap: session.hasSetLogs
-            ? () => showSessionSetLogs(context, session)
-            : null,
-        trailing: _SessionTrailing(
-          session: session,
-          onDelete: () => _confirmDeleteSession(context, ref, session),
+    final tile = ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      title: Text(
+        title,
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w700,
         ),
       ),
+      subtitle: subtitleLines.isEmpty
+          ? null
+          : Text(subtitleLines.join('\n'), style: mutedStyle),
+      isThreeLine: subtitleLines.length > 1,
+      onTap: session.hasSetLogs
+          ? () => showSessionSetLogs(context, session)
+          : null,
+      trailing: _SessionTrailing(
+        session: session,
+        onDelete: () => _confirmDeleteSession(context, ref, session),
+      ),
     );
+    if (embedded) {
+      return tile;
+    }
+    return Card(child: tile);
   }
 }
 

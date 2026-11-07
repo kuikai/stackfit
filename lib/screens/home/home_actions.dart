@@ -334,16 +334,16 @@ Future<void> createHomeSection(
   }
 }
 
-Future<void> moveHomeRow(WidgetRef ref, int index, int direction) {
-  return ref.read(workoutsProvider.notifier).moveHomeGroupBy(index, direction);
+Future<void> reorderHomeRow(WidgetRef ref, int from, int to) {
+  return ref.read(workoutsProvider.notifier).reorderHomeGroup(from, to);
 }
 
-Future<void> moveHomeWorkoutInSection(
+Future<void> reorderHomeWorkoutInSection(
   WidgetRef ref,
   Workout workout,
-  int direction,
+  int to,
 ) {
   return ref
       .read(workoutsProvider.notifier)
-      .moveWorkoutWithinSection(workout.id, direction);
+      .reorderWorkoutInSection(workout.id, to);
 }

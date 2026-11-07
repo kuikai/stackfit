@@ -157,14 +157,14 @@ class WorkoutsNotifier extends StateNotifier<List<Workout>> {
     await _persist();
   }
 
-  /// Moves a Home row (a section or an ungrouped workout) by [direction].
-  Future<void> moveHomeGroupBy(int index, int direction) async {
-    await _saveOrder(moveHomeGroup(state, index, index + direction));
+  /// Moves a Home row (a section or an ungrouped workout) to slot [to].
+  Future<void> reorderHomeGroup(int from, int to) async {
+    await _saveOrder(moveHomeGroup(state, from, to));
   }
 
-  /// Moves a workout up or down among the others in its section.
-  Future<void> moveWorkoutWithinSection(String workoutId, int direction) async {
-    await _saveOrder(moveWorkoutInsideSection(state, workoutId, direction));
+  /// Moves a workout to slot [to] among the others in its section.
+  Future<void> reorderWorkoutInSection(String workoutId, int to) async {
+    await _saveOrder(moveWorkoutInSectionTo(state, workoutId, to));
   }
 
   /// Saves a new list order. Workout edits stay on their own timestamps.

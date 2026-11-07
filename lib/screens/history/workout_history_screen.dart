@@ -8,10 +8,10 @@ import '../../models/models.dart';
 import '../../providers/completed_sessions_provider.dart';
 import '../../providers/pro_provider.dart';
 import '../../widgets/empty_state.dart';
-import '../../widgets/session_tile.dart';
+import '../../widgets/history_workout_section.dart';
 import 'history_screen.dart';
 
-/// Past sessions of one workout, with a short "done N times" header.
+/// Past sessions of one workout, with a load chart and short stats.
 class WorkoutHistoryScreen extends ConsumerWidget {
   const WorkoutHistoryScreen({
     super.key,
@@ -41,19 +41,15 @@ class WorkoutHistoryScreen extends ConsumerWidget {
                 if (!isPro && totalCount > AppConstants.freeHistoryLimit)
                   const FreeHistoryBanner(),
                 Expanded(
-                  child: ListView.separated(
+                  child: ListView(
                     padding: context.pageGutter(top: 8, bottom: 24),
-                    itemCount: sessions.length + 1,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      if (index == 0) {
-                        return _WorkoutStats(sessions: sessions);
-                      }
-                      return SessionTile(
-                        session: sessions[index - 1],
-                        showWorkoutName: false,
-                      );
-                    },
+                    children: [
+                      HistoryWorkoutSection(
+                        group: groupSessionsByWorkout(sessions).single,
+                        showHeader: false,
+                        belowChart: _WorkoutStats(sessions: sessions),
+                      ),
+                    ],
                   ),
                 ),
               ],

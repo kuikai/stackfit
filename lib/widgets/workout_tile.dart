@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/theme.dart';
 import '../core/utils.dart';
 import '../models/models.dart';
+import 'fit_menu_button.dart';
 import 'skin_panel.dart';
 
 /// A single workout row on the Home screen.
@@ -16,13 +17,10 @@ class WorkoutTile extends StatelessWidget {
     required this.onHistory,
     this.onDuplicate,
     this.onMoveToSection,
-    this.onMoveUp,
-    this.onMoveDown,
-    this.canMoveUp = false,
-    this.canMoveDown = false,
     this.onStartOver,
     this.inProgress = false,
     this.embedded = false,
+    this.dragHandle,
   });
 
   final Workout workout;
@@ -32,14 +30,6 @@ class WorkoutTile extends StatelessWidget {
   final VoidCallback onHistory;
   final VoidCallback? onDuplicate;
   final VoidCallback? onMoveToSection;
-  final VoidCallback? onMoveUp;
-  final VoidCallback? onMoveDown;
-
-  /// False on the first Home row, or the first workout in a section.
-  final bool canMoveUp;
-
-  /// False on the last Home row, or the last workout in a section.
-  final bool canMoveDown;
 
   /// Clears a saved run and starts from the first exercise.
   final VoidCallback? onStartOver;
@@ -49,6 +39,9 @@ class WorkoutTile extends StatelessWidget {
 
   /// True when this row sits inside a section card (no extra Card chrome).
   final bool embedded;
+
+  /// Grip on the right. Finger down here starts a drag.
+  final Widget? dragHandle;
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +65,7 @@ class WorkoutTile extends StatelessWidget {
       borderRadius: look.cornerRadius,
       onTap: onStart,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(embedded ? 8 : 16, 14, 8, 14),
+        padding: EdgeInsets.fromLTRB(embedded ? 8 : 16, 14, 4, 14),
         child: Row(
           children: [
             Container(
@@ -114,7 +107,8 @@ class WorkoutTile extends StatelessWidget {
                 ],
               ),
             ),
-            PopupMenuButton<_WorkoutMenuAction>(
+            ?dragHandle,
+            FitMenuButton<_WorkoutMenuAction>(
               tooltip: 'Workout options',
               onSelected: (action) {
                 switch (action) {
@@ -124,10 +118,6 @@ class WorkoutTile extends StatelessWidget {
                     onHistory();
                   case _WorkoutMenuAction.startOver:
                     onStartOver?.call();
-                  case _WorkoutMenuAction.moveUp:
-                    onMoveUp?.call();
-                  case _WorkoutMenuAction.moveDown:
-                    onMoveDown?.call();
                   case _WorkoutMenuAction.move:
                     onMoveToSection?.call();
                   case _WorkoutMenuAction.duplicate:
@@ -149,18 +139,6 @@ class WorkoutTile extends StatelessWidget {
                   const PopupMenuItem(
                     value: _WorkoutMenuAction.startOver,
                     child: Text('Start over'),
-                  ),
-                if (onMoveUp != null)
-                  PopupMenuItem(
-                    value: _WorkoutMenuAction.moveUp,
-                    enabled: canMoveUp,
-                    child: const Text('Move up'),
-                  ),
-                if (onMoveDown != null)
-                  PopupMenuItem(
-                    value: _WorkoutMenuAction.moveDown,
-                    enabled: canMoveDown,
-                    child: const Text('Move down'),
                   ),
                 if (onMoveToSection != null)
                   const PopupMenuItem(
@@ -197,13 +175,4 @@ class WorkoutTile extends StatelessWidget {
   }
 }
 
-enum _WorkoutMenuAction {
-  edit,
-  history,
-  startOver,
-  moveUp,
-  moveDown,
-  move,
-  duplicate,
-  delete,
-}
+enum _WorkoutMenuAction { edit, history, startOver, move, duplicate, delete }

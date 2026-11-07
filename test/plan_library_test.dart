@@ -193,6 +193,16 @@ void main() {
       );
     });
 
+    test('moves a workout two places inside a section', () {
+      final workouts = [
+        fake('chest', section: 'Bro Split'),
+        fake('back', section: 'Bro Split'),
+        fake('legs', section: 'Bro Split'),
+      ];
+      final moved = moveWorkoutInSectionTo(workouts, 'legs', 0);
+      expect(moved.map((workout) => workout.id), ['legs', 'chest', 'back']);
+    });
+
     test('a move past the end leaves the list alone', () {
       final workouts = [
         fake('chest', section: 'Bro Split'),

@@ -296,6 +296,13 @@ icon.png              Home-screen icon picture. Black background, blue dumbbell,
 app-store-header.png  App Store header and search image. Same dumbbell, 5244×2950
 ```
 
+### `store-screenshots/` – pictures for the App Store and Play Store
+
+```
+ios/       Same scenes for App Store Connect. 1206×2622 JPEG, no transparency
+android/   Same scenes for Play Console. 1080×1920 JPEG, no transparency
+```
+
 ### `web/` – the same phone app, opened in a browser
 
 ```
@@ -320,13 +327,14 @@ core/
   theme_mode_codec.dart           Converts ThemeMode <-> the "system/light/dark" text saved on the account
   utils.dart                      Small helpers: new ids, duration formatting
 
-models/                           Data shapes. Every one has toJson / fromJson.
+models/                           Data shapes. Saved ones have toJson / fromJson.
   models.dart                     One import that re-exports all models
   exercise_type.dart              enum: timer or sets
   exercise.dart                   One exercise: name + work/rest/rounds, or sets/reps/rest
   circuit.dart                    A circuit: exercises that play in order, then repeat
   workout.dart                    A named list of exercises and circuits, optional Home section, createdAt / updatedAt
   completed_session.dart          One history row: workout name, when, how long, how many exercises
+  history_group.dart              Groups finished sessions by workout, and the points for the load chart
   in_progress_workout.dart        A run you left early: place, logged sets, and time, on the phone only
   set_log.dart                    Reps and kg for one set, saved on a finished session, with the circuit round
   catalog_exercise.dart           One catalog row, the built-in list, and search
@@ -375,6 +383,7 @@ services/                         Does the work the providers ask for.
 screens/                          One folder per screen.
   home/home_screen.dart           Workout list grouped into sections, continue rows, + button, Plans / History / Settings
   home/continue_run_row.dart      A plan day left unfinished, shown on Home because it is not in the workout list
+  home/home_rows.dart             Draws one Home row (a loose workout or a section) with a drag grip
   home/home_actions.dart          Start or continue, start over, create, delete, duplicate, section changes, and moving rows
   home/section_dialogs.dart       Name a section, move workouts in, pick which days to group
   workout_editor/workout_editor_screen.dart   Create or edit a workout, including a circuit box. Saving one exercise writes the workout
@@ -385,8 +394,8 @@ screens/                          One folder per screen.
   active_timer/timer_controls.dart            Done, skip rest, pause, skip, reset, and stop. Logging hides pause and skip
   active_timer/active_timer_card.dart         WORK and REST countdown, drawn on the background
   active_timer/workout_complete_screen.dart   Done screen. Saves the session and always returns to Home.
-  history/history_screen.dart     Completed sessions across every workout
-  history/workout_history_screen.dart  Past sessions of one workout
+  history/history_screen.dart     Completed sessions grouped by workout, with a load chart
+  history/workout_history_screen.dart  Past sessions of one workout, with a load chart
   plans/plan_library_screen.dart  Browse built-in plans by category or search
   plans/plan_detail_screen.dart   Days of one plan. Start continues an unfinished day. Add is Pro
   settings/settings_screen.dart   Theme, everyday skins, Pro skins, Pro, account card
@@ -395,6 +404,8 @@ screens/                          One folder per screen.
   account/delete_account_dialog.dart  Password confirm before an account is deleted
 
 widgets/                          Reusable pieces used by several screens.
+  fit_menu_button.dart            The ⋮ menu on Home. Scrolls a bottom row up so the menu stays on screen
+  home_reorder.dart               Drag grip on Home. Finger on the handle, then slide up or down
   workout_tile.dart               One workout row on Home. Shows In progress, with Start over when a run is saved
   workout_section_card.dart       A named folder of days on Home, like Bro Split
   workout_limit_banner.dart       "2 of 3 workouts" banner for Free users
@@ -408,6 +419,8 @@ widgets/                          Reusable pieces used by several screens.
   log_row_swipe.dart              Short swipe that removes one exercise log, like marking a task done
   set_log_list.dart               Finished sets grouped by exercise. History swipes one exercise away
   session_tile.dart               One history row. Tap opens that session's sets. Delete removes the session
+  history_load_chart.dart         Small load chart for one workout: kilograms, or reps when nothing was weighted
+  history_workout_section.dart    One workout in History: name, dates, load chart, and its logs
   skin_picker.dart                Grid of skins in Settings
   collapsible_section.dart        A settings card that stays closed until you tap Show
   skin_artwork.dart               Big girl on Home, empty gym behind dark anime screens, skin mascot
@@ -500,6 +513,7 @@ themes/dumbbell/                  Dumbbell art. Home is girl-standing.jpg. backg
 
 ```
 widget_test.dart                  Home screen renders, and History can delete a finished session
+history_group_test.dart           History groups sessions by workout, and the chart uses kilograms or reps
 snapshot_merge_test.dart          Merge rules
 custom_catalog_test.dart          A custom exercise joins the catalog, and sync keeps one copy of each name
 website_snapshot_test.dart        Phone can read a snapshot the website wrote
@@ -557,6 +571,8 @@ Chrome can show that same page as an app window, with no address bar and no tabs
 ```powershell
 & "C:\Program Files\Google\Chrome\Application\chrome.exe" --user-data-dir="$env:LOCALAPPDATA\StackFit\chrome-app" --app=http://127.0.0.1:8181 --window-size=430,900
 ```
+
+Store listing pictures for this app go in `store-screenshots/ios` (1206×2622, App Store Connect) and `store-screenshots/android` (1080×1920, Play Console). Capture each scene at both sizes. Do not stretch one picture into the other. The 430×900 window is too small for those files. http://127.0.0.1:8787 is not a store shot.
 
 ```bash
 # phone app, served for the browser and for the Chrome app window
@@ -777,7 +793,7 @@ For 1.0 only:
   Windows window title, website, and privacy page
 - [ ] Subtitle for the App Store listing
 - [ ] Description, keywords, category, age rating
-- [ ] Screenshots for the required iPhone sizes (and iPad if you check iPad)
+- [ ] Screenshots: the same scenes in `store-screenshots/ios` (1206×2622) and `store-screenshots/android` (1080×1920). Add a 13-inch iPad set only if the app still targets iPad
 - [ ] App Privacy “nutrition labels” match 1.0 (no ads; data on device only;
   no account email until the later accounts feature)
 - [ ] Review notes: how to test Pro / restore (no sign-in required for 1.0)

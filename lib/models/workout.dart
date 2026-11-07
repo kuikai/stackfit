@@ -203,20 +203,19 @@ List<Workout> moveHomeGroup(List<Workout> workouts, int from, int to) {
   return _flattenHomeGroups(next);
 }
 
-/// Moves [workoutId] up or down inside its section.
+/// Moves [workoutId] to slot [to] inside its section.
 ///
-/// [direction] is -1 or 1. An ungrouped workout, or a move past either end,
-/// leaves the list as it is. Sections come out as contiguous blocks.
-List<Workout> moveWorkoutInsideSection(
+/// An ungrouped workout, or a [to] past either end, leaves the list as it is.
+List<Workout> moveWorkoutInSectionTo(
   List<Workout> workouts,
   String workoutId,
-  int direction,
+  int to,
 ) {
   final groups = groupWorkoutsForHome(workouts);
   final next = <WorkoutHomeGroup>[];
   var changed = false;
   for (final group in groups) {
-    final reordered = _shiftInsideSection(group, workoutId, direction);
+    final reordered = _moveInsideSection(group, workoutId, to);
     if (reordered == null) {
       next.add(group);
       continue;
@@ -230,22 +229,44 @@ List<Workout> moveWorkoutInsideSection(
   return _flattenHomeGroups(next);
 }
 
-WorkoutHomeGroup? _shiftInsideSection(
-  WorkoutHomeGroup group,
+/// Moves [workoutId] up or down inside its section.
+///
+/// [direction] is -1 or 1. An ungrouped workout, or a move past either end,
+/// leaves the list as it is. Sections come out as contiguous blocks.
+List<Workout> moveWorkoutInsideSection(
+  List<Workout> workouts,
   String workoutId,
   int direction,
+) {
+  for (final group in groupWorkoutsForHome(workouts)) {
+    if (!group.isSection) {
+      continue;
+    }
+    final index = group.workouts.indexWhere(
+      (workout) => workout.id == workoutId,
+    );
+    if (index >= 0) {
+      return moveWorkoutInSectionTo(workouts, workoutId, index + direction);
+    }
+  }
+  return workouts;
+}
+
+WorkoutHomeGroup? _moveInsideSection(
+  WorkoutHomeGroup group,
+  String workoutId,
+  int to,
 ) {
   if (!group.isSection) {
     return null;
   }
   final index = group.workouts.indexWhere((workout) => workout.id == workoutId);
-  final target = index + direction;
-  if (index < 0 || target < 0 || target >= group.workouts.length) {
+  if (index < 0 || to < 0 || to >= group.workouts.length || index == to) {
     return null;
   }
   final reordered = [...group.workouts];
   final moved = reordered.removeAt(index);
-  reordered.insert(target, moved);
+  reordered.insert(to, moved);
   return WorkoutHomeGroup(section: group.section, workouts: reordered);
 }
 
