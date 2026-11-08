@@ -3,12 +3,6 @@ workflows:
     name: iOS TestFlight
     max_build_duration: 120
     instance_type: mac_mini_m2
-    triggering:
-      events:
-        - push
-      branch_patterns:
-        - pattern: website/next
-          include: true
     integrations:
       app_store_connect: Codemagic
     environment:
@@ -37,7 +31,7 @@ workflows:
         script: |
           flutter build ipa --release \
             --dart-define=UNLOCK_PRO=true \
-            --build-name=1.0.1 \
+            --build-name=1.0.0 \
             --build-number=$PROJECT_BUILD_NUMBER \
             --export-options-plist=/Users/builder/export_options.plist
     artifacts:
