@@ -5,18 +5,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
 import '../../core/theme.dart';
+import '../../models/models.dart';
 import '../../providers/completed_sessions_provider.dart';
 import '../../providers/pro_provider.dart';
 import '../../widgets/empty_state.dart';
-import '../../widgets/session_tile.dart';
+import '../../widgets/history_workout_section.dart';
 
-/// Every finished session across all workouts, newest first.
+/// Finished sessions grouped by workout, newest workout first.
 class HistoryScreen extends ConsumerWidget {
   const HistoryScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sessions = ref.watch(visibleCompletedSessionsProvider);
+    final groups = groupSessionsByWorkout(sessions);
     final isPro = ref.watch(isProProvider);
     final totalCount = ref.watch(completedSessionsProvider).length;
 
@@ -42,12 +44,11 @@ class HistoryScreen extends ConsumerWidget {
                 if (!isPro && totalCount > AppConstants.freeHistoryLimit)
                   const FreeHistoryBanner(),
                 Expanded(
-                  child: ListView.separated(
+                  child: ListView.builder(
                     padding: context.pageGutter(top: 8, bottom: 24),
-                    itemCount: sessions.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                    itemCount: groups.length,
                     itemBuilder: (context, index) {
-                      return SessionTile(session: sessions[index]);
+                      return HistoryWorkoutSection(group: groups[index]);
                     },
                   ),
                 ),

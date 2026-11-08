@@ -345,3 +345,17 @@ Future<void> createHomeSection(
     await notifier.moveToSection(workout.id, name);
   }
 }
+
+Future<void> reorderHomeRow(WidgetRef ref, int from, int to) {
+  return ref.read(workoutsProvider.notifier).reorderHomeGroup(from, to);
+}
+
+Future<void> reorderHomeWorkoutInSection(
+  WidgetRef ref,
+  Workout workout,
+  int to,
+) {
+  return ref
+      .read(workoutsProvider.notifier)
+      .reorderWorkoutInSection(workout.id, to);
+}

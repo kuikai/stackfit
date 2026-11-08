@@ -115,6 +115,66 @@ void main() {
     expect(merged.skin, 'forest');
     expect(merged.themeMode, 'dark');
   });
+
+  test('a newer home order wins, and a newer edit still wins', () {
+    final merged = mergeSnapshots(
+      _snapshot(
+        workouts: [
+          _workout('same', DateTime.utc(2026, 1, 1), 'Old'),
+          _workout('other', DateTime.utc(2026, 1, 1), 'Other'),
+        ],
+        homeOrderUpdatedAt: DateTime.utc(2026, 6, 1),
+      ),
+      _snapshot(
+        workouts: [
+          _workout('other', DateTime.utc(2026, 1, 1), 'Other'),
+          _workout('same', DateTime.utc(2026, 2, 1), 'New'),
+        ],
+        homeOrderUpdatedAt: DateTime.utc(2026, 1, 1),
+      ),
+    );
+
+    expect(merged.workouts.map((workout) => workout.id), ['same', 'other']);
+    expect(merged.workouts.first.name, 'New');
+    expect(merged.homeOrderUpdatedAt, DateTime.utc(2026, 6, 1));
+  });
+
+  test('a workout only the other device has is appended', () {
+    final merged = mergeSnapshots(
+      _snapshot(
+        workouts: [
+          _workout('a', DateTime.utc(2026, 1, 1), 'A'),
+          _workout('b', DateTime.utc(2026, 1, 1), 'B'),
+        ],
+        homeOrderUpdatedAt: DateTime.utc(2026, 6, 1),
+      ),
+      _snapshot(
+        workouts: [
+          _workout('c', DateTime.utc(2026, 3, 1), 'C'),
+          _workout('b', DateTime.utc(2026, 1, 1), 'B'),
+          _workout('a', DateTime.utc(2026, 1, 1), 'A'),
+        ],
+        homeOrderUpdatedAt: DateTime.utc(2026, 1, 1),
+      ),
+    );
+
+    expect(merged.workouts.map((workout) => workout.id), ['a', 'b', 'c']);
+  });
+
+  test('with no home order, workouts stay alphabetical', () {
+    final merged = mergeSnapshots(
+      _snapshot(
+        workouts: [
+          _workout('z', DateTime.utc(2026, 1, 1), 'Zebra'),
+          _workout('a', DateTime.utc(2026, 1, 1), 'Alpha'),
+        ],
+      ),
+      _snapshot(workouts: [_workout('a', DateTime.utc(2026, 1, 1), 'Alpha')]),
+    );
+
+    expect(merged.workouts.map((workout) => workout.name), ['Alpha', 'Zebra']);
+    expect(merged.homeOrderUpdatedAt, DateTime.utc(1970));
+  });
 }
 
 AccountSnapshot _snapshot({
@@ -124,6 +184,7 @@ AccountSnapshot _snapshot({
   List<SnapshotDeletion> deletedSessions = const [],
   String skin = 'classic',
   DateTime? appearanceUpdatedAt,
+  DateTime? homeOrderUpdatedAt,
 }) {
   return AccountSnapshot(
     workouts: workouts,
@@ -133,6 +194,7 @@ AccountSnapshot _snapshot({
     themeMode: 'dark',
     skin: skin,
     appearanceUpdatedAt: appearanceUpdatedAt ?? DateTime.utc(1970),
+    homeOrderUpdatedAt: homeOrderUpdatedAt ?? DateTime.utc(1970),
   );
 }
 

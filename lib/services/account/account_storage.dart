@@ -63,6 +63,7 @@ class AccountStorage {
   static const _deletionsKey = 'stackfit_deleted_workouts';
   static const _sessionDeletionsKey = 'stackfit_deleted_sessions';
   static const _appearanceUpdatedAtKey = 'stackfit_appearance_updated_at';
+  static const _homeOrderUpdatedAtKey = 'stackfit_home_order_updated_at';
 
   AccountSession? loadSession() {
     final raw = _prefs.getString(_sessionKey);
@@ -103,6 +104,18 @@ class AccountStorage {
   Future<void> setAppearanceUpdatedAt(DateTime updatedAt) async {
     await _prefs.setString(
       _appearanceUpdatedAtKey,
+      updatedAt.toUtc().toIso8601String(),
+    );
+  }
+
+  DateTime loadHomeOrderUpdatedAt() {
+    final raw = _prefs.getString(_homeOrderUpdatedAtKey);
+    return DateTime.tryParse(raw ?? '') ?? DateTime.utc(1970);
+  }
+
+  Future<void> setHomeOrderUpdatedAt(DateTime updatedAt) async {
+    await _prefs.setString(
+      _homeOrderUpdatedAtKey,
       updatedAt.toUtc().toIso8601String(),
     );
   }

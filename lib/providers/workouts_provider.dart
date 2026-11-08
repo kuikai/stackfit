@@ -157,6 +157,26 @@ class WorkoutsNotifier extends StateNotifier<List<Workout>> {
     await _persist();
   }
 
+  /// Moves a Home row (a section or an ungrouped workout) to slot [to].
+  Future<void> reorderHomeGroup(int from, int to) async {
+    await _saveOrder(moveHomeGroup(state, from, to));
+  }
+
+  /// Moves a workout to slot [to] among the others in its section.
+  Future<void> reorderWorkoutInSection(String workoutId, int to) async {
+    await _saveOrder(moveWorkoutInSectionTo(state, workoutId, to));
+  }
+
+  /// Saves a new list order. Workout edits stay on their own timestamps.
+  Future<void> _saveOrder(List<Workout> next) async {
+    if (identical(next, state)) {
+      return;
+    }
+    await _accountStorage.setHomeOrderUpdatedAt(DateTime.now().toUtc());
+    state = next;
+    await _persist();
+  }
+
   /// Removes the folder; the workouts stay, ungrouped.
   Future<void> dissolveSection(String section) async {
     final now = DateTime.now();

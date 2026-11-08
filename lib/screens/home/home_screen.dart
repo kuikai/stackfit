@@ -9,14 +9,14 @@ import '../../providers/pro_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/workouts_provider.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/fit_menu_button.dart';
+import '../../widgets/home_reorder.dart';
 import '../../widgets/skin_artwork.dart';
-import '../../widgets/skin_panel.dart';
 import '../../widgets/workout_limit_banner.dart';
-import '../../widgets/workout_section_card.dart';
-import '../../widgets/workout_tile.dart';
 import '../history/history_screen.dart';
 import '../settings/settings_screen.dart';
 import 'home_actions.dart';
+import 'home_rows.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -101,24 +101,13 @@ class HomeScreen extends ConsumerWidget {
                 Expanded(
                   child: workouts.isEmpty && looseRuns.isEmpty
                       ? _emptyHome(context, ref)
-                      : ListView.builder(
-                          padding: context.pageGutter(top: 8, bottom: 100),
-                          itemCount: _homeItemCount(
-                            looseRuns,
-                            workouts,
-                            groups,
-                          ),
-                          itemBuilder: (context, index) {
-                            return _homeItem(
-                              context,
-                              ref,
-                              index: index,
-                              looseRuns: looseRuns,
-                              groups: groups,
-                              runs: runs,
-                              isPro: isPro,
-                            );
-                          },
+                      : _homeList(
+                          context,
+                          ref,
+                          looseRuns: looseRuns,
+                          groups: groups,
+                          runs: runs,
+                          isPro: isPro,
                         ),
                 ),
               ],
@@ -154,105 +143,50 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _homeItem(
+  Widget _homeList(
     BuildContext context,
     WidgetRef ref, {
-    required int index,
     required List<InProgressWorkout> looseRuns,
     required List<WorkoutHomeGroup> groups,
     required List<InProgressWorkout> runs,
     required bool isPro,
   }) {
-    if (index < looseRuns.length) {
-      final run = looseRuns[index];
-      return _ContinueRunRow(
-        run: run,
-        onContinue: () => openInProgressRun(context, ref, run),
-        onStartOver: () => openInProgressRun(context, ref, run, fresh: true),
-      );
-    }
-    final rest = index - looseRuns.length;
+    final padding = context.pageGutter(top: 8, bottom: FitMenuButton.menuRoom);
+    final header = buildHomeHeader(context, ref, looseRuns: looseRuns);
     if (groups.isEmpty) {
-      return _emptyHome(context, ref);
-    }
-    return _buildGroup(
-      context,
-      ref,
-      groups[rest],
-      runs: runs,
-      isPro: isPro,
-    );
-  }
-
-  Widget _buildGroup(
-    BuildContext context,
-    WidgetRef ref,
-    WorkoutHomeGroup group, {
-    required List<InProgressWorkout> runs,
-    required bool isPro,
-  }) {
-    if (!group.isSection) {
-      final workout = group.workouts.single;
-      final inProgress = _matchesRun(runs, workout);
-      return WorkoutTile(
-        workout: workout,
-        inProgress: inProgress,
-        onStart: () => startHomeWorkout(context, ref, workout),
-        onStartOver: inProgress
-            ? () => startHomeWorkout(context, ref, workout, fresh: true)
-            : null,
-        onEdit: () => openHomeEditor(context, workoutId: workout.id),
-        onHistory: () => openHomeWorkoutHistory(context, workout),
-        onDelete: () => deleteHomeWorkout(context, ref, workout),
-        onMoveToSection: () => moveHomeWorkout(context, ref, workout),
-        onDuplicate: isPro
-            ? () => duplicateHomeWorkout(context, ref, workout)
-            : null,
+      return ListView(
+        padding: padding,
+        children: [header, _emptyHome(context, ref)],
       );
     }
-
-    return WorkoutSectionCard(
-      section: group.section!,
-      workouts: group.workouts,
-      onStart: (workout) => startHomeWorkout(context, ref, workout),
-      onStartOver: (workout) =>
-          startHomeWorkout(context, ref, workout, fresh: true),
-      isInProgress: (workout) => _matchesRun(runs, workout),
-      onEdit: (workout) => openHomeEditor(context, workoutId: workout.id),
-      onHistory: (workout) => openHomeWorkoutHistory(context, workout),
-      onDelete: (workout) => deleteHomeWorkout(context, ref, workout),
-      onMoveToSection: (workout) => moveHomeWorkout(context, ref, workout),
-      onRename: () => renameHomeSection(context, ref, group.section!),
-      onDissolve: () => dissolveHomeSection(context, ref, group.section!),
-      onAddWorkout: () =>
-          createHomeWorkout(context, ref, section: group.section),
-      onDuplicate: isPro
-          ? (workout) => duplicateHomeWorkout(context, ref, workout)
-          : null,
+    return ReorderableListView.builder(
+      padding: padding,
+      header: header,
+      buildDefaultDragHandles: false,
+      itemCount: groups.length,
+      proxyDecorator: homeReorderProxy,
+      onReorderItem: (from, to) {
+        reorderHomeRow(ref, from, to);
+      },
+      itemBuilder: (context, index) {
+        final group = groups[index];
+        final id = group.isSection
+            ? 's:${group.section}'
+            : 'w:${group.workouts.single.id}';
+        return KeyedSubtree(
+          key: ValueKey(id),
+          child: buildHomeGroup(
+            context,
+            ref,
+            group,
+            groupIndex: index,
+            runs: runs,
+            isPro: isPro,
+          ),
+        );
+      },
     );
   }
-}
-
-int _homeItemCount(
-  List<InProgressWorkout> looseRuns,
-  List<Workout> workouts,
-  List<WorkoutHomeGroup> groups,
-) {
-  if (workouts.isEmpty || groups.isEmpty) {
-    return looseRuns.length + 1;
-  }
-  return looseRuns.length + groups.length;
-}
-
-bool _matchesRun(List<InProgressWorkout> runs, Workout workout) {
-  for (final run in runs) {
-    if (run.workout.id == workout.id &&
-        run.canResume &&
-        run.matchesLayout(workout)) {
-      return true;
-    }
-  }
-  return false;
 }
 
 List<InProgressWorkout> _runsNotOnHome(
@@ -264,69 +198,4 @@ List<InProgressWorkout> _runsNotOnHome(
     for (final run in runs)
       if (run.canResume && !ids.contains(run.workout.id)) run,
   ];
-}
-
-/// A plan day left unfinished, shown because it is not in the workout list.
-class _ContinueRunRow extends StatelessWidget {
-  const _ContinueRunRow({
-    required this.run,
-    required this.onContinue,
-    required this.onStartOver,
-  });
-
-  final InProgressWorkout run;
-  final VoidCallback onContinue;
-  final VoidCallback onStartOver;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final look = context.skinLook;
-    return SkinPanel(
-      margin: EdgeInsets.only(bottom: look.listGap),
-      overPortrait: true,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              run.workout.name,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'In progress',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton(
-                    onPressed: onContinue,
-                    child: const Text('Continue'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: onStartOver,
-                    child: const Text('Start over'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

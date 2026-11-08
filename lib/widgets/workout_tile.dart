@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/theme.dart';
 import '../core/utils.dart';
 import '../models/models.dart';
+import 'fit_menu_button.dart';
 import 'skin_panel.dart';
 
 /// A single workout row on the Home screen.
@@ -19,6 +20,7 @@ class WorkoutTile extends StatelessWidget {
     this.onStartOver,
     this.inProgress = false,
     this.embedded = false,
+    this.dragHandle,
   });
 
   final Workout workout;
@@ -37,6 +39,9 @@ class WorkoutTile extends StatelessWidget {
 
   /// True when this row sits inside a section card (no extra Card chrome).
   final bool embedded;
+
+  /// Grip on the right. Finger down here starts a drag.
+  final Widget? dragHandle;
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +65,7 @@ class WorkoutTile extends StatelessWidget {
       borderRadius: look.cornerRadius,
       onTap: onStart,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(embedded ? 8 : 16, 14, 8, 14),
+        padding: EdgeInsets.fromLTRB(embedded ? 8 : 16, 14, 4, 14),
         child: Row(
           children: [
             Container(
@@ -102,7 +107,8 @@ class WorkoutTile extends StatelessWidget {
                 ],
               ),
             ),
-            PopupMenuButton<_WorkoutMenuAction>(
+            ?dragHandle,
+            FitMenuButton<_WorkoutMenuAction>(
               tooltip: 'Workout options',
               onSelected: (action) {
                 switch (action) {

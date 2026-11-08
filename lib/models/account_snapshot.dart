@@ -27,7 +27,8 @@ class SnapshotDeletion {
 ///
 /// Pro is intentionally absent. It stays a store purchase on the device.
 class AccountSnapshot {
-  const AccountSnapshot({
+  // DateTime.utc is not a constant here, so this constructor stays non-const.
+  AccountSnapshot({
     required this.workouts,
     required this.deletedWorkouts,
     required this.sessions,
@@ -36,7 +37,8 @@ class AccountSnapshot {
     required this.appearanceUpdatedAt,
     this.deletedSessions = const [],
     this.customExercises = const [],
-  });
+    DateTime? homeOrderUpdatedAt,
+  }) : homeOrderUpdatedAt = homeOrderUpdatedAt ?? DateTime.utc(1970);
 
   factory AccountSnapshot.empty() {
     return AccountSnapshot(
@@ -64,6 +66,9 @@ class AccountSnapshot {
   final String skin;
   final DateTime appearanceUpdatedAt;
 
+  /// When Home was last rearranged. The 1970 default means "still alphabetical".
+  final DateTime homeOrderUpdatedAt;
+
   AccountSnapshot copyWith({
     List<Workout>? workouts,
     List<SnapshotDeletion>? deletedWorkouts,
@@ -73,6 +78,7 @@ class AccountSnapshot {
     String? themeMode,
     String? skin,
     DateTime? appearanceUpdatedAt,
+    DateTime? homeOrderUpdatedAt,
   }) {
     return AccountSnapshot(
       workouts: workouts ?? this.workouts,
@@ -83,6 +89,7 @@ class AccountSnapshot {
       themeMode: themeMode ?? this.themeMode,
       skin: skin ?? this.skin,
       appearanceUpdatedAt: appearanceUpdatedAt ?? this.appearanceUpdatedAt,
+      homeOrderUpdatedAt: homeOrderUpdatedAt ?? this.homeOrderUpdatedAt,
     );
   }
 
@@ -105,6 +112,7 @@ class AccountSnapshot {
       'themeMode': themeMode,
       'skin': skin,
       'appearanceUpdatedAt': appearanceUpdatedAt.toIso8601String(),
+      'homeOrderUpdatedAt': homeOrderUpdatedAt.toIso8601String(),
     };
   }
 
@@ -139,6 +147,9 @@ class AccountSnapshot {
       skin: json['skin'] as String? ?? 'classic',
       appearanceUpdatedAt:
           DateTime.tryParse(json['appearanceUpdatedAt'] as String? ?? '') ??
+          DateTime.utc(1970),
+      homeOrderUpdatedAt:
+          DateTime.tryParse(json['homeOrderUpdatedAt'] as String? ?? '') ??
           DateTime.utc(1970),
     );
   }

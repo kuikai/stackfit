@@ -12,12 +12,15 @@ import '../../models/workout.dart';
 /// Custom exercises: union by name, ignoring case. The local copy is kept
 /// when both devices have that name.
 /// Appearance: the newer [AccountSnapshot.appearanceUpdatedAt] wins.
+/// Home order: the newer [AccountSnapshot.homeOrderUpdatedAt] wins. Until
+/// someone rearranges Home, workouts stay alphabetical.
 AccountSnapshot mergeSnapshots(AccountSnapshot local, AccountSnapshot remote) {
   final workouts = _mergeWorkouts(local, remote);
   final sessions = _mergeSessions(local, remote);
   final appearance = _newerAppearance(local, remote);
+  final homeOrder = _newerHomeOrder(local, remote);
   return AccountSnapshot(
-    workouts: workouts.workouts,
+    workouts: _arrangeHomeOrder(workouts.workouts, homeOrder),
     deletedWorkouts: workouts.deletions,
     sessions: sessions.sessions,
     deletedSessions: sessions.deletions,
@@ -28,6 +31,7 @@ AccountSnapshot mergeSnapshots(AccountSnapshot local, AccountSnapshot remote) {
     themeMode: appearance.themeMode,
     skin: appearance.skin,
     appearanceUpdatedAt: appearance.appearanceUpdatedAt,
+    homeOrderUpdatedAt: homeOrder.updatedAt,
   );
 }
 
@@ -70,8 +74,69 @@ _WorkoutMerge _mergeWorkouts(AccountSnapshot local, AccountSnapshot remote) {
     }
   }
 
-  keptWorkouts.sort((a, b) => a.name.compareTo(b.name));
   return _WorkoutMerge(workouts: keptWorkouts, deletions: keptDeletions);
+}
+
+class _HomeOrder {
+  const _HomeOrder({
+    required this.updatedAt,
+    required this.primary,
+    required this.secondary,
+  });
+
+  final DateTime updatedAt;
+  final List<Workout> primary;
+  final List<Workout> secondary;
+
+  bool get isCustom => updatedAt.isAfter(DateTime.utc(1970));
+}
+
+/// Equal timestamps keep the remote arrangement, same as workout edits.
+_HomeOrder _newerHomeOrder(AccountSnapshot local, AccountSnapshot remote) {
+  if (remote.homeOrderUpdatedAt.isBefore(local.homeOrderUpdatedAt)) {
+    return _HomeOrder(
+      updatedAt: local.homeOrderUpdatedAt,
+      primary: local.workouts,
+      secondary: remote.workouts,
+    );
+  }
+  return _HomeOrder(
+    updatedAt: remote.homeOrderUpdatedAt,
+    primary: remote.workouts,
+    secondary: local.workouts,
+  );
+}
+
+List<Workout> _arrangeHomeOrder(List<Workout> kept, _HomeOrder order) {
+  if (!order.isCustom) {
+    final sorted = [...kept]..sort((a, b) => a.name.compareTo(b.name));
+    return sorted;
+  }
+  final byId = {for (final workout in kept) workout.id: workout};
+  final ordered = <Workout>[];
+  final seen = <String>{};
+  _takeInOrder(ordered, seen, byId, order.primary);
+  _takeInOrder(ordered, seen, byId, order.secondary);
+  for (final workout in kept) {
+    if (seen.add(workout.id)) {
+      ordered.add(workout);
+    }
+  }
+  return ordered;
+}
+
+void _takeInOrder(
+  List<Workout> ordered,
+  Set<String> seen,
+  Map<String, Workout> byId,
+  List<Workout> source,
+) {
+  for (final workout in source) {
+    final match = byId[workout.id];
+    if (match != null && seen.add(match.id)) {
+      ordered.add(match);
+    }
+  }
 }
 
 _SessionMerge _mergeSessions(AccountSnapshot local, AccountSnapshot remote) {

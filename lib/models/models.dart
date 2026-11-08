@@ -7,6 +7,7 @@ export 'completed_session.dart';
 export 'custom_catalog.dart';
 export 'exercise.dart';
 export 'exercise_type.dart';
+export 'history_group.dart';
 export 'in_progress_workout.dart';
 export 'plans/plan_library.dart';
 export 'set_log.dart';

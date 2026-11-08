@@ -63,6 +63,7 @@ AccountSnapshot _readSnapshot(Ref ref, AccountStorage storage) {
     themeMode: themeModeToStorage(settings.themeMode),
     skin: settings.skin.name,
     appearanceUpdatedAt: storage.loadAppearanceUpdatedAt(),
+    homeOrderUpdatedAt: storage.loadHomeOrderUpdatedAt(),
   );
 }
 
@@ -71,6 +72,7 @@ Future<void> _writeSnapshot(Ref ref, AccountSnapshot snapshot) async {
   await storage.replaceDeletions(snapshot.deletedWorkouts);
   await storage.replaceSessionDeletions(snapshot.deletedSessions);
   await storage.setAppearanceUpdatedAt(snapshot.appearanceUpdatedAt);
+  await storage.setHomeOrderUpdatedAt(snapshot.homeOrderUpdatedAt);
   await ref.read(workoutsProvider.notifier).replaceAll(snapshot.workouts);
   await ref
       .read(completedSessionsProvider.notifier)

@@ -207,6 +207,7 @@ in `website/js/snapshot.js`:
 | History | union by id, then drop any id in `deletedSessions` |
 | Custom exercises | union by name, ignoring case; the local copy is kept when both have it |
 | Theme + skin | newer `appearanceUpdatedAt` wins |
+| Home order | newer `homeOrderUpdatedAt` wins; workouts only on the other device are appended |
 | Pro | not in the snapshot at all; it stays a store purchase on the phone |
 
 ---
@@ -324,12 +325,13 @@ models/                           Data shapes. Saved ones have toJson / fromJson
   workout.dart                    A named list of exercises and circuits, optional Home section, createdAt / updatedAt
   tabata_clock.dart               Classic 20/10/8 recipe. Builds a temporary workout the clock runs, and does not save it
   completed_session.dart          One history row: workout name, when, how long, how many exercises
+  history_group.dart              Groups finished sessions by workout, and the points for the load chart
   in_progress_workout.dart        A run you left early. A running rest remembers when it ends
   set_log.dart                    Reps and kg for one set, saved on a finished session, with the circuit round
   catalog_exercise.dart           One catalog row, the built-in list, and search
   custom_catalog.dart             Adds an exercise you made under Custom, or updates that name
   app_settings.dart               Theme, skin, and sound. Sound stays on this phone
-  account_snapshot.dart           The snapshot: workouts, deletions, sessions, deleted sessions, custom exercises, appearance. What syncs.
+  account_snapshot.dart           The snapshot: workouts, deletions, sessions, deleted sessions, custom exercises, appearance, home order. What syncs.
   workout_plan.dart               A read-only built-in plan and its days
   plans/
     plan_library.dart             Lists every built-in plan, by category, with search
@@ -368,12 +370,14 @@ services/                         Does the work the providers ask for.
   plan_workout_builder.dart       Turns a plan day into a workout; multi-day plans share a section
   account/
     account_api_client.dart       HTTP calls to the server (/v1/auth, /v1/account, /v1/sync, /v1/profile)
-    account_storage.dart          Saves who is signed in, plus sync bookkeeping (workout and session deletions, unmoved data)
+    account_storage.dart          Saves who is signed in, plus sync bookkeeping (deletions, unmoved data, home-order time)
     snapshot_merge.dart           The merge rules from section 4
 
 screens/                          One folder per screen.
   home/home_screen.dart           Workout list grouped into sections, continue rows, + button. Tabata is an icon beside Plans
-  home/home_actions.dart          Start or continue, start over, create, delete, duplicate, sections, and Tabata
+  home/continue_run_row.dart      A plan day left unfinished, shown on Home because it is not in the workout list
+  home/home_rows.dart             Draws one Home row (a loose workout or a section) with a drag grip
+  home/home_actions.dart          Start or continue, start over, create, delete, duplicate, sections, Tabata, and moving rows
   home/section_dialogs.dart       Name a section, move workouts in, pick which days to group
   workout_editor/workout_editor_screen.dart   Create or edit a workout, including a circuit box. Saving one exercise writes the workout
   workout_editor/workout_editor_actions.dart  Add an exercise or a circuit, and edit the stations inside it
@@ -384,8 +388,8 @@ screens/                          One folder per screen.
   active_timer/active_timer_card.dart         READY, WORK, and REST countdown, drawn on the background
   active_timer/workout_complete_screen.dart   Done screen. Saves the session, plays a celebrate jump for the mascot and her partner when the skin has both, and always returns to Home.
   tabata/tabata_screen.dart       Tabata clock. Opens on 20/10/8, then start, pause, skip a work round, skip rest, and stop. Not a saved workout
-  history/history_screen.dart     Completed sessions across every workout. Clear wipes history after confirm
-  history/workout_history_screen.dart  Past sessions of one workout
+  history/history_screen.dart     Completed sessions grouped by workout, with a load chart. Clear wipes history after confirm
+  history/workout_history_screen.dart  Past sessions of one workout, with a load chart
   plans/plan_library_screen.dart  Browse built-in plans by category or search
   plans/plan_detail_screen.dart   Days of one plan. Start continues an unfinished day. Add is Pro
   settings/settings_screen.dart   Theme, sound, everyday skins, Pro skins, buy or restore Pro. Account card stays hidden until accounts ship
@@ -395,6 +399,8 @@ screens/                          One folder per screen.
   account/delete_account_dialog.dart  Password confirm before an account is deleted
 
 widgets/                          Reusable pieces used by several screens.
+  fit_menu_button.dart            The ⋮ menu on Home. Scrolls a bottom row up so the menu stays on screen
+  home_reorder.dart               Drag grip on Home. Finger on the handle, then slide up or down
   workout_tile.dart               One workout row on Home. Shows In progress, with Start over when a run is saved
   workout_section_card.dart       A named folder of days on Home, like Bro Split
   workout_limit_banner.dart       "2 of 3 workouts" banner for Free users
@@ -407,6 +413,8 @@ widgets/                          Reusable pieces used by several screens.
   log_row_swipe.dart              Short swipe that removes one exercise log or a history row, like marking a task done
   set_log_list.dart               Finished sets grouped by exercise. History swipes one exercise away
   session_tile.dart               One history row. Tap opens that session's sets. Swipe deletes the session after confirm
+  history_load_chart.dart         Small load chart for one workout: kilograms, or reps when nothing was weighted
+  history_workout_section.dart    One workout in History: name, dates, load chart, and its logs
   skin_picker.dart                Grid of skins in Settings
   collapsible_section.dart        A settings card that stays closed until you tap Show
   skin_artwork.dart               Big picture on Home, empty gym behind dark anime screens, skin mascots
@@ -475,7 +483,8 @@ themes/dumbbell/                  Dumbbell art. Home is girl-standing.jpg. backg
 ```
 widget_test.dart                  Home screen renders
 tabata_clock_test.dart            Classic Tabata is one timer exercise, 20/10/8, and Home opens that clock
-snapshot_merge_test.dart          Merge rules, including session deletions
+snapshot_merge_test.dart          Merge rules, including session deletions and Home order
+history_group_test.dart           History groups sessions by workout, and the chart uses kilograms or reps
 completed_sessions_test.dart      Deleting a session or clearing history writes tombstones so sync cannot bring them back
 custom_catalog_test.dart          A custom exercise joins the catalog, and sync keeps one copy of each name
 website_snapshot_test.dart        Phone can read a snapshot the website wrote
@@ -500,7 +509,7 @@ countdown_beep_test.dart          The last 3 seconds and the zero of work and of
 
 | Word | Means |
 |------|-------|
-| **Snapshot** | Everything on one account in one JSON object: workouts, deleted workout ids, sessions, deleted session ids, custom exercises, theme, skin. |
+| **Snapshot** | Everything on one account in one JSON object: workouts, deleted workout ids, sessions, deleted session ids, custom exercises, theme, skin, and when Home was last rearranged. |
 | **Custom exercise** | An exercise you typed yourself, including its timer or sets. Listed in the catalog under Custom. |
 | **Session** (history) | One finished workout: `CompletedSession`. |
 | **In-progress workout** | A run you left before it finished. Stored on the phone only, so you can continue. A rest still running keeps counting while the app is closed. Reset or Start over clears it. |
@@ -513,6 +522,7 @@ countdown_beep_test.dart          The last 3 seconds and the zero of work and of
 | **Token** (account) | A secret string proving you are signed in. Sent as `Authorization: Bearer …`. |
 | **Token** (share) | The random part of a share link, `/s/<token>`. Not secret, just hard to guess. |
 | **Section** | A named folder on Home that groups workouts (for example Bro Split → Chest, Back). Stored on each workout. |
+| **Home order** | The saved order of sections and workouts on Home. Dragging a row updates it. |
 | **Circuit** | A box in a workout. The exercises inside play in order, then the box repeats. Exercises outside the box run once. |
 | **Work ready** | A timer exercise just opened. The time is on screen and the clock waits until Start. The next round of that same exercise starts on its own after rest. |
 | **Tabata clock** | A round timer opened from Home. Classic is 20 seconds on, 10 off, 8 rounds. It is not a saved workout. |
