@@ -802,6 +802,11 @@ For 1.0 only:
 
 ### TestFlight then submit
 
+Codemagic **iOS TestFlight** on branch `website/next` compiles with
+`--dart-define=UNLOCK_PRO=true`, so testers have Pro. Start that workflow
+on `website/next`, not `master`. `master` talks to RevenueCat and can turn
+Pro off after launch if the store has no purchase.
+
 - [ ] Upload build to TestFlight; install on at least one real iPhone
 - [ ] Invite tryout people via TestFlight when you want them on a pre-store
   build (whole app, sandbox purchases)
