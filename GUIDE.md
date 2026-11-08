@@ -416,7 +416,7 @@ widgets/                          Reusable pieces used by several screens.
   history_load_chart.dart         Small load chart for one workout: kilograms, or reps when nothing was weighted
   history_workout_section.dart    One workout in History: name, dates, load chart, and its logs
   skin_picker.dart                Grid of skins in Settings
-  collapsible_section.dart        A settings card that stays closed until you tap Show
+  collapsible_section.dart        A settings card that can hide its contents behind Show
   skin_artwork.dart               Big picture on Home, empty gym behind dark anime screens, skin mascots
   chibi_run.dart                  Mascot run across workout complete, or an in-place jump. A partner list hops beside her
   skin_panel.dart                 Holder: solid on everyday skins, Home-style glass on anime skins

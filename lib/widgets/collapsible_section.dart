@@ -8,19 +8,21 @@ class CollapsibleSection extends StatefulWidget {
     required this.collapsedSubtitle,
     required this.expandedSubtitle,
     required this.child,
+    this.initiallyExpanded = false,
   });
 
   final String title;
   final String collapsedSubtitle;
   final String expandedSubtitle;
   final Widget child;
+  final bool initiallyExpanded;
 
   @override
   State<CollapsibleSection> createState() => _CollapsibleSectionState();
 }
 
 class _CollapsibleSectionState extends State<CollapsibleSection> {
-  bool _expanded = false;
+  late bool _expanded = widget.initiallyExpanded;
 
   @override
   Widget build(BuildContext context) {

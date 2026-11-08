@@ -93,6 +93,7 @@ class SettingsScreen extends ConsumerWidget {
           if (AppSkin.proSkins.isNotEmpty) ...[
             CollapsibleSection(
               title: 'Pro skins',
+              initiallyExpanded: true,
               collapsedSubtitle: settings.skin.pro
                   ? 'Current: ${settings.skin.displayName}'
                   : 'Fun themes included with StackFit Pro',

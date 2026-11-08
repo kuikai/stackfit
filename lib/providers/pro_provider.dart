@@ -7,6 +7,9 @@ import '../services/revenue_cat_service.dart';
 import '../services/storage_service.dart';
 import 'app_providers.dart';
 
+/// Codemagic TestFlight sets this so testers have Pro without a store buy.
+const _unlockPro = bool.fromEnvironment('UNLOCK_PRO');
+
 final isProProvider = StateNotifierProvider<IsProNotifier, bool>((ref) {
   return IsProNotifier(
     ref.watch(storageServiceProvider),
@@ -16,7 +19,7 @@ final isProProvider = StateNotifierProvider<IsProNotifier, bool>((ref) {
 
 class IsProNotifier extends StateNotifier<bool> {
   IsProNotifier(this._storage, this._revenueCat)
-      : super(const bool.fromEnvironment('UNLOCK_PRO') || _storage.loadIsPro()) {
+    : super(_unlockPro || _storage.loadIsPro()) {
     _customerInfoListener = (customerInfo) {
       if (_syncingPurchase) return;
       _applyCustomerInfo(customerInfo, source: 'listener');
@@ -148,7 +151,7 @@ class IsProNotifier extends StateNotifier<bool> {
     required String source,
   }) async {
     _revenueCat.logEntitlements(customerInfo, source);
-    final isPro = _revenueCat.hasProEntitlement(customerInfo);
+    final isPro = _unlockPro || _revenueCat.hasProEntitlement(customerInfo);
     debugPrint('[Pro][$source] setting isPro=$isPro');
     debugPrint(
       '[Pro][$source] accepted entitlement IDs: '
