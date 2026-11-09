@@ -1,6 +1,7 @@
 enum ExerciseType {
   timer,
-  sets;
+  sets,
+  hold;
 
   String get displayName {
     switch (this) {
@@ -8,6 +9,8 @@ enum ExerciseType {
         return 'Timer';
       case ExerciseType.sets:
         return 'Sets';
+      case ExerciseType.hold:
+        return 'Hold';
     }
   }
 

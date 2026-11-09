@@ -48,6 +48,63 @@ void main() {
     });
   });
 
+  group('historyChartExercises', () {
+    test('lists the newest session first, then older exercises', () {
+      final exercises = historyChartExercises([
+        _session(
+          id: 'old',
+          workoutId: 'w',
+          name: 'test',
+          day: 1,
+          logs: const [
+            SetLog(
+              exerciseId: 'press',
+              exerciseName: 'Press',
+              setNumber: 1,
+              reps: 8,
+            ),
+            SetLog(
+              exerciseId: 'squat',
+              exerciseName: 'Squat old',
+              setNumber: 1,
+              reps: 5,
+              weightKg: 40,
+            ),
+          ],
+        ),
+        _session(
+          id: 'new',
+          workoutId: 'w',
+          name: 'test',
+          day: 8,
+          logs: const [
+            SetLog(
+              exerciseId: 'squat',
+              exerciseName: 'Squat',
+              setNumber: 1,
+              reps: 5,
+              weightKg: 50,
+            ),
+            SetLog(
+              exerciseId: 'bench',
+              exerciseName: 'Bench',
+              setNumber: 1,
+              reps: 8,
+              weightKg: 60,
+            ),
+          ],
+        ),
+      ]);
+
+      expect(exercises.map((exercise) => exercise.id), [
+        'squat',
+        'bench',
+        'press',
+      ]);
+      expect(exercises.first.name, 'Squat');
+    });
+  });
+
   group('historyChartSeries', () {
     test('skips a single session', () {
       final series = historyChartSeries([
@@ -92,31 +149,215 @@ void main() {
       expect(series.points.map((point) => point.value), [480, 500]);
     });
 
-    test('plots reps when the workout has no weights', () {
+    test('counts sets for the whole workout', () {
       final series = historyChartSeries([
-        _session(id: 'a', workoutId: 'w', name: 'test', day: 1, reps: 12),
-        _session(id: 'b', workoutId: 'w', name: 'test', day: 2, reps: 8),
-      ]);
-
-      expect(series!.unit, HistoryChartUnit.reps);
-      expect(series.points.map((point) => point.value), [12, 8]);
-    });
-
-    test('plots reps when only one session was weighted', () {
-      final series = historyChartSeries([
-        _session(id: 'a', workoutId: 'w', name: 'test', day: 1, reps: 12),
+        _session(
+          id: 'a',
+          workoutId: 'w',
+          name: 'test',
+          day: 1,
+          logs: const [
+            SetLog(
+              exerciseId: 'bench',
+              exerciseName: 'Bench',
+              setNumber: 1,
+              reps: 8,
+              weightKg: 60,
+            ),
+            SetLog(
+              exerciseId: 'bench',
+              exerciseName: 'Bench',
+              setNumber: 2,
+              reps: 8,
+              weightKg: 60,
+            ),
+          ],
+        ),
         _session(
           id: 'b',
           workoutId: 'w',
           name: 'test',
           day: 2,
+          logs: const [
+            SetLog(
+              exerciseId: 'bench',
+              exerciseName: 'Bench',
+              setNumber: 1,
+              reps: 6,
+              weightKg: 60,
+            ),
+          ],
+        ),
+      ], unit: HistoryChartUnit.sets);
+
+      expect(series!.unit, HistoryChartUnit.sets);
+      expect(series.points.map((point) => point.value), [2, 1]);
+    });
+
+    test('keeps kilograms at zero when nothing was weighted', () {
+      final series = historyChartSeries([
+        _session(id: 'a', workoutId: 'w', name: 'test', day: 1, reps: 12),
+        _session(id: 'b', workoutId: 'w', name: 'test', day: 2, reps: 8),
+      ]);
+
+      expect(series!.unit, HistoryChartUnit.kilograms);
+      expect(series.points.map((point) => point.value), [0, 0]);
+    });
+
+    test('plots one exercise and drops a session that skipped it', () {
+      final withBench = _session(
+        id: 'with',
+        workoutId: 'w',
+        name: 'test',
+        day: 1,
+        logs: const [
+          SetLog(
+            exerciseId: 'bench',
+            exerciseName: 'Bench',
+            setNumber: 1,
+            reps: 8,
+            weightKg: 20,
+          ),
+          SetLog(
+            exerciseId: 'bench',
+            exerciseName: 'Bench',
+            setNumber: 1,
+            reps: 8,
+            weightKg: 20,
+            round: 2,
+          ),
+          SetLog(
+            exerciseId: 'row',
+            exerciseName: 'Row',
+            setNumber: 1,
+            reps: 10,
+            weightKg: 30,
+          ),
+        ],
+      );
+      final skipped = _session(
+        id: 'skip',
+        workoutId: 'w',
+        name: 'test',
+        day: 4,
+        logs: const [
+          SetLog(
+            exerciseId: 'row',
+            exerciseName: 'Row',
+            setNumber: 1,
+            reps: 10,
+            weightKg: 30,
+          ),
+        ],
+      );
+      final again = _session(
+        id: 'again',
+        workoutId: 'w',
+        name: 'test',
+        day: 8,
+        logs: const [
+          SetLog(
+            exerciseId: 'bench',
+            exerciseName: 'Bench',
+            setNumber: 1,
+            reps: 5,
+            weightKg: 40,
+          ),
+        ],
+      );
+
+      final kilograms = historyChartSeries([
+        again,
+        skipped,
+        withBench,
+      ], exerciseId: 'bench');
+      final sets = historyChartSeries(
+        [again, skipped, withBench],
+        exerciseId: 'bench',
+        unit: HistoryChartUnit.sets,
+      );
+
+      expect(kilograms!.points.map((point) => point.at), [
+        withBench.completedAt,
+        again.completedAt,
+      ]);
+      expect(kilograms.points.map((point) => point.value), [320, 200]);
+      expect(sets!.points.map((point) => point.value), [2, 1]);
+    });
+
+    test('plots the longest hold when the workout is holds', () {
+      final series = historyChartSeries([
+        _session(
+          id: 'a',
+          workoutId: 'w',
+          name: 'Plank',
+          day: 1,
+          logs: const [
+            SetLog(
+              exerciseId: 'plank',
+              exerciseName: 'Plank',
+              setNumber: 1,
+              reps: 0,
+              heldSeconds: 40,
+            ),
+            SetLog(
+              exerciseId: 'plank',
+              exerciseName: 'Plank',
+              setNumber: 2,
+              reps: 0,
+              heldSeconds: 50,
+            ),
+          ],
+        ),
+        _session(
+          id: 'b',
+          workoutId: 'w',
+          name: 'Plank',
+          day: 2,
+          logs: const [
+            SetLog(
+              exerciseId: 'plank',
+              exerciseName: 'Plank',
+              setNumber: 1,
+              reps: 0,
+              heldSeconds: 65,
+            ),
+          ],
+        ),
+      ], unit: HistoryChartUnit.seconds);
+
+      expect(series!.unit, HistoryChartUnit.seconds);
+      expect(series.points.map((point) => point.value), [50, 65]);
+    });
+
+    test('skips an exercise logged on only one day', () {
+      final series = historyChartSeries([
+        _session(
+          id: 'a',
+          workoutId: 'w',
+          name: 'test',
+          day: 1,
           reps: 8,
           kg: 40,
         ),
-      ]);
+        _session(
+          id: 'b',
+          workoutId: 'w',
+          name: 'test',
+          day: 2,
+          logs: const [
+            SetLog(
+              exerciseId: 'other',
+              exerciseName: 'Other',
+              setNumber: 1,
+              reps: 8,
+              weightKg: 40,
+            ),
+          ],
+        ),
+      ], exerciseId: 'lift');
 
-      expect(series!.unit, HistoryChartUnit.reps);
-      expect(series.points.map((point) => point.value), [12, 8]);
+      expect(series, isNull);
     });
   });
 }
@@ -128,6 +369,7 @@ CompletedSession _session({
   required int day,
   int reps = 0,
   double? kg,
+  List<SetLog>? logs,
 }) {
   return CompletedSession(
     id: id,
@@ -136,15 +378,17 @@ CompletedSession _session({
     completedAt: DateTime.utc(2026, 11, day, 18),
     durationSeconds: 60,
     totalExercises: 1,
-    setLogs: [
-      if (reps > 0)
-        SetLog(
-          exerciseId: 'lift',
-          exerciseName: 'Lift',
-          setNumber: 1,
-          reps: reps,
-          weightKg: kg,
-        ),
-    ],
+    setLogs:
+        logs ??
+        [
+          if (reps > 0)
+            SetLog(
+              exerciseId: 'lift',
+              exerciseName: 'Lift',
+              setNumber: 1,
+              reps: reps,
+              weightKg: kg,
+            ),
+        ],
   );
 }

@@ -7,8 +7,9 @@ import 'workout.dart';
 ///
 /// This is not a history row and it is not part of the account snapshot.
 /// A rest that is still running stores [restEndsAt], so the countdown keeps
-/// going while the app is closed. Leaving the workout screen omits that, and
-/// the saved seconds stay put.
+/// going while the app is closed. A hold that is still running stores
+/// [holdStartedAt], so locking the phone does not freeze the plank. Leaving
+/// the workout screen omits both, and the saved seconds stay put.
 class InProgressWorkout {
   const InProgressWorkout({
     required this.workout,
@@ -28,6 +29,7 @@ class InProgressWorkout {
     this.draftWeightKg = 0,
     this.afterRest,
     this.restEndsAt,
+    this.holdStartedAt,
   });
 
   final Workout workout;
@@ -40,7 +42,7 @@ class InProgressWorkout {
   final int exerciseIndex;
   final int setIndex;
 
-  /// `workReady`, `work`, `rest`, or `setReady`.
+  /// `workReady`, `work`, `rest`, `setReady`, or `hold`.
   final String phase;
   final int remainingSeconds;
   final bool isPaused;
@@ -60,6 +62,9 @@ class InProgressWorkout {
 
   /// When a running rest hits zero. Null when rest is paused or not running.
   final DateTime? restEndsAt;
+
+  /// When a running hold read 0:00. Null when the hold is paused or you left.
+  final DateTime? holdStartedAt;
   final DateTime savedAt;
 
   static String planOrigin(String planId, String dayName) {
@@ -70,7 +75,8 @@ class InProgressWorkout {
     return phase == 'workReady' ||
         phase == 'work' ||
         phase == 'rest' ||
-        phase == 'setReady';
+        phase == 'setReady' ||
+        phase == 'hold';
   }
 
   /// False at the first station with nothing logged and under a second elapsed.
@@ -98,7 +104,30 @@ class InProgressWorkout {
   /// includes that gap, so the workout length keeps moving with the rest.
   DateTime resumedStartedAt(DateTime now) {
     final spent = elapsedSeconds < 0 ? 0 : elapsedSeconds;
-    return now.subtract(Duration(seconds: spent + _closedRestSeconds(now)));
+    return now.subtract(
+      Duration(
+        seconds: spent + _closedRestSeconds(now) + _closedHoldSeconds(now),
+      ),
+    );
+  }
+
+  /// Seconds on the hold clock at [now]. A saved start keeps counting.
+  /// Leaving the workout omits that start, so the saved seconds stay put.
+  int holdSecondsAt(DateTime now) {
+    final started = holdStartedAt;
+    if (phase != 'hold' || isPaused || started == null) {
+      return remainingSeconds < 0 ? 0 : remainingSeconds;
+    }
+    final seconds = now.difference(started).inSeconds;
+    return seconds < 0 ? 0 : seconds;
+  }
+
+  /// Seconds to put back on the clock when a run continues.
+  int secondsToRestore(DateTime now) {
+    if (phase == 'hold') {
+      return holdSecondsAt(now);
+    }
+    return restSecondsLeft(now);
   }
 
   /// Seconds of rest still left at [now]. Other phases keep [remainingSeconds].
@@ -114,6 +143,17 @@ class InProgressWorkout {
     if (phase != 'rest' || isPaused || restEndsAt == null) {
       return 0;
     }
+    return _awaySeconds(now);
+  }
+
+  int _closedHoldSeconds(DateTime now) {
+    if (phase != 'hold' || isPaused || holdStartedAt == null) {
+      return 0;
+    }
+    return _awaySeconds(now);
+  }
+
+  int _awaySeconds(DateTime now) {
     final away = now.difference(savedAt).inSeconds;
     return away > 0 ? away : 0;
   }
@@ -123,7 +163,7 @@ class InProgressWorkout {
     final logs = setLogs
         .map(
           (log) =>
-              '${log.exerciseId}:${log.round}:${log.setNumber}:${log.reps}:${log.weightKg}',
+              '${log.exerciseId}:${log.round}:${log.setNumber}:${log.reps}:${log.weightKg}:${log.heldSeconds}',
         )
         .join(',');
     return '$blockIndex|$roundIndex|$exerciseIndex|$setIndex|$phase|$isPaused|'
@@ -149,6 +189,8 @@ class InProgressWorkout {
       if (draftEdited) 'draftWeightKg': draftWeightKg,
       if (afterRest != null) 'afterRest': afterRest,
       if (restEndsAt != null) 'restEndsAt': restEndsAt!.toIso8601String(),
+      if (holdStartedAt != null)
+        'holdStartedAt': holdStartedAt!.toIso8601String(),
       'savedAt': savedAt.toIso8601String(),
     };
   }
@@ -175,6 +217,7 @@ class InProgressWorkout {
       draftWeightKg: (json['draftWeightKg'] as num?)?.toDouble() ?? 0,
       afterRest: json['afterRest'] as String?,
       restEndsAt: _optionalTime(json['restEndsAt']),
+      holdStartedAt: _optionalTime(json['holdStartedAt']),
       savedAt: DateTime.parse(json['savedAt'] as String),
     );
   }

@@ -20,7 +20,6 @@ class WorkoutTile extends StatelessWidget {
     this.onStartOver,
     this.inProgress = false,
     this.embedded = false,
-    this.dragHandle,
   });
 
   final Workout workout;
@@ -40,9 +39,6 @@ class WorkoutTile extends StatelessWidget {
   /// True when this row sits inside a section card (no extra Card chrome).
   final bool embedded;
 
-  /// Grip on the right. Finger down here starts a drag.
-  final Widget? dragHandle;
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -50,16 +46,17 @@ class WorkoutTile extends StatelessWidget {
     final look = context.skinLook;
     final exerciseCount = workout.exercises.length;
     final circuitCount = workout.circuitCount;
-    final durationLabel = AppUtils.formatDurationFriendly(
-      workout.estimatedDurationSeconds,
-    );
+    final seconds = workout.estimatedDurationSeconds;
+    final timing = seconds <= 0
+        ? ''
+        : ' · ~${AppUtils.formatDurationFriendly(seconds)}';
     final circuitLabel = circuitCount == 0
         ? ''
         : ' · $circuitCount circuit${circuitCount == 1 ? '' : 's'}';
     final detail =
         '$exerciseCount exercise${exerciseCount == 1 ? '' : 's'}'
         '$circuitLabel'
-        ' · ~$durationLabel';
+        '$timing';
 
     final row = InkWell(
       borderRadius: look.cornerRadius,
@@ -107,7 +104,6 @@ class WorkoutTile extends StatelessWidget {
                 ],
               ),
             ),
-            ?dragHandle,
             FitMenuButton<_WorkoutMenuAction>(
               tooltip: 'Workout options',
               onSelected: (action) {

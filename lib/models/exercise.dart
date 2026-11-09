@@ -42,6 +42,22 @@ class Exercise {
     );
   }
 
+  /// A hold counts up until you press Done. [sets] is how many attempts.
+  factory Exercise.hold({
+    required String id,
+    required String name,
+    int sets = 1,
+    int restSeconds = 0,
+  }) {
+    return Exercise(
+      id: id,
+      name: name,
+      type: ExerciseType.hold,
+      sets: sets,
+      restSeconds: restSeconds,
+    );
+  }
+
   /// Factory for Sets exercise
   factory Exercise.sets({
     required String id,
@@ -110,9 +126,15 @@ class Exercise {
       final rounds = sets ?? 1;
       final roundsText = rounds > 1 ? ' · $rounds rounds' : '';
       return '$name (${workSeconds}s work / ${restSeconds}s rest$roundsText)';
-    } else {
-      final repsText = reps != null ? ' × $reps reps' : '';
-      return '$name ($sets sets$repsText / ${restSeconds}s rest)';
     }
+    if (type == ExerciseType.hold) {
+      final attempts = sets ?? 1;
+      final attemptText = attempts == 1 ? '1 attempt' : '$attempts attempts';
+      final rest = restSeconds ?? 0;
+      final restText = rest > 0 ? ' · ${rest}s rest' : '';
+      return '$name (hold, $attemptText$restText)';
+    }
+    final repsText = reps != null ? ' × $reps reps' : '';
+    return '$name ($sets sets$repsText / ${restSeconds}s rest)';
   }
 }

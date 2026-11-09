@@ -24,15 +24,25 @@ class SessionTile extends ConsumerWidget {
   /// False on the per-workout history page, where the name is the title.
   final bool showWorkoutName;
 
-  /// "3 sets · 24 reps logged", or with " · 1440 kg total" when weighted.
+  /// "3 sets · 24 reps logged", "held 1:05", or with kg when weighted.
   static String setSummary(CompletedSession session) {
-    final base =
-        '${session.setLogs.length} sets · ${session.totalRepsLogged} reps';
-    final volume = session.totalVolumeKg;
-    if (volume <= 0) {
-      return '$base logged';
+    final holds = [
+      for (final log in session.setLogs)
+        if (log.isHold) log,
+    ];
+    if (holds.isNotEmpty && holds.length == session.setLogs.length) {
+      return 'held ${SetLog.summarize(holds)}';
     }
-    return '$base · ${SetLog.formatKg(volume)} kg total';
+    final efforts = session.setLogs.length - holds.length;
+    final base = '$efforts sets · ${session.totalRepsLogged} reps';
+    final volume = session.totalVolumeKg;
+    final logged = volume <= 0
+        ? '$base logged'
+        : '$base · ${SetLog.formatKg(volume)} kg total';
+    if (holds.isEmpty) {
+      return logged;
+    }
+    return '$logged · held ${SetLog.summarize(holds)}';
   }
 
   @override

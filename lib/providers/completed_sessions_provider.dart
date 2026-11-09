@@ -91,6 +91,23 @@ class CompletedSessionsNotifier extends StateNotifier<List<CompletedSession>> {
     await _persist();
   }
 
+  /// Drops every saved session of one workout and records tombstones.
+  Future<void> deleteSessionsForWorkout(String workoutId) async {
+    final ids = [
+      for (final session in state)
+        if (session.workoutId == workoutId) session.id,
+    ];
+    if (ids.isEmpty) {
+      return;
+    }
+    await _accountStorage.addSessionDeletions(ids, DateTime.now().toUtc());
+    state = [
+      for (final session in state)
+        if (session.workoutId != workoutId) session,
+    ];
+    await _persist();
+  }
+
   Future<void> clearAll() async {
     await _accountStorage.addSessionDeletions(
       state.map((session) => session.id),

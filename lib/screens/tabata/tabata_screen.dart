@@ -144,6 +144,7 @@ class _TabataScreenState extends ConsumerState<TabataScreen>
                   state: state,
                   onStart: () {},
                   onCompleteSet: () {},
+                  onCompleteHold: () {},
                   onSkipRest: clock.skipRest,
                 ),
               ],

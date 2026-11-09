@@ -192,7 +192,11 @@ function cardHeading(index, inCircuit) {
 function typeSwitch(type) {
   const group = document.createElement('div');
   group.className = 'segment';
-  group.append(typeButton('sets', 'Sets', type), typeButton('timer', 'Timer', type));
+  group.append(
+    typeButton('sets', 'Sets', type),
+    typeButton('timer', 'Timer', type),
+    typeButton('hold', 'Hold', type),
+  );
   return group;
 }
 
@@ -213,6 +217,17 @@ function typeFields(exercise, inCircuit) {
       labeledInput('Work (seconds)', 'work', exercise.workSeconds ?? 40, 'number'),
       labeledInput(restLabel, 'rest', exercise.restSeconds ?? 15, 'number'),
       labeledInput('Sets / rounds', 'rounds', exercise.sets ?? (inCircuit ? 1 : 3), 'number'),
+    ];
+  }
+  if (exercise.type === 'hold') {
+    return [
+      labeledInput('Attempts', 'sets', exercise.sets ?? 1, 'number'),
+      labeledInput(
+        'Rest between attempts (seconds)',
+        'rest',
+        exercise.restSeconds ?? 0,
+        'number',
+      ),
     ];
   }
   const setsRest = inCircuit ? restLabel : 'Rest between sets (seconds)';
@@ -281,7 +296,22 @@ function readExercise(card) {
   if (type === 'timer') {
     return timerExercise(card, id, name);
   }
+  if (type === 'hold') {
+    return holdExercise(card, id, name);
+  }
   return setsExercise(card, id, name);
+}
+
+function holdExercise(card, id, name) {
+  return {
+    id,
+    name,
+    type: 'hold',
+    workSeconds: null,
+    restSeconds: numberIn(card, '.rest'),
+    sets: numberIn(card, '.sets'),
+    reps: null,
+  };
 }
 
 function timerExercise(card, id, name) {
@@ -337,7 +367,20 @@ function exerciseProblem(exercise) {
   if (exercise.type === 'timer') {
     return timerProblem(exercise);
   }
+  if (exercise.type === 'hold') {
+    return holdProblem(exercise);
+  }
   return setsProblem(exercise);
+}
+
+function holdProblem(exercise) {
+  if (!Number.isInteger(exercise.sets) || exercise.sets < 1) {
+    return 'Attempts must be at least 1.';
+  }
+  if (!Number.isInteger(exercise.restSeconds) || exercise.restSeconds < 0) {
+    return 'Enter a valid rest time.';
+  }
+  return '';
 }
 
 function timerProblem(exercise) {
@@ -367,6 +410,16 @@ function setsProblem(exercise) {
 }
 
 function withType(exercise, type) {
+  if (type === 'hold' && exercise.type !== 'hold') {
+    return {
+      ...exercise,
+      type: 'hold',
+      sets: 1,
+      restSeconds: 0,
+      reps: null,
+      workSeconds: null,
+    };
+  }
   return {
     ...exercise,
     type,

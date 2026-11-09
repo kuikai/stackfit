@@ -104,25 +104,46 @@ class _ExerciseEditorScreenState extends State<ExerciseEditorScreen> {
           ),
           const SizedBox(height: 8),
           SegmentedButton<ExerciseType>(
+            showSelectedIcon: false,
             segments: const [
-              ButtonSegment(
-                value: ExerciseType.timer,
-                label: Text('Timer'),
-                icon: Icon(Icons.timer_outlined),
-              ),
-              ButtonSegment(
-                value: ExerciseType.sets,
-                label: Text('Sets'),
-                icon: Icon(Icons.replay_outlined),
-              ),
+              ButtonSegment(value: ExerciseType.timer, label: Text('Timer')),
+              ButtonSegment(value: ExerciseType.sets, label: Text('Sets')),
+              ButtonSegment(value: ExerciseType.hold, label: Text('Hold')),
             ],
             selected: {_type},
             onSelectionChanged: (selected) {
-              setState(() => _type = selected.first);
+              final next = selected.first;
+              setState(() {
+                if (next == ExerciseType.hold && _type != ExerciseType.hold) {
+                  final seed = widget.initial ?? widget.preset;
+                  if (seed?.type == ExerciseType.hold) {
+                    _setsController.text = '${seed!.sets ?? 1}';
+                    _restController.text = '${seed.restSeconds ?? 0}';
+                  } else {
+                    _setsController.text = '1';
+                    _restController.text = '0';
+                  }
+                }
+                _type = next;
+              });
             },
           ),
           const SizedBox(height: 24),
-          if (_type == ExerciseType.timer) ...[
+          if (_type == ExerciseType.hold) ...[
+            _numberField(
+              controller: _setsController,
+              label: 'Attempts',
+              helperText: '1 is a single hold.',
+            ),
+            const SizedBox(height: 12),
+            _numberField(
+              controller: _restController,
+              label: 'Rest between attempts',
+              helperText: widget.inCircuit
+                  ? 'Seconds. Also waits this long before the next station.'
+                  : 'Seconds.',
+            ),
+          ] else if (_type == ExerciseType.timer) ...[
             _numberField(controller: _workController, label: 'Work (seconds)'),
             const SizedBox(height: 12),
             _numberField(
@@ -182,15 +203,27 @@ class _ExerciseEditorScreenState extends State<ExerciseEditorScreen> {
     bool required = true,
     String? helperText,
   }) {
-    return TextField(
-      controller: controller,
-      keyboardType: TextInputType.number,
-      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-      decoration: InputDecoration(
-        labelText: label,
-        helperText:
-            helperText ?? (required ? null : 'Leave empty if not needed'),
-      ),
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: InputDecoration(
+            helperText:
+                helperText ?? (required ? null : 'Leave empty if not needed'),
+          ),
+        ),
+      ],
     );
   }
 
@@ -198,6 +231,23 @@ class _ExerciseEditorScreenState extends State<ExerciseEditorScreen> {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       _showError('Enter an exercise name');
+      return;
+    }
+
+    if (_type == ExerciseType.hold) {
+      final attempts = int.tryParse(_setsController.text.trim());
+      final rest = int.tryParse(_restController.text.trim());
+      if (attempts == null || attempts <= 0) {
+        _showError('Attempts must be at least 1');
+        return;
+      }
+      if (rest == null || rest < 0) {
+        _showError('Enter a valid rest time');
+        return;
+      }
+      Navigator.of(context).pop(
+        Exercise.hold(id: _id, name: name, sets: attempts, restSeconds: rest),
+      );
       return;
     }
 

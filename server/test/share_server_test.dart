@@ -153,6 +153,43 @@ void main() {
     expect(page.containsKey('email'), isFalse);
   });
 
+  test('a shared hold exercise stays a hold', () async {
+    final client = http.Client();
+    addTearDown(client.close);
+
+    final created = await _post(client, '$baseUrl/v1/auth/signup', {
+      'email': 'mia@example.com',
+      'password': 'password1',
+    });
+    final token = _json(created)['token'] as String;
+    final snapshot = _snapshot();
+    (snapshot['workouts'] as List).add({
+      'id': 'w-plank',
+      'name': 'Plank',
+      'exercises': [
+        {'name': 'Plank', 'type': 'hold', 'sets': 1, 'restSeconds': 0},
+      ],
+    });
+    await _put(client, '$baseUrl/v1/sync', token, {
+      'baseRevision': 0,
+      'snapshot': snapshot,
+    });
+
+    final shared = await _post(client, '$baseUrl/v1/shares', {
+      'kind': 'workout',
+      'workoutId': 'w-plank',
+    }, token: token);
+    final shareToken = _json(shared)['token'] as String;
+    final page = _json(
+      await client.get(Uri.parse('$baseUrl/v1/shares/$shareToken')),
+    );
+    final exercise = (page['exercises'] as List).single as Map;
+    expect(exercise['name'], 'Plank');
+    expect(exercise['type'], 'hold');
+    expect(exercise['sets'], 1);
+    expect(exercise['restSeconds'], 0);
+  });
+
   test('a progress link lists only the chosen sessions', () async {
     final client = http.Client();
     addTearDown(client.close);

@@ -71,6 +71,32 @@ export function advanceWork(state) {
   return leaveStation(state, false);
 }
 
+export function completeHold(state) {
+  const exercise = currentExercise(state);
+  const started = state.holdStartedAt;
+  const seconds = started
+    ? Math.max(0, Math.floor((Date.now() - started) / 1000))
+    : Math.max(0, state.remaining || 0);
+  const round = (state.roundIndex || 0) + 1;
+  const entry = {
+    exerciseId: exercise?.id || '',
+    exerciseName: exercise?.name || '',
+    setNumber: state.setIndex + 1,
+    reps: 0,
+    heldSeconds: seconds,
+  };
+  if (round > 1) {
+    entry.round = round;
+  }
+  const logged = { ...state, logs: [...(state.logs || []), entry] };
+  const total = exercise?.sets ?? 1;
+  const last = state.setIndex >= total - 1;
+  if (last) {
+    return leaveStation(logged, false);
+  }
+  return beginRest(logged, exercise?.restSeconds ?? 0, 'hold');
+}
+
 export function completeSet(state) {
   const exercise = currentExercise(state);
   const total = exercise?.sets ?? 1;
@@ -116,6 +142,9 @@ function openExercise(state, blockIndex, roundIndex, exerciseIndex) {
   if (exercise.type === 'timer') {
     return armTimer(next, exercise);
   }
+  if (exercise.type === 'hold') {
+    return { ...next, phase: 'hold', remaining: 0, holdStartedAt: Date.now() };
+  }
   return { ...next, phase: 'set', remaining: 0 };
 }
 
@@ -153,6 +182,16 @@ function applyAfterRest(state, after) {
   }
   if (after === 'set') {
     return { ...state, setIndex: state.setIndex + 1, phase: 'set', remaining: 0, paused: false };
+  }
+  if (after === 'hold') {
+    return {
+      ...state,
+      setIndex: state.setIndex + 1,
+      phase: 'hold',
+      remaining: 0,
+      paused: false,
+      holdStartedAt: Date.now(),
+    };
   }
   if (after === 'station') {
     return openExercise(state, state.blockIndex, state.roundIndex, state.exerciseIndex + 1);
@@ -225,6 +264,10 @@ function onPrimary(app) {
     applyStep(completeSet(run), app);
     return;
   }
+  if (run.phase === 'hold') {
+    applyStep(completeHold(run), app);
+    return;
+  }
   if (run.phase === 'rest') {
     applyStep(finishRest(run), app);
   }
@@ -242,6 +285,10 @@ function skipCurrent(app) {
     applyStep(finishRest(run), app);
     return;
   }
+  if (run.phase === 'hold') {
+    applyStep(completeHold(run), app);
+    return;
+  }
   applyStep(completeSet(run), app);
 }
 
@@ -249,8 +296,15 @@ function toggleRunPause() {
   if (!run || run.phase === 'set' || run.phase === 'done') {
     return;
   }
+  if (run.phase === 'hold' && !run.paused) {
+    const started = run.holdStartedAt || Date.now();
+    run.remaining = Math.max(0, Math.floor((Date.now() - started) / 1000));
+    run.holdStartedAt = null;
+  }
   run.paused = !run.paused;
-  if (!run.paused) {
+  if (!run.paused && run.phase === 'hold') {
+    run.holdStartedAt = Date.now() - run.remaining * 1000;
+  } else if (!run.paused) {
     run.endsAt = Date.now() + run.remaining * 1000;
   }
   renderRun(run);
@@ -262,7 +316,7 @@ function onRunKey(event, app) {
     return;
   }
   event.preventDefault();
-  if (run?.phase === 'set') {
+  if (run?.phase === 'set' || run?.phase === 'hold') {
     onPrimary(app);
     return;
   }
@@ -274,11 +328,26 @@ function armClock(app) {
   if (run.phase === 'work' || run.phase === 'rest') {
     run.endsAt = Date.now() + run.remaining * 1000;
   }
+  if (run.phase === 'hold' && !run.paused && !run.holdStartedAt) {
+    run.holdStartedAt = Date.now() - run.remaining * 1000;
+  }
   clock = window.setInterval(() => onClock(app), 200);
 }
 
 function onClock(app) {
-  if (!run || run.paused || (run.phase !== 'work' && run.phase !== 'rest')) {
+  if (!run || run.paused) {
+    return;
+  }
+  if (run.phase === 'hold') {
+    const started = run.holdStartedAt || Date.now();
+    const elapsed = Math.max(0, Math.floor((Date.now() - started) / 1000));
+    if (elapsed !== run.remaining) {
+      run.remaining = elapsed;
+      renderRun(run);
+    }
+    return;
+  }
+  if (run.phase !== 'work' && run.phase !== 'rest') {
     return;
   }
   const left = Math.max(0, Math.ceil((run.endsAt - Date.now()) / 1000));
@@ -306,6 +375,9 @@ function applyStep(next, app) {
   if (run.phase === 'work' || run.phase === 'rest') {
     run.endsAt = Date.now() + run.remaining * 1000;
   }
+  if (run.phase === 'hold' && !run.paused) {
+    run.holdStartedAt = Date.now() - (run.remaining || 0) * 1000;
+  }
   renderRun(run);
 }
 async function finishWorkout(app) {
@@ -328,14 +400,18 @@ async function logSession(app, finished) {
   const elapsed = Math.max(1, Math.round((Date.now() - finished.startedAt) / 1000));
   await app.loadAccountData();
   const snapshot = app.cloneSnapshot(app.account.snapshot);
-  snapshot.sessions.push({
+  const session = {
     id: newId(),
     workoutId: finished.workout.id,
     workoutName: finished.workout.name,
     completedAt: new Date().toISOString(),
     durationSeconds: elapsed,
     totalExercises: workoutStations(finished.workout).length,
-  });
+  };
+  if (Array.isArray(finished.logs) && finished.logs.length > 0) {
+    session.setLogs = finished.logs;
+  }
+  snapshot.sessions.push(session);
   await app.persist(snapshot, 'Saved. The app shows this session the next time it syncs.');
 }
 

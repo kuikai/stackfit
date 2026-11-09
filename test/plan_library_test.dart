@@ -215,6 +215,55 @@ void main() {
       expect(identical(moveHomeGroup(workouts, 0, -1), workouts), isTrue);
     });
 
+    test('joining a section puts the workout in that folder', () {
+      final workouts = [
+        fake('chest', section: 'Upper / Lower'),
+        fake('back', section: 'Upper / Lower'),
+        fake('timer'),
+      ];
+      final joined = [
+        for (final workout in workouts)
+          if (workout.id == 'timer')
+            workout.copyWith(section: 'Upper / Lower')
+          else
+            workout,
+      ];
+      final groups = groupWorkoutsForHome(joined);
+      expect(groups, hasLength(1));
+      expect(groups.single.section, 'Upper / Lower');
+      expect(groups.single.workouts.map((workout) => workout.id), [
+        'chest',
+        'back',
+        'timer',
+      ]);
+    });
+
+    test('leaving a section makes a loose Home row', () {
+      final workouts = [
+        fake('chest', section: 'Upper / Lower'),
+        fake('back', section: 'Upper / Lower'),
+      ];
+      final left = [
+        workouts.first.copyWith(clearSection: true),
+        workouts.last,
+      ];
+      final groups = groupWorkoutsForHome(left);
+      expect(groups, hasLength(2));
+      expect(groups[0].isSection, isFalse);
+      expect(groups[0].workouts.single.id, 'chest');
+      expect(groups[1].section, 'Upper / Lower');
+      expect(groups[1].workouts.single.id, 'back');
+    });
+
+    test('the last workout leaving a section leaves no empty folder', () {
+      final workouts = [fake('chest', section: 'Upper / Lower')];
+      final left = [workouts.single.copyWith(clearSection: true)];
+      final groups = groupWorkoutsForHome(left);
+      expect(groups, hasLength(1));
+      expect(groups.single.isSection, isFalse);
+      expect(groups.single.workouts.single.id, 'chest');
+    });
+
     test('omits section from JSON when ungrouped', () {
       final workout = fake('solo');
       expect(workout.toJson().containsKey('section'), isFalse);

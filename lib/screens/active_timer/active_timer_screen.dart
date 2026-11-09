@@ -303,7 +303,7 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
       exerciseIndex: state.exerciseIndex,
       setIndex: state.setIndex,
       phase: state.phase.name,
-      remainingSeconds: state.remainingSeconds,
+      remainingSeconds: _controller.displayedSeconds,
       isPaused: state.isPaused,
       elapsedSeconds: _controller.elapsedSeconds,
       setLogs: _controller.setLogs,
@@ -314,6 +314,7 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
           ? _controller.restContinuation
           : null,
       restEndsAt: _savedRestEndsAt(state),
+      holdStartedAt: _savedHoldStartedAt(state),
       savedAt: DateTime.now(),
     );
   }
@@ -329,6 +330,18 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
     }
     return _controller.restEndsAt ??
         DateTime.now().add(Duration(seconds: state.remainingSeconds));
+  }
+
+  /// Start of a hold that should keep counting if the phone locks.
+  /// Leaving the workout screen clears it, so Continue waits where you left.
+  DateTime? _savedHoldStartedAt(WorkoutSessionState state) {
+    if (_announcedLeave) {
+      return null;
+    }
+    if (state.phase != SessionPhase.hold || state.isPaused) {
+      return null;
+    }
+    return _controller.holdStartedAt;
   }
 
   /// Writes the run when the place or the logs changed. Returns true if kept.
@@ -434,6 +447,7 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
                     _controller.startWork();
                   },
                   onCompleteSet: _completeSet,
+                  onCompleteHold: _controller.completeHold,
                   onSkipRest: _controller.skipRest,
                 ),
                 const SizedBox(height: 12),

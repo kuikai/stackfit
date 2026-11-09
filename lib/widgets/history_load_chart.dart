@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 
-/// A short line of load over the dates of one workout.
+/// A short line of load over the dates of one workout, or one exercise.
 ///
-/// Nothing is drawn for a single session.
-class HistoryLoadChart extends StatelessWidget {
+/// Pick All or an exercise, and kilograms or sets. A hold workout charts
+/// seconds. Fewer than two dates keeps the controls and a short note
+/// instead of the line.
+class HistoryLoadChart extends StatefulWidget {
   const HistoryLoadChart({super.key, required this.sessions, this.padding});
 
   final List<CompletedSession> sessions;
@@ -14,50 +16,212 @@ class HistoryLoadChart extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
 
   @override
-  Widget build(BuildContext context) {
-    final series = historyChartSeries(sessions);
-    if (series == null) {
-      return const SizedBox.shrink();
+  State<HistoryLoadChart> createState() => _HistoryLoadChartState();
+}
+
+class _HistoryLoadChartState extends State<HistoryLoadChart> {
+  /// Menu value for the whole workout. Not an exercise id.
+  static const _allExercises = '\u0000';
+
+  String? _exerciseId;
+  HistoryChartUnit _unit = HistoryChartUnit.kilograms;
+
+  @override
+  void didUpdateWidget(HistoryLoadChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final selected = _exerciseId;
+    if (selected == null) {
+      return;
     }
+    for (final exercise in historyChartExercises(widget.sessions)) {
+      if (exercise.id == selected) {
+        return;
+      }
+    }
+    _exerciseId = null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final exercises = historyChartExercises(widget.sessions);
+    final holdsOnly = historyLogsAreHolds(
+      widget.sessions,
+      exerciseId: _exerciseId,
+    );
+    final unit = holdsOnly ? HistoryChartUnit.seconds : _unit;
+    final series = historyChartSeries(
+      widget.sessions,
+      exerciseId: _exerciseId,
+      unit: unit,
+    );
     final theme = Theme.of(context);
     final labelStyle = theme.textTheme.labelSmall?.copyWith(
       color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
       fontWeight: FontWeight.w600,
     );
-    final first = series.points.first.at;
-    final last = series.points.last.at;
 
     return Padding(
-      padding: padding ?? const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: widget.padding ?? const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(_unitLabel(series.unit), style: labelStyle),
+          _controls(context, exercises, labelStyle, holdsOnly: holdsOnly),
           const SizedBox(height: 4),
-          SizedBox(
-            height: 64,
-            child: CustomPaint(
-              painter: _LoadLinePainter(
-                points: series.points,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(_axisDate(first, last), style: labelStyle),
-              Text(_axisDate(last, first), style: labelStyle),
-            ],
-          ),
+          if (series == null)
+            Text('One more time to see the line.', style: labelStyle)
+          else if (_noWeight(series))
+            Text('No weight logged.', style: labelStyle)
+          else
+            _line(series, labelStyle),
         ],
       ),
     );
   }
-}
 
-String _unitLabel(HistoryChartUnit unit) {
-  return unit == HistoryChartUnit.kilograms ? 'kg' : 'reps';
+  bool _noWeight(HistoryChartSeries series) {
+    if (series.unit != HistoryChartUnit.kilograms) {
+      return false;
+    }
+    for (final point in series.points) {
+      if (point.value > 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Widget _controls(
+    BuildContext context,
+    List<HistoryChartExercise> exercises,
+    TextStyle? labelStyle, {
+    required bool holdsOnly,
+  }) {
+    final theme = Theme.of(context);
+    final nameStyle = labelStyle?.copyWith(
+      color: theme.colorScheme.onSurface,
+      fontWeight: FontWeight.w700,
+    );
+    return Row(
+      children: [
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: _exerciseMenu(exercises, nameStyle),
+          ),
+        ),
+        const SizedBox(width: 8),
+        holdsOnly ? Text('seconds', style: labelStyle) : _unitSwitch(),
+      ],
+    );
+  }
+
+  Widget _exerciseMenu(
+    List<HistoryChartExercise> exercises,
+    TextStyle? nameStyle,
+  ) {
+    return PopupMenuButton<String>(
+      tooltip: 'Exercise',
+      padding: EdgeInsets.zero,
+      initialValue: _exerciseId ?? _allExercises,
+      onSelected: (value) {
+        setState(() {
+          _exerciseId = value == _allExercises ? null : value;
+        });
+      },
+      itemBuilder: (context) {
+        return [
+          CheckedPopupMenuItem(
+            value: _allExercises,
+            checked: _exerciseId == null,
+            child: const Text('All'),
+          ),
+          for (final exercise in exercises)
+            CheckedPopupMenuItem(
+              value: exercise.id,
+              checked: exercise.id == _exerciseId,
+              child: Text(_exerciseLabel(exercise)),
+            ),
+        ];
+      },
+      child: Row(
+        children: [
+          Flexible(
+            child: Text(
+              _selectedLabel(exercises),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: nameStyle,
+            ),
+          ),
+          Icon(Icons.arrow_drop_down, size: 20, color: nameStyle?.color),
+        ],
+      ),
+    );
+  }
+
+  String _selectedLabel(List<HistoryChartExercise> exercises) {
+    final selected = _exerciseId;
+    if (selected == null) {
+      return 'All';
+    }
+    for (final exercise in exercises) {
+      if (exercise.id == selected) {
+        return _exerciseLabel(exercise);
+      }
+    }
+    return 'All';
+  }
+
+  String _exerciseLabel(HistoryChartExercise exercise) {
+    final name = exercise.name.trim();
+    return name.isEmpty ? 'Exercise' : name;
+  }
+
+  Widget _unitSwitch() {
+    return SegmentedButton<HistoryChartUnit>(
+      showSelectedIcon: false,
+      style: const ButtonStyle(
+        visualDensity: VisualDensity.compact,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 10)),
+      ),
+      segments: const [
+        ButtonSegment(value: HistoryChartUnit.kilograms, label: Text('kg')),
+        ButtonSegment(value: HistoryChartUnit.sets, label: Text('sets')),
+      ],
+      selected: {_unit},
+      onSelectionChanged: (selected) {
+        setState(() => _unit = selected.first);
+      },
+    );
+  }
+
+  Widget _line(HistoryChartSeries series, TextStyle? labelStyle) {
+    final theme = Theme.of(context);
+    final first = series.points.first.at;
+    final last = series.points.last.at;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          height: 64,
+          child: CustomPaint(
+            painter: _LoadLinePainter(
+              points: series.points,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(_axisDate(first, last), style: labelStyle),
+            Text(_axisDate(last, first), style: labelStyle),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
 /// `5 Nov`, or with the time when both ends fall on the same day.

@@ -1,7 +1,7 @@
 part of 'workout_session_controller.dart';
 
 /// What to do when the current rest ends.
-enum _AfterRest { timerRound, set, station, round, block }
+enum _AfterRest { timerRound, set, hold, station, round, block }
 
 mixin WorkoutSessionPhases on ChangeNotifier {
   WorkoutSessionState get state;
@@ -24,6 +24,12 @@ mixin WorkoutSessionPhases on ChangeNotifier {
 
   /// True after [freezeClock] while a rest is still on the wall clock.
   bool _restLeftRunning = false;
+
+  /// Moment a hold read 0:00. Null while paused or not holding.
+  DateTime? _holdStartedAt;
+
+  /// True after [freezeClock] while a hold is still on the wall clock.
+  bool _holdLeftRunning = false;
 
   void _enterBlock(int index) {
     final blocks = state.workout.blocks;
@@ -58,6 +64,10 @@ mixin WorkoutSessionPhases on ChangeNotifier {
     }
     if (exercise.type == ExerciseType.timer) {
       _armTimer(exercise);
+      return;
+    }
+    if (exercise.type == ExerciseType.hold) {
+      _beginHold();
       return;
     }
     _instantSkips = 0;
@@ -172,6 +182,8 @@ mixin WorkoutSessionPhases on ChangeNotifier {
         );
         _stopTicker();
         notifyListeners();
+      case _AfterRest.hold:
+        _beginHold(setIndex: state.setIndex + 1);
       case _AfterRest.station:
         _openExercise(
           blockIndex: state.blockIndex,
@@ -207,6 +219,48 @@ mixin WorkoutSessionPhases on ChangeNotifier {
     _startTicker();
     notifyListeners();
     _noteCountdown(seconds);
+  }
+
+  /// Starts a hold at 0:00, or continues at [setIndex] for the next attempt.
+  void _beginHold({int? setIndex}) {
+    _instantSkips = 0;
+    _holdLeftRunning = false;
+    _holdStartedAt = _now();
+    state = state.copyWith(
+      setIndex: setIndex ?? state.setIndex,
+      phase: SessionPhase.hold,
+      remainingSeconds: 0,
+      isPaused: false,
+    );
+    _startTicker();
+    notifyListeners();
+  }
+
+  void _clearHoldClock() {
+    _holdStartedAt = null;
+    _holdLeftRunning = false;
+  }
+
+  /// Seconds on the hold clock right now.
+  int _holdSecondsNow() {
+    final started = _holdStartedAt;
+    if (started == null || state.isPaused) {
+      return state.remainingSeconds < 0 ? 0 : state.remainingSeconds;
+    }
+    final seconds = _now().difference(started).inSeconds;
+    return seconds < 0 ? 0 : seconds;
+  }
+
+  void _syncHold() {
+    if (state.phase != SessionPhase.hold || state.isPaused) {
+      return;
+    }
+    final elapsed = _holdSecondsNow();
+    if (elapsed == state.remainingSeconds) {
+      return;
+    }
+    state = state.copyWith(remainingSeconds: elapsed);
+    notifyListeners();
   }
 
   void _startNextTimerRound() {
@@ -249,7 +303,8 @@ mixin WorkoutSessionPhases on ChangeNotifier {
     _ticker?.cancel();
     // Work drops one second per tick, so it stays on a one-second timer.
     // Rest reads the wall clock and can tick faster without drifting.
-    final step = state.phase == SessionPhase.rest
+    final step =
+        state.phase == SessionPhase.rest || state.phase == SessionPhase.hold
         ? const Duration(milliseconds: 200)
         : const Duration(seconds: 1);
     _ticker = Timer.periodic(step, (_) => _onTick());
@@ -290,6 +345,10 @@ mixin WorkoutSessionPhases on ChangeNotifier {
     }
     if (state.phase == SessionPhase.rest) {
       _syncRest();
+      return;
+    }
+    if (state.phase == SessionPhase.hold) {
+      _syncHold();
       return;
     }
     if (state.phase != SessionPhase.work) {

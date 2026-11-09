@@ -11,7 +11,7 @@ export 'workout_session_state.dart';
 
 part 'workout_session_phases.dart';
 
-/// Runs a workout: timer countdowns, set prompts, rest, skip, pause, stop.
+/// Runs a workout: timer countdowns, holds, set prompts, rest, skip, pause, stop.
 class WorkoutSessionController extends ChangeNotifier
     with WorkoutSessionPhases {
   WorkoutSessionController({
@@ -97,6 +97,17 @@ class WorkoutSessionController extends ChangeNotifier
 
   /// When the current rest hits zero. Null when rest is not running.
   DateTime? get restEndsAt => _restEndsAt;
+
+  /// When the current hold read 0:00. Null when it is paused or not running.
+  DateTime? get holdStartedAt => _holdStartedAt;
+
+  /// Seconds to draw, including a hold that has not ticked yet.
+  int get displayedSeconds {
+    if (state.phase == SessionPhase.hold) {
+      return _holdSecondsNow();
+    }
+    return state.remainingSeconds;
+  }
 
   int get _secondsSinceStart {
     final seconds = _now().difference(state.startedAt).inSeconds;
@@ -199,12 +210,14 @@ class WorkoutSessionController extends ChangeNotifier
     }
     if (!state.isPaused) {
       _holdRestForPause();
+      _snapshotHold();
     }
     state = state.copyWith(isPaused: !state.isPaused);
     if (state.isPaused) {
       _stopTicker();
     } else if (_shouldTick) {
       _releaseRestAfterPause();
+      _resumeHold();
       _startTicker();
     }
     notifyListeners();
@@ -227,6 +240,22 @@ class WorkoutSessionController extends ChangeNotifier
     _restEndsAt = _now().add(Duration(seconds: state.remainingSeconds));
   }
 
+  /// Freezes the seconds already held so pause does not keep counting.
+  void _snapshotHold() {
+    if (state.phase != SessionPhase.hold) {
+      return;
+    }
+    state = state.copyWith(remainingSeconds: _holdSecondsNow());
+    _clearHoldClock();
+  }
+
+  void _resumeHold() {
+    if (state.phase != SessionPhase.hold) {
+      return;
+    }
+    _holdStartedAt = _now().subtract(Duration(seconds: state.remainingSeconds));
+  }
+
   void skipRest() {
     if (state.phase != SessionPhase.rest || state.isComplete) {
       return;
@@ -238,7 +267,7 @@ class WorkoutSessionController extends ChangeNotifier
   ///
   /// Rest keeps its end time, so leaving the app does not pause that countdown.
   void freezeClock() {
-    if (_restLeftRunning) {
+    if (_restLeftRunning || _holdLeftRunning) {
       return;
     }
     if (_restKeepsRunning) {
@@ -246,8 +275,20 @@ class WorkoutSessionController extends ChangeNotifier
       _stopTicker();
       return;
     }
+    if (_holdKeepsRunning) {
+      state = state.copyWith(remainingSeconds: _holdSecondsNow());
+      _holdLeftRunning = true;
+      _stopTicker();
+      return;
+    }
     _frozenElapsed ??= _secondsSinceStart;
     _stopTicker();
+  }
+
+  bool get _holdKeepsRunning {
+    return state.phase == SessionPhase.hold &&
+        !state.isPaused &&
+        _holdStartedAt != null;
   }
 
   /// Continues a frozen work interval, or catches the rest up to the wall clock.
@@ -256,6 +297,18 @@ class WorkoutSessionController extends ChangeNotifier
       _restLeftRunning = false;
       final resting = _syncRest();
       if (resting) {
+        _startTicker();
+      }
+      notifyListeners();
+      return;
+    }
+    if (_holdLeftRunning) {
+      _holdLeftRunning = false;
+      final elapsed = _holdSecondsNow();
+      if (elapsed != state.remainingSeconds) {
+        state = state.copyWith(remainingSeconds: elapsed);
+      }
+      if (_shouldTick) {
         _startTicker();
       }
       notifyListeners();
@@ -282,6 +335,7 @@ class WorkoutSessionController extends ChangeNotifier
     }
     _frozenElapsed = null;
     _clearRestDeadline();
+    _clearHoldClock();
     _stopTicker();
     _afterRest = _AfterRest.block;
     _instantSkips = 0;
@@ -301,6 +355,16 @@ class WorkoutSessionController extends ChangeNotifier
   }
 
   void _armRestoredSession(String? afterRest) {
+    if (state.phase == SessionPhase.hold) {
+      if (state.isPaused) {
+        return;
+      }
+      _holdStartedAt = _now().subtract(
+        Duration(seconds: state.remainingSeconds),
+      );
+      _startTicker();
+      return;
+    }
     if (state.phase != SessionPhase.rest) {
       if (_shouldTick) {
         _startTicker();
@@ -325,7 +389,9 @@ class WorkoutSessionController extends ChangeNotifier
     if (state.isPaused || state.isComplete) {
       return false;
     }
-    return state.phase == SessionPhase.work || state.phase == SessionPhase.rest;
+    return state.phase == SessionPhase.work ||
+        state.phase == SessionPhase.rest ||
+        state.phase == SessionPhase.hold;
   }
 
   /// Best guess when a saved rest did not record where it was going.
@@ -338,6 +404,11 @@ class WorkoutSessionController extends ChangeNotifier
       final rounds = exercise.sets ?? 1;
       if (state.setIndex < rounds - 1) {
         return 'timerRound';
+      }
+    } else if (exercise.type == ExerciseType.hold) {
+      final attempts = exercise.sets ?? 1;
+      if (state.setIndex < attempts - 1) {
+        return 'hold';
       }
     } else {
       final sets = exercise.sets ?? 1;
@@ -379,6 +450,9 @@ class WorkoutSessionController extends ChangeNotifier
       case SessionPhase.setReady:
         completeSet();
         break;
+      case SessionPhase.hold:
+        completeHold();
+        break;
       case SessionPhase.complete:
         break;
     }
@@ -413,6 +487,39 @@ class WorkoutSessionController extends ChangeNotifier
     }
     _startRest(exercise.restSeconds ?? 0, _AfterRest.set);
   }
+
+  /// Saves the seconds on the clock and moves to the next attempt or exercise.
+  void completeHold() {
+    if (state.phase != SessionPhase.hold || state.isComplete) {
+      return;
+    }
+    final exercise = state.currentExercise;
+    if (exercise == null || exercise.type != ExerciseType.hold) {
+      return;
+    }
+
+    final held = _holdSecondsNow();
+    state = state.copyWith(remainingSeconds: held);
+    _clearHoldClock();
+    _setLog.add(
+      SetLog(
+        exerciseId: exercise.id,
+        exerciseName: exercise.name,
+        setNumber: state.setNumber,
+        reps: 0,
+        heldSeconds: held,
+        round: state.roundNumber,
+      ),
+    );
+
+    final total = exercise.sets ?? 1;
+    final isLast = state.setIndex >= total - 1;
+    if (isLast) {
+      _beginStationExit(restAfterLastSet: false);
+      return;
+    }
+    _startRest(exercise.restSeconds ?? 0, _AfterRest.hold);
+  }
 }
 
 /// Builds the timer place for a saved run.
@@ -431,7 +538,7 @@ WorkoutSessionState stateFromProgress(
     exerciseIndex: progress.exerciseIndex,
     setIndex: progress.setIndex,
     phase: _phaseFromName(progress.phase),
-    remainingSeconds: progress.restSecondsLeft(now),
+    remainingSeconds: progress.secondsToRestore(now),
     isPaused: progress.isPaused,
     startedAt: progress.resumedStartedAt(now),
   );
@@ -450,6 +557,7 @@ String _afterRestName(_AfterRest after) {
   return switch (after) {
     _AfterRest.timerRound => 'timerRound',
     _AfterRest.set => 'set',
+    _AfterRest.hold => 'hold',
     _AfterRest.station => 'station',
     _AfterRest.round => 'round',
     _AfterRest.block => 'block',
@@ -460,6 +568,7 @@ _AfterRest _afterRestFromName(String name) {
   return switch (name) {
     'timerRound' => _AfterRest.timerRound,
     'set' => _AfterRest.set,
+    'hold' => _AfterRest.hold,
     'station' => _AfterRest.station,
     'round' => _AfterRest.round,
     _ => _AfterRest.block,

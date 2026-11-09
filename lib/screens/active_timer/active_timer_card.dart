@@ -28,6 +28,7 @@ class ActiveTimerCard extends StatelessWidget {
       SessionPhase.work => 'WORK',
       SessionPhase.rest => 'REST',
       SessionPhase.setReady => 'SET',
+      SessionPhase.hold => 'HOLD',
       SessionPhase.complete => 'DONE',
     };
 
@@ -44,6 +45,10 @@ class ActiveTimerCard extends StatelessWidget {
             state.phase == SessionPhase.rest);
     final showSetRest =
         exercise?.type == ExerciseType.sets && state.phase == SessionPhase.rest;
+    final showAttempt =
+        exercise?.type == ExerciseType.hold &&
+        state.totalSets > 1 &&
+        (state.phase == SessionPhase.hold || state.phase == SessionPhase.rest);
 
     final countdown = Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
@@ -64,11 +69,13 @@ class ActiveTimerCard extends StatelessWidget {
               ),
             ),
           ),
-          if (showRound || showSetRest) ...[
+          if (showRound || showSetRest || showAttempt) ...[
             const SizedBox(height: 6),
             Text(
               showRound
                   ? '$countLabel ${state.setNumber} of ${state.totalSets}'
+                  : showAttempt && state.phase == SessionPhase.hold
+                  ? 'Attempt ${state.setNumber} of ${state.totalSets}'
                   : _restCaption(),
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: colorScheme.onSurface.withValues(alpha: 0.55),
@@ -132,10 +139,13 @@ class ActiveTimerCard extends StatelessWidget {
   /// During rest after a set, the set coming up, or that the exercise is done.
   String _restCaption() {
     final next = state.setNumber + 1;
+    final holding = state.currentExercise?.type == ExerciseType.hold;
+    final noun = holding ? 'attempt' : 'set';
     if (next > state.totalSets) {
-      return 'All ${state.totalSets} sets done';
+      final done = holding ? 'attempts' : 'sets';
+      return 'All ${state.totalSets} $done done';
     }
-    return 'Next: set $next of ${state.totalSets}';
+    return 'Next: $noun $next of ${state.totalSets}';
   }
 }
 

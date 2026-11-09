@@ -32,12 +32,14 @@ class TimerPrimaryAction extends ConsumerWidget {
     required this.state,
     required this.onStart,
     required this.onCompleteSet,
+    required this.onCompleteHold,
     required this.onSkipRest,
   });
 
   final WorkoutSessionState state;
   final VoidCallback onStart;
   final VoidCallback onCompleteSet;
+  final VoidCallback onCompleteHold;
   final VoidCallback onSkipRest;
 
   @override
@@ -51,6 +53,12 @@ class TimerPrimaryAction extends ConsumerWidget {
           ? 'Done'
           : 'Done / Next Set';
       return _markedButton(context, skin, label, onCompleteSet);
+    }
+    if (state.phase == SessionPhase.hold) {
+      final label = state.setNumber >= state.totalSets
+          ? 'Done'
+          : 'Done / Next attempt';
+      return _markedButton(context, skin, label, onCompleteHold);
     }
     if (state.phase == SessionPhase.rest) {
       return _skipRestButton(skin);

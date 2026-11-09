@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -29,7 +31,25 @@ class WorkoutHistoryScreen extends ConsumerWidget {
     final totalCount = ref.watch(completedSessionsProvider).length;
 
     return Scaffold(
-      appBar: AppBar(title: Text(workoutName)),
+      appBar: AppBar(
+        title: Text(workoutName),
+        actions: [
+          if (sessions.isNotEmpty)
+            IconButton(
+              key: ValueKey('delete-workout-logs-$workoutId'),
+              tooltip: 'Delete logs',
+              onPressed: () => unawaited(
+                confirmDeleteWorkoutHistory(
+                  context,
+                  ref,
+                  workoutId: workoutId,
+                  workoutName: workoutName,
+                ),
+              ),
+              icon: const Icon(Icons.delete_outline_rounded),
+            ),
+        ],
+      ),
       body: sessions.isEmpty
           ? const EmptyState(
               title: 'Not done yet',

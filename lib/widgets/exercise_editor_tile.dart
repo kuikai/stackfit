@@ -81,6 +81,13 @@ class ExerciseEditorTile extends StatelessWidget {
       final roundsText = rounds > 1 ? ' · $rounds sets' : '';
       return '${exercise.workSeconds}s work · ${exercise.restSeconds}s rest$roundsText';
     }
+    if (exercise.type == ExerciseType.hold) {
+      final attempts = exercise.sets ?? 1;
+      final attemptText = attempts == 1 ? '1 attempt' : '$attempts attempts';
+      final rest = exercise.restSeconds ?? 0;
+      final restText = rest > 0 ? ' · ${rest}s rest' : '';
+      return 'Hold · $attemptText$restText';
+    }
     final repsText = exercise.reps != null ? ' × ${exercise.reps}' : '';
     return '${exercise.sets} sets$repsText · ${exercise.restSeconds}s rest';
   }

@@ -16,7 +16,7 @@ class HistoryWorkoutGroup {
   final List<CompletedSession> sessions;
 }
 
-/// One point on the load chart. [value] is kilograms or reps.
+/// One point on the load chart. [value] is kilograms, a set count, or seconds.
 class HistoryChartPoint {
   const HistoryChartPoint({required this.at, required this.value});
 
@@ -24,9 +24,20 @@ class HistoryChartPoint {
   final double value;
 }
 
-enum HistoryChartUnit { kilograms, reps }
+enum HistoryChartUnit { kilograms, sets, seconds }
 
-/// Load over time for one workout. Points run oldest to newest.
+/// One exercise that can be drawn on the load chart.
+class HistoryChartExercise {
+  const HistoryChartExercise({required this.id, required this.name});
+
+  final String id;
+
+  /// Name on the newest log of this exercise.
+  final String name;
+}
+
+/// Load over time for one workout, or one exercise in it.
+/// Points run oldest to newest.
 class HistoryChartSeries {
   const HistoryChartSeries({required this.unit, required this.points});
 
@@ -65,35 +76,127 @@ HistoryWorkoutGroup _groupFor(
   );
 }
 
-/// Kilograms when at least two sessions logged weight. Otherwise reps.
-/// One session, or none, has nothing to draw.
-HistoryChartSeries? historyChartSeries(List<CompletedSession> sessions) {
-  if (sessions.length < 2) {
+/// Exercises that appear in [sessions], newest session first.
+/// The same exercise id is listed once, under the name on its newest log.
+List<HistoryChartExercise> historyChartExercises(
+  List<CompletedSession> sessions,
+) {
+  final newestFirst = [...sessions]
+    ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
+  final seen = <String>{};
+  final exercises = <HistoryChartExercise>[];
+  for (final session in newestFirst) {
+    for (final log in session.setLogs) {
+      if (!seen.add(log.exerciseId)) {
+        continue;
+      }
+      exercises.add(
+        HistoryChartExercise(id: log.exerciseId, name: log.exerciseName),
+      );
+    }
+  }
+  return exercises;
+}
+
+/// True when every logged set is a hold, and there is at least one.
+bool historyLogsAreHolds(
+  List<CompletedSession> sessions, {
+  String? exerciseId,
+}) {
+  var any = false;
+  for (final session in sessions) {
+    for (final log in session.setLogs) {
+      if (exerciseId != null && log.exerciseId != exerciseId) {
+        continue;
+      }
+      if (!log.isHold) {
+        return false;
+      }
+      any = true;
+    }
+  }
+  return any;
+}
+
+/// Kilograms, set count, or seconds held. [exerciseId] null is the whole workout.
+/// A chosen exercise leaves out sessions that did not log it.
+/// Fewer than two points has nothing to draw.
+HistoryChartSeries? historyChartSeries(
+  List<CompletedSession> sessions, {
+  String? exerciseId,
+  HistoryChartUnit unit = HistoryChartUnit.kilograms,
+}) {
+  final matching = [
+    for (final session in sessions)
+      if (exerciseId == null || _loggedExercise(session, exerciseId)) session,
+  ];
+  if (matching.length < 2) {
     return null;
   }
-  final useKilograms = _weightedSessionCount(sessions) >= 2;
-  final ordered = [...sessions]
+  final ordered = [...matching]
     ..sort((a, b) => a.completedAt.compareTo(b.completedAt));
   return HistoryChartSeries(
-    unit: useKilograms ? HistoryChartUnit.kilograms : HistoryChartUnit.reps,
+    unit: unit,
     points: [
       for (final session in ordered)
         HistoryChartPoint(
           at: session.completedAt,
-          value: useKilograms
-              ? session.totalVolumeKg
-              : session.totalRepsLogged.toDouble(),
+          value: _chartValue(session, exerciseId: exerciseId, unit: unit),
         ),
     ],
   );
 }
 
-int _weightedSessionCount(List<CompletedSession> sessions) {
-  var count = 0;
-  for (final session in sessions) {
-    if (session.totalVolumeKg > 0) {
-      count += 1;
+bool _loggedExercise(CompletedSession session, String exerciseId) {
+  for (final log in session.setLogs) {
+    if (log.exerciseId == exerciseId) {
+      return true;
     }
   }
-  return count;
+  return false;
+}
+
+double _chartValue(
+  CompletedSession session, {
+  required String? exerciseId,
+  required HistoryChartUnit unit,
+}) {
+  if (unit == HistoryChartUnit.seconds) {
+    return _longestHold(session, exerciseId).toDouble();
+  }
+  if (exerciseId == null) {
+    return unit == HistoryChartUnit.kilograms
+        ? session.totalVolumeKg
+        : session.setLogs.length.toDouble();
+  }
+  if (unit == HistoryChartUnit.sets) {
+    var count = 0;
+    for (final log in session.setLogs) {
+      if (log.exerciseId == exerciseId) {
+        count += 1;
+      }
+    }
+    return count.toDouble();
+  }
+  var volume = 0.0;
+  for (final log in session.setLogs) {
+    if (log.exerciseId == exerciseId && log.hasWeight) {
+      volume += log.reps * log.weightKg!;
+    }
+  }
+  return volume;
+}
+
+int _longestHold(CompletedSession session, String? exerciseId) {
+  var best = 0;
+  for (final log in session.setLogs) {
+    if (exerciseId != null && log.exerciseId != exerciseId) {
+      continue;
+    }
+    final held = log.heldSeconds;
+    if (held != null && held > best) {
+      best = held;
+    }
+  }
+  return best;
 }

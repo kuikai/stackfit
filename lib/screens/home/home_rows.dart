@@ -32,7 +32,8 @@ Widget buildHomeGroup(
     section: group.section!,
     workouts: group.workouts,
     dragIndex: groupIndex,
-    dragHandle: homeDragHandle(groupIndex),
+    onDropWorkout: (workout) =>
+        dropHomeWorkoutOnSection(ref, workout, group.section!),
     onReorderWorkouts: (from, to) =>
         reorderHomeWorkoutInSection(ref, group.workouts[from], to),
     onStart: (workout) => startHomeWorkout(context, ref, workout),
@@ -63,21 +64,23 @@ Widget _looseWorkoutTile(
   final inProgress = homeRunMatches(runs, workout);
   return ReorderableDelayedDragStartListener(
     index: groupIndex,
-    child: WorkoutTile(
+    child: wrapHomeWorkoutDrag(
       workout: workout,
-      inProgress: inProgress,
-      dragHandle: homeDragHandle(groupIndex),
-      onStart: () => startHomeWorkout(context, ref, workout),
-      onStartOver: inProgress
-          ? () => startHomeWorkout(context, ref, workout, fresh: true)
-          : null,
-      onEdit: () => openHomeEditor(context, workoutId: workout.id),
-      onHistory: () => openHomeWorkoutHistory(context, workout),
-      onDelete: () => deleteHomeWorkout(context, ref, workout),
-      onMoveToSection: () => moveHomeWorkout(context, ref, workout),
-      onDuplicate: isPro
-          ? () => duplicateHomeWorkout(context, ref, workout)
-          : null,
+      buildChild: () => WorkoutTile(
+        workout: workout,
+        inProgress: inProgress,
+        onStart: () => startHomeWorkout(context, ref, workout),
+        onStartOver: inProgress
+            ? () => startHomeWorkout(context, ref, workout, fresh: true)
+            : null,
+        onEdit: () => openHomeEditor(context, workoutId: workout.id),
+        onHistory: () => openHomeWorkoutHistory(context, workout),
+        onDelete: () => deleteHomeWorkout(context, ref, workout),
+        onMoveToSection: () => moveHomeWorkout(context, ref, workout),
+        onDuplicate: isPro
+            ? () => duplicateHomeWorkout(context, ref, workout)
+            : null,
+      ),
     ),
   );
 }

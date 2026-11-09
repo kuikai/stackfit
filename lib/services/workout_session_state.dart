@@ -13,6 +13,9 @@ enum SessionPhase {
   /// Set exercise: waiting for user to tap Done.
   setReady,
 
+  /// Hold exercise: counting up until Done.
+  hold,
+
   /// Workout finished.
   complete,
 }

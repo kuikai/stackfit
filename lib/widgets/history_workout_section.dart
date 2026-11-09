@@ -10,12 +10,14 @@ import 'skin_panel.dart';
 /// One workout on History: name, load chart, and each session's date.
 ///
 /// Starts open. The header folds the rows and leaves the chart up.
+/// [onDeleteAll] puts a trash icon on the right of the header.
 class HistoryWorkoutSection extends StatefulWidget {
   const HistoryWorkoutSection({
     super.key,
     required this.group,
     this.showHeader = true,
     this.belowChart,
+    this.onDeleteAll,
   });
 
   final HistoryWorkoutGroup group;
@@ -25,6 +27,9 @@ class HistoryWorkoutSection extends StatefulWidget {
 
   /// Extra block under the chart. The per-workout page passes its stats.
   final Widget? belowChart;
+
+  /// Deletes every log of this workout. Null hides the trash icon.
+  final VoidCallback? onDeleteAll;
 
   @override
   State<HistoryWorkoutSection> createState() => _HistoryWorkoutSectionState();
@@ -60,41 +65,61 @@ class _HistoryWorkoutSectionState extends State<HistoryWorkoutSection> {
     final count = group.sessions.length;
     final times = count == 1 ? '1 time' : '$count times';
     final latest = AppUtils.formatSessionDate(group.sessions.first.completedAt);
+    final onDeleteAll = widget.onDeleteAll;
 
-    return InkWell(
-      onTap: () => setState(() => _open = !_open),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 8, 12, 4),
-        child: Row(
-          children: [
-            Icon(_open ? Icons.expand_less : Icons.expand_more),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    group.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 4, 4, 0),
+      child: Row(
+        children: [
+          Expanded(
+            child: InkWell(
+              onTap: () => setState(() => _open = !_open),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Icon(_open ? Icons.expand_less : Icons.expand_more),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            group.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '$times · $latest',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.6,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '$times · $latest',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+          if (onDeleteAll != null)
+            IconButton(
+              key: ValueKey('delete-workout-logs-${group.workoutId}'),
+              tooltip: 'Delete logs',
+              visualDensity: VisualDensity.compact,
+              onPressed: onDeleteAll,
+              icon: const Icon(Icons.delete_outline_rounded),
+            ),
+        ],
       ),
     );
   }

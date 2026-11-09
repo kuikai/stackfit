@@ -16,7 +16,7 @@ export function renderRun(run) {
   clockNode.textContent = showSet ? setLabel(run, exercise) : formatClock(run.remaining);
   clockNode.className = showSet ? 'tabata-clock set-prompt' : 'tabata-clock';
   renderControls(run);
-  if (run.phase === 'work' || run.phase === 'rest') {
+  if (run.phase === 'work' || run.phase === 'rest' || run.phase === 'hold') {
     document.title = `${formatClock(run.remaining)} ${phaseLabel(run.phase)}`;
   }
 }
@@ -84,6 +84,9 @@ function phaseLabel(phase) {
   if (phase === 'set') {
     return 'Set';
   }
+  if (phase === 'hold') {
+    return 'Hold';
+  }
   return 'Work';
 }
 
@@ -95,6 +98,9 @@ function detailLabel(state, exercise) {
     return exercise.reps ? `${exercise.reps} reps` : '';
   }
   const total = exercise.sets ?? 1;
+  if (total > 1 && (exercise.type === 'hold' || state.phase === 'hold')) {
+    return `Attempt ${state.setIndex + 1} of ${total}`;
+  }
   if (total > 1) {
     return `Set ${state.setIndex + 1} of ${total}`;
   }

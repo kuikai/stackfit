@@ -26,7 +26,7 @@ Future<WorkoutAddChoice?> askWhatToAdd(BuildContext context) {
             ListTile(
               leading: const Icon(Icons.edit_outlined),
               title: const Text('Custom exercise'),
-              subtitle: const Text('Timer or sets from scratch'),
+              subtitle: const Text('Timer, sets, or hold from scratch'),
               onTap: () => Navigator.pop(context, WorkoutAddChoice.custom),
             ),
             ListTile(

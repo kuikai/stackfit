@@ -159,29 +159,44 @@ class HomeScreen extends ConsumerWidget {
         children: [header, _emptyHome(context, ref)],
       );
     }
-    return ReorderableListView.builder(
-      padding: padding,
-      header: header,
-      buildDefaultDragHandles: false,
-      itemCount: groups.length,
-      proxyDecorator: homeReorderProxy,
-      onReorderItem: (from, to) {
-        reorderHomeRow(ref, from, to);
+    return DragTarget<HomeWorkoutDrag>(
+      onWillAcceptWithDetails: (details) => details.data.fromSection != null,
+      onAcceptWithDetails: (details) {
+        dropHomeWorkoutOnHome(ref, details.data.workout);
       },
-      itemBuilder: (context, index) {
-        final group = groups[index];
-        final id = group.isSection
-            ? 's:${group.section}'
-            : 'w:${group.workouts.single.id}';
-        return KeyedSubtree(
-          key: ValueKey(id),
-          child: buildHomeGroup(
-            context,
-            ref,
-            group,
-            groupIndex: index,
-            runs: runs,
-            isPro: isPro,
+      builder: (context, candidate, rejected) {
+        final leaving = candidate.isNotEmpty;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          color: leaving
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)
+              : Colors.transparent,
+          child: ReorderableListView.builder(
+            padding: padding,
+            header: header,
+            buildDefaultDragHandles: false,
+            itemCount: groups.length,
+            proxyDecorator: homeReorderProxy,
+            onReorderItem: (from, to) {
+              reorderHomeRow(ref, from, to);
+            },
+            itemBuilder: (context, index) {
+              final group = groups[index];
+              final id = group.isSection
+                  ? 's:${group.section}'
+                  : 'w:${group.workouts.single.id}';
+              return KeyedSubtree(
+                key: ValueKey(id),
+                child: buildHomeGroup(
+                  context,
+                  ref,
+                  group,
+                  groupIndex: index,
+                  runs: runs,
+                  isPro: isPro,
+                ),
+              );
+            },
           ),
         );
       },

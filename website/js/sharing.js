@@ -450,8 +450,12 @@ function exerciseError(exercise) {
       || numberError(exercise.restSeconds, 0, 'Enter a valid rest time.')
       || numberError(exercise.sets, 1, 'Sets must be at least 1.');
   }
+  if (exercise.type === 'hold') {
+    return numberError(exercise.sets, 1, 'Attempts must be at least 1.')
+      || numberError(exercise.restSeconds, 0, 'Enter a valid rest time.');
+  }
   if (exercise.type !== 'sets') {
-    return 'Each exercise must be timer or sets.';
+    return 'Each exercise must be timer, sets, or hold.';
   }
   const reps = exercise.reps;
   if (reps != null && (!Number.isInteger(reps) || reps < 1)) {

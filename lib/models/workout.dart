@@ -147,6 +147,12 @@ int _exerciseDuration(Exercise exercise) {
     final rounds = exercise.sets ?? 1;
     return ((exercise.workSeconds ?? 0) + (exercise.restSeconds ?? 0)) * rounds;
   }
+  if (exercise.type == ExerciseType.hold) {
+    final attempts = exercise.sets ?? 1;
+    final gaps = attempts > 1 ? attempts - 1 : 0;
+    final rest = exercise.restSeconds ?? 0;
+    return gaps * (rest < 0 ? 0 : rest);
+  }
   final sets = exercise.sets ?? 1;
   final rest = (sets - 1) * (exercise.restSeconds ?? 0);
   return (sets * 45) + (rest < 0 ? 0 : rest);

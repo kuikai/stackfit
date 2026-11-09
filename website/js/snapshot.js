@@ -96,6 +96,10 @@ export function estimatedDurationSeconds(exercises) {
     if (exercise.type === 'timer') {
       const rounds = exercise.sets ?? 1;
       total += ((exercise.workSeconds ?? 0) + (exercise.restSeconds ?? 0)) * rounds;
+    } else if (exercise.type === 'hold') {
+      const attempts = exercise.sets ?? 1;
+      const gaps = attempts > 1 ? attempts - 1 : 0;
+      total += gaps * Math.max(exercise.restSeconds ?? 0, 0);
     } else {
       const sets = exercise.sets ?? 1;
       const rest = Math.max(sets - 1, 0) * (exercise.restSeconds ?? 0);
@@ -110,6 +114,13 @@ export function exerciseLine(exercise) {
     const rounds = exercise.sets ?? 1;
     const roundsText = rounds > 1 ? ` · ${rounds} rounds` : '';
     return `${exercise.name} (${exercise.workSeconds}s work / ${exercise.restSeconds}s rest${roundsText})`;
+  }
+  if (exercise.type === 'hold') {
+    const attempts = exercise.sets ?? 1;
+    const attemptText = attempts === 1 ? '1 attempt' : `${attempts} attempts`;
+    const rest = exercise.restSeconds ?? 0;
+    const restText = rest > 0 ? ` · ${rest}s rest` : '';
+    return `${exercise.name} (hold, ${attemptText}${restText})`;
   }
   const repsText = exercise.reps != null ? ` × ${exercise.reps} reps` : '';
   return `${exercise.name} (${exercise.sets} sets${repsText} / ${exercise.restSeconds}s rest)`;

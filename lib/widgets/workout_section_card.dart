@@ -25,9 +25,9 @@ class WorkoutSectionCard extends StatefulWidget {
     this.onDuplicate,
     this.onStartOver,
     this.isInProgress,
-    this.dragHandle,
     this.dragIndex,
     this.onReorderWorkouts,
+    this.onDropWorkout,
   });
 
   final String section;
@@ -44,13 +44,13 @@ class WorkoutSectionCard extends StatefulWidget {
   final void Function(Workout workout)? onStartOver;
   final bool Function(Workout workout)? isInProgress;
 
-  /// Grip on the section header. Finger down here drags the whole folder.
-  final Widget? dragHandle;
-
   /// Home-list index so a long-press on the header can start the same drag.
   final int? dragIndex;
 
   final void Function(int from, int to)? onReorderWorkouts;
+
+  /// Drop a workout here to put it in this folder.
+  final void Function(Workout workout)? onDropWorkout;
 
   @override
   State<WorkoutSectionCard> createState() => _WorkoutSectionCardState();
@@ -76,9 +76,8 @@ class _WorkoutSectionCardState extends State<WorkoutSectionCard> {
     for (final workout in widget.workouts) {
       seconds += workout.estimatedDurationSeconds;
     }
-    final duration = AppUtils.formatDurationFriendly(
-      count == 0 ? 0 : seconds ~/ count,
-    );
+    final average = count == 0 ? 0 : seconds ~/ count;
+    final duration = AppUtils.formatDurationFriendly(average);
 
     final look = context.skinLook;
     Widget header = ListTile(
@@ -94,39 +93,35 @@ class _WorkoutSectionCardState extends State<WorkoutSectionCard> {
         ),
       ),
       subtitle: Text(
-        '$count session${count == 1 ? '' : 's'} · ~$duration each',
+        average <= 0
+            ? '$count session${count == 1 ? '' : 's'}'
+            : '$count session${count == 1 ? '' : 's'} · ~$duration each',
         style: theme.textTheme.bodySmall?.copyWith(color: muted),
       ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (widget.dragHandle != null) widget.dragHandle!,
-          FitMenuButton<_SectionMenuAction>(
-            tooltip: 'Section options',
-            onSelected: (action) {
-              switch (action) {
-                case _SectionMenuAction.add:
-                  widget.onAddWorkout();
-                case _SectionMenuAction.rename:
-                  widget.onRename();
-                case _SectionMenuAction.dissolve:
-                  widget.onDissolve();
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: _SectionMenuAction.add,
-                child: Text('Add workout'),
-              ),
-              const PopupMenuItem(
-                value: _SectionMenuAction.rename,
-                child: Text('Rename section'),
-              ),
-              const PopupMenuItem(
-                value: _SectionMenuAction.dissolve,
-                child: Text('Ungroup'),
-              ),
-            ],
+      trailing: FitMenuButton<_SectionMenuAction>(
+        tooltip: 'Section options',
+        onSelected: (action) {
+          switch (action) {
+            case _SectionMenuAction.add:
+              widget.onAddWorkout();
+            case _SectionMenuAction.rename:
+              widget.onRename();
+            case _SectionMenuAction.dissolve:
+              widget.onDissolve();
+          }
+        },
+        itemBuilder: (context) => [
+          const PopupMenuItem(
+            value: _SectionMenuAction.add,
+            child: Text('Add workout'),
+          ),
+          const PopupMenuItem(
+            value: _SectionMenuAction.rename,
+            child: Text('Rename section'),
+          ),
+          const PopupMenuItem(
+            value: _SectionMenuAction.dissolve,
+            child: Text('Ungroup'),
           ),
         ],
       ),
@@ -139,10 +134,36 @@ class _WorkoutSectionCardState extends State<WorkoutSectionCard> {
       );
     }
 
-    return SkinPanel(
+    final card = SkinPanel(
       margin: EdgeInsets.only(bottom: look.listGap),
       overPortrait: true,
       child: Column(children: [header, if (_open) _workoutList()]),
+    );
+    final onDrop = widget.onDropWorkout;
+    if (onDrop == null) {
+      return card;
+    }
+    return DragTarget<HomeWorkoutDrag>(
+      onWillAcceptWithDetails: (_) => true,
+      onAcceptWithDetails: (details) {
+        if (details.data.workout.section == widget.section) {
+          return;
+        }
+        onDrop(details.data.workout);
+      },
+      builder: (context, candidate, rejected) {
+        final hovering = candidate.isNotEmpty;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          decoration: BoxDecoration(
+            borderRadius: look.cornerRadius,
+            color: hovering
+                ? theme.colorScheme.primary.withValues(alpha: 0.16)
+                : Colors.transparent,
+          ),
+          child: card,
+        );
+      },
     );
   }
 
@@ -155,7 +176,11 @@ class _WorkoutSectionCardState extends State<WorkoutSectionCard> {
           children: [
             for (var i = 0; i < workouts.length; i++) ...[
               if (i > 0) const Divider(height: 1),
-              _tile(workouts[i], i),
+              wrapHomeWorkoutDrag(
+                workout: workouts[i],
+                fromSection: widget.section,
+                buildChild: () => _tile(workouts[i]),
+              ),
             ],
           ],
         ),
@@ -171,24 +196,25 @@ class _WorkoutSectionCardState extends State<WorkoutSectionCard> {
       proxyDecorator: homeReorderProxy,
       onReorderItem: widget.onReorderWorkouts!,
       itemBuilder: (context, index) {
+        final workout = workouts[index];
         return ReorderableDelayedDragStartListener(
-          key: ValueKey(workouts[index].id),
+          key: ValueKey(workout.id),
           index: index,
-          child: _tile(workouts[index], index),
+          child: wrapHomeWorkoutDrag(
+            workout: workout,
+            fromSection: widget.section,
+            buildChild: () => _tile(workout),
+          ),
         );
       },
     );
   }
 
-  Widget _tile(Workout workout, int index) {
+  Widget _tile(Workout workout) {
     return WorkoutTile(
       workout: workout,
       embedded: true,
       inProgress: widget.isInProgress?.call(workout) ?? false,
-      dragHandle:
-          widget.onReorderWorkouts != null && widget.workouts.length >= 2
-          ? homeDragHandle(index)
-          : null,
       onStart: () => widget.onStart(workout),
       onEdit: () => widget.onEdit(workout),
       onHistory: () => widget.onHistory(workout),

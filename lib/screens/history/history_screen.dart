@@ -48,7 +48,18 @@ class HistoryScreen extends ConsumerWidget {
                     padding: context.pageGutter(top: 8, bottom: 24),
                     itemCount: groups.length,
                     itemBuilder: (context, index) {
-                      return HistoryWorkoutSection(group: groups[index]);
+                      final group = groups[index];
+                      return HistoryWorkoutSection(
+                        group: group,
+                        onDeleteAll: () => unawaited(
+                          confirmDeleteWorkoutHistory(
+                            context,
+                            ref,
+                            workoutId: group.workoutId,
+                            workoutName: group.name,
+                          ),
+                        ),
+                      );
                     },
                   ),
                 ),
@@ -109,4 +120,41 @@ Future<void> _confirmClearHistory(BuildContext context, WidgetRef ref) async {
     return;
   }
   await ref.read(completedSessionsProvider.notifier).clearAll();
+}
+
+/// Asks, then removes every saved session of one workout.
+Future<void> confirmDeleteWorkoutHistory(
+  BuildContext context,
+  WidgetRef ref, {
+  required String workoutId,
+  required String workoutName,
+}) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('Delete all logs?'),
+        content: Text(
+          'Every session of "$workoutName" will be removed. '
+          'This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      );
+    },
+  );
+  if (confirmed != true) {
+    return;
+  }
+  await ref
+      .read(completedSessionsProvider.notifier)
+      .deleteSessionsForWorkout(workoutId);
 }

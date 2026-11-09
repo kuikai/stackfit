@@ -22,7 +22,7 @@ class CatalogExercise {
     this.reps,
   });
 
-  /// The saved timer or sets, used to fill the editor when this is picked.
+  /// The saved timer, sets, or hold, used to fill the editor when this is picked.
   ///
   /// Built-in catalog rows have no saved setup, so this is null for them.
   Exercise? get preset {
@@ -37,6 +37,14 @@ class CatalogExercise {
         workSeconds: workSeconds ?? 40,
         restSeconds: restSeconds ?? 60,
         sets: sets ?? 1,
+      );
+    }
+    if (exerciseType == ExerciseType.hold) {
+      return Exercise.hold(
+        id: id,
+        name: name,
+        sets: sets ?? 1,
+        restSeconds: restSeconds ?? 0,
       );
     }
     return Exercise.sets(

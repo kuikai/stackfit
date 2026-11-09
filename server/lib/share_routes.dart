@@ -307,6 +307,9 @@ Map<String, dynamic>? _sanitizeExercise(Map<String, dynamic> exercise) {
   if (type == 'sets') {
     return _setsExercise(name.trim(), exercise);
   }
+  if (type == 'hold') {
+    return _holdExercise(name.trim(), exercise);
+  }
   return null;
 }
 
@@ -329,6 +332,25 @@ Map<String, dynamic>? _timerExercise(
     'name': name,
     'type': 'timer',
     'workSeconds': work,
+    'restSeconds': rest,
+    'sets': sets,
+    'reps': null,
+  };
+}
+
+Map<String, dynamic>? _holdExercise(
+  String name,
+  Map<String, dynamic> exercise,
+) {
+  final sets = exercise['sets'];
+  final rest = exercise['restSeconds'];
+  if (sets is! int || sets < 1 || rest is! int || rest < 0) {
+    return null;
+  }
+  return {
+    'name': name,
+    'type': 'hold',
+    'workSeconds': null,
     'restSeconds': rest,
     'sets': sets,
     'reps': null,

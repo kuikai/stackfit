@@ -43,13 +43,28 @@ class CompletedSession {
     );
   }
 
-  /// Total reps across every logged set.
+  /// Total reps across every logged set. Holds are not reps.
   int get totalRepsLogged {
     var total = 0;
     for (final log in setLogs) {
+      if (log.isHold) {
+        continue;
+      }
       total += log.reps;
     }
     return total;
+  }
+
+  /// Longest hold in this session, or 0 when nothing was held.
+  int get bestHoldSeconds {
+    var best = 0;
+    for (final log in setLogs) {
+      final held = log.heldSeconds;
+      if (held != null && held > best) {
+        best = held;
+      }
+    }
+    return best;
   }
 
   /// Sum of reps × kg over weighted sets; 0 when nothing was weighted.
