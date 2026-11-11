@@ -238,6 +238,134 @@ void main() {
       ]);
     });
 
+    test('flat rows expand open folder days under the header', () {
+      final groups = groupWorkoutsForHome([
+        fake('push'),
+        fake('chest', section: 'Upper / Lower'),
+        fake('back', section: 'Upper / Lower'),
+      ]);
+      final closed = buildHomeFlatRows(groups, {});
+      expect(closed.map((row) => row.key), ['w:push', 's:Upper / Lower']);
+      final open = buildHomeFlatRows(groups, {'Upper / Lower'});
+      expect(open.map((row) => row.key), [
+        'w:push',
+        's:Upper / Lower',
+        'w:chest',
+        'w:back',
+        'x:Upper / Lower',
+      ]);
+    });
+
+    test('flat reorder drops a loose workout between folder days', () {
+      final workouts = [
+        fake('chest', section: 'Upper / Lower'),
+        fake('back', section: 'Upper / Lower'),
+        fake('timer'),
+      ];
+      // Open rows: header, chest, back, exit, timer — move timer between chest and back.
+      final moved = reorderHomeFlatRows(
+        workouts,
+        {'Upper / Lower'},
+        4,
+        2,
+      );
+      expect(moved.map((workout) => workout.id), ['chest', 'timer', 'back']);
+      expect(moved[1].section, 'Upper / Lower');
+    });
+
+    test('flat reorder pulls a day out above the folder', () {
+      final workouts = [
+        fake('push'),
+        fake('chest', section: 'Upper / Lower'),
+        fake('back', section: 'Upper / Lower'),
+      ];
+      // Open rows: push, header, chest, back, exit — move back before push.
+      final moved = reorderHomeFlatRows(
+        workouts,
+        {'Upper / Lower'},
+        3,
+        0,
+      );
+      expect(moved.map((workout) => workout.id), ['back', 'push', 'chest']);
+      expect(moved.first.section, isNull);
+      expect(moved.last.section, 'Upper / Lower');
+    });
+
+    test('flat reorder drops a loose workout under a bottom folder', () {
+      final workouts = [
+        fake('timer'),
+        fake('chest', section: 'Upper / Lower'),
+        fake('back', section: 'Upper / Lower'),
+      ];
+      // Open rows: timer, header, chest, back, exit — drop timer on the exit.
+      final moved = reorderHomeFlatRows(
+        workouts,
+        {'Upper / Lower'},
+        0,
+        4,
+      );
+      expect(moved.map((workout) => workout.id), ['chest', 'back', 'timer']);
+      expect(moved.last.section, isNull);
+      expect(moved.first.section, 'Upper / Lower');
+    });
+
+    test('flat reorder can still park a day last in a bottom folder', () {
+      final workouts = [
+        fake('chest', section: 'Upper / Lower'),
+        fake('back', section: 'Upper / Lower'),
+        fake('legs', section: 'Upper / Lower'),
+      ];
+      // Open rows: header, chest, back, legs, exit — move chest before exit.
+      final moved = reorderHomeFlatRows(
+        workouts,
+        {'Upper / Lower'},
+        1,
+        3,
+      );
+      expect(moved.map((workout) => workout.id), ['back', 'legs', 'chest']);
+      expect(
+        moved.every((workout) => workout.section == 'Upper / Lower'),
+        isTrue,
+      );
+    });
+
+    test('placeWorkoutAt joins a loose workout between folder days', () {
+      final workouts = [
+        fake('chest', section: 'Upper / Lower'),
+        fake('back', section: 'Upper / Lower'),
+        fake('timer'),
+      ];
+      final placed = placeWorkoutAt(
+        workouts,
+        'timer',
+        section: 'Upper / Lower',
+        index: 1,
+      );
+      expect(placed.map((workout) => workout.id), [
+        'chest',
+        'timer',
+        'back',
+      ]);
+      expect(placed[1].section, 'Upper / Lower');
+    });
+
+    test('placeWorkoutAt leaves a day above the folder on Home', () {
+      final workouts = [
+        fake('push'),
+        fake('chest', section: 'Upper / Lower'),
+        fake('back', section: 'Upper / Lower'),
+      ];
+      final left = placeWorkoutAt(
+        workouts,
+        'back',
+        section: null,
+        index: 0,
+      );
+      expect(left.map((workout) => workout.id), ['back', 'push', 'chest']);
+      expect(left.first.section, isNull);
+      expect(left.last.section, 'Upper / Lower');
+    });
+
     test('leaving a section makes a loose Home row', () {
       final workouts = [
         fake('chest', section: 'Upper / Lower'),

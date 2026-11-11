@@ -169,11 +169,7 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
   }
 
   Future<void> _onReorder(int oldIndex, int newIndex) async {
-    var dest = newIndex;
-    if (dest > oldIndex) {
-      dest -= 1;
-    }
-    await _moveBlockTo(oldIndex, dest);
+    await _moveBlockTo(oldIndex, newIndex);
   }
 
   Future<void> _moveBlock(int index, int direction) {
@@ -325,11 +321,7 @@ class _WorkoutEditorScreenState extends ConsumerState<WorkoutEditorScreen> {
     int oldIndex,
     int newIndex,
   ) async {
-    var dest = newIndex;
-    if (dest > oldIndex) {
-      dest -= 1;
-    }
-    await _moveStationTo(circuitId, oldIndex, dest);
+    await _moveStationTo(circuitId, oldIndex, newIndex);
   }
 
   Future<void> _moveStation(

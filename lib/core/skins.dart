@@ -280,23 +280,25 @@ class SkinLook extends ThemeExtension<SkinLook> {
   final double buttonPaddingVertical;
   final double cardOpacity;
 
-  /// Solid skins use the surface colour. Glass skins use the same frost as
-  /// the Home holders, so every box matches on Cyberpunk.
+  /// Solid skins use the surface colour. Glass skins use a frost wash.
+  /// [overPortrait] uses a heavier frost so Home rows stay readable on the
+  /// wallpaper (same strength as the open folder shell).
   Color cardFill(ColorScheme colors, {bool overPortrait = false}) {
     if (cardOpacity >= 1) {
       return colors.surface;
     }
-    return colors.surface.withValues(alpha: 0.72);
+    return colors.surface.withValues(alpha: overPortrait ? 0.9 : 0.72);
   }
 
   BoxDecoration cardDecoration(
     ColorScheme colors, {
     Color? color,
     bool overPortrait = false,
+    BorderRadius? borderRadius,
   }) {
     return BoxDecoration(
       color: color ?? cardFill(colors, overPortrait: overPortrait),
-      borderRadius: cornerRadius,
+      borderRadius: borderRadius ?? cornerRadius,
       border: cardOpacity < 1
           ? Border.all(color: colors.primary.withValues(alpha: 0.32))
           : null,

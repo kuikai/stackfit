@@ -12,12 +12,16 @@ class SkinPanel extends StatelessWidget {
     required this.child,
     this.margin,
     this.color,
+    this.borderRadius,
     this.overPortrait = false,
   });
 
   final Widget child;
   final EdgeInsetsGeometry? margin;
   final Color? color;
+
+  /// Overrides the skin's usual round corners (folder shells use this).
+  final BorderRadius? borderRadius;
 
   /// Darker frost so names stay readable on the big Home picture.
   final bool overPortrait;
@@ -26,8 +30,14 @@ class SkinPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final look = context.skinLook;
     final colors = Theme.of(context).colorScheme;
+    final radius = borderRadius ?? look.cornerRadius;
     if (look.cardOpacity >= 1) {
-      return Card(margin: margin, color: color, child: child);
+      return Card(
+        margin: margin,
+        color: color,
+        shape: RoundedRectangleBorder(borderRadius: radius),
+        child: child,
+      );
     }
     return Container(
       margin: margin,
@@ -35,6 +45,7 @@ class SkinPanel extends StatelessWidget {
         colors,
         color: color,
         overPortrait: overPortrait,
+        borderRadius: radius,
       ),
       clipBehavior: Clip.antiAlias,
       child: Material(type: MaterialType.transparency, child: child),

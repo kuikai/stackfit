@@ -279,3 +279,267 @@ WorkoutHomeGroup? _moveInsideSection(
 List<Workout> _flattenHomeGroups(List<WorkoutHomeGroup> groups) {
   return [for (final group in groups) ...group.workouts];
 }
+
+/// Moves [workoutId] onto Home or into a folder at a specific slot.
+///
+/// When [section] is null, [index] is a Home row index (loose workout or
+/// folder). When [section] is set, [index] is the day slot inside that folder
+/// (0 = top, length = after the last day). Out-of-range indexes clamp.
+List<Workout> placeWorkoutAt(
+  List<Workout> workouts,
+  String workoutId, {
+  String? section,
+  required int index,
+  DateTime? updatedAt,
+}) {
+  final groups = groupWorkoutsForHome(workouts);
+  Workout? moved;
+  final next = <WorkoutHomeGroup>[];
+
+  for (final group in groups) {
+    if (!group.isSection) {
+      final workout = group.workouts.single;
+      if (workout.id == workoutId) {
+        moved = workout;
+        continue;
+      }
+      next.add(group);
+      continue;
+    }
+
+    final kept = <Workout>[];
+    for (final workout in group.workouts) {
+      if (workout.id == workoutId) {
+        moved = workout;
+      } else {
+        kept.add(workout);
+      }
+    }
+    if (kept.isEmpty) {
+      continue;
+    }
+    next.add(WorkoutHomeGroup(section: group.section, workouts: kept));
+  }
+
+  if (moved == null) {
+    return workouts;
+  }
+
+  final normalized = Workout.normalizeSection(section);
+  final placed = moved.copyWith(
+    section: normalized,
+    clearSection: normalized == null,
+    updatedAt: updatedAt ?? moved.updatedAt,
+  );
+
+  if (normalized == null) {
+    final at = index.clamp(0, next.length);
+    next.insert(at, WorkoutHomeGroup(section: null, workouts: [placed]));
+    return _flattenHomeGroups(next);
+  }
+
+  final sectionIndex = next.indexWhere((group) => group.section == normalized);
+  if (sectionIndex < 0) {
+    final at = index.clamp(0, next.length);
+    next.insert(
+      at,
+      WorkoutHomeGroup(section: normalized, workouts: [placed]),
+    );
+    return _flattenHomeGroups(next);
+  }
+
+  final days = [...next[sectionIndex].workouts];
+  final at = index.clamp(0, days.length);
+  days.insert(at, placed);
+  next[sectionIndex] = WorkoutHomeGroup(section: normalized, workouts: days);
+  return _flattenHomeGroups(next);
+}
+
+/// One row in the flat Home list (folder header or a workout / day).
+sealed class HomeFlatRow {
+  const HomeFlatRow();
+
+  String get key;
+}
+
+/// Folder header. When the folder is closed, [workouts] still holds its days.
+class HomeFlatHeader extends HomeFlatRow {
+  const HomeFlatHeader({required this.section, required this.workouts});
+
+  final String section;
+  final List<Workout> workouts;
+
+  @override
+  String get key => 's:$section';
+}
+
+/// A loose Home workout, or one day inside an open folder.
+class HomeFlatWorkout extends HomeFlatRow {
+  const HomeFlatWorkout({required this.workout, this.section});
+
+  final Workout workout;
+
+  /// Folder this day belongs to. Null means a loose Home row.
+  final String? section;
+
+  /// Stable across join/leave so a drop does not rebuild the tile as new.
+  @override
+  String get key => 'w:${workout.id}';
+}
+
+/// Drop target under an open folder so a workout can land on Home below it.
+///
+/// Without this row, a plan at the bottom of Home has no slot past its last
+/// day — every release lands inside the plan.
+class HomeFlatExit extends HomeFlatRow {
+  const HomeFlatExit(this.section);
+
+  final String section;
+
+  @override
+  String get key => 'x:$section';
+}
+
+/// Builds the flat Home rows. Open folders expand their days under the header.
+List<HomeFlatRow> buildHomeFlatRows(
+  List<WorkoutHomeGroup> groups,
+  Set<String> openSections,
+) {
+  final rows = <HomeFlatRow>[];
+  for (final group in groups) {
+    if (!group.isSection) {
+      rows.add(HomeFlatWorkout(workout: group.workouts.single));
+      continue;
+    }
+    final section = group.section!;
+    rows.add(HomeFlatHeader(section: section, workouts: group.workouts));
+    if (openSections.contains(section)) {
+      for (final workout in group.workouts) {
+        rows.add(HomeFlatWorkout(workout: workout, section: section));
+      }
+      rows.add(HomeFlatExit(section));
+    }
+  }
+  return rows;
+}
+
+/// Applies a flat-list drag so gaps inside an open folder work like Home.
+///
+/// [from]/to] are [onReorderItem] indexes. Moving a closed folder header
+/// moves the whole folder among Home rows. Moving a workout joins, leaves, or
+/// reorders days based on the slot it lands in. Dropping on a folder's exit
+/// row parks the workout on Home under that folder.
+List<Workout> reorderHomeFlatRows(
+  List<Workout> workouts,
+  Set<String> openSections,
+  int from,
+  int to,
+) {
+  final groups = groupWorkoutsForHome(workouts);
+  final rows = buildHomeFlatRows(groups, openSections);
+  if (from < 0 ||
+      to < 0 ||
+      from >= rows.length ||
+      to >= rows.length ||
+      from == to) {
+    return workouts;
+  }
+
+  final moved = rows[from];
+  if (moved is HomeFlatExit) {
+    return workouts;
+  }
+  final without = [...rows]..removeAt(from);
+
+  if (moved is HomeFlatHeader) {
+    final groupFrom = groups.indexWhere((group) => group.section == moved.section);
+    if (groupFrom < 0) {
+      return workouts;
+    }
+    final groupTo = _homeGroupIndexForInsert(without, to);
+    return moveHomeGroup(workouts, groupFrom, groupTo);
+  }
+
+  if (moved is! HomeFlatWorkout) {
+    return workouts;
+  }
+
+  final section = _sectionForInsert(
+    without,
+    to,
+    movingFromSection: moved.section,
+  );
+  if (section != null) {
+    return placeWorkoutAt(
+      workouts,
+      moved.workout.id,
+      section: section,
+      index: _dayIndexForInsert(without, to, section),
+    );
+  }
+  return placeWorkoutAt(
+    workouts,
+    moved.workout.id,
+    section: null,
+    index: _homeGroupIndexForInsert(without, to),
+  );
+}
+
+/// Which folder a drop slot belongs to, if any.
+///
+/// A slot after the last day of a folder (before its exit row) is ambiguous:
+/// "last day in the plan" or "loose row under the plan". Outsiders land under
+/// the plan; a day that already belongs there stays as the last day.
+String? _sectionForInsert(
+  List<HomeFlatRow> rows,
+  int insertAt, {
+  String? movingFromSection,
+}) {
+  final HomeFlatRow? above = insertAt > 0 ? rows[insertAt - 1] : null;
+  final HomeFlatRow? below =
+      insertAt < rows.length ? rows[insertAt] : null;
+
+  if (above is HomeFlatHeader) {
+    return above.section;
+  }
+  if (above is HomeFlatWorkout && above.section != null) {
+    final section = above.section!;
+    if (below is HomeFlatWorkout && below.section == section) {
+      return section;
+    }
+    // Before the exit row, or at end: outsiders leave; members stay last.
+    if (below is HomeFlatExit || below == null) {
+      return movingFromSection == section ? section : null;
+    }
+    if (movingFromSection == section) {
+      return section;
+    }
+    return null;
+  }
+  if (below is HomeFlatWorkout && below.section != null) {
+    return below.section;
+  }
+  return null;
+}
+
+int _dayIndexForInsert(List<HomeFlatRow> rows, int insertAt, String section) {
+  var day = 0;
+  for (var i = 0; i < insertAt && i < rows.length; i++) {
+    final row = rows[i];
+    if (row is HomeFlatWorkout && row.section == section) {
+      day++;
+    }
+  }
+  return day;
+}
+
+int _homeGroupIndexForInsert(List<HomeFlatRow> rows, int insertAt) {
+  var home = 0;
+  for (var i = 0; i < insertAt && i < rows.length; i++) {
+    final row = rows[i];
+    if (row is HomeFlatHeader || (row is HomeFlatWorkout && row.section == null)) {
+      home++;
+    }
+  }
+  return home;
+}

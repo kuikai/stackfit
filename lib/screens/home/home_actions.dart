@@ -350,24 +350,3 @@ Future<void> reorderHomeRow(WidgetRef ref, int from, int to) {
   return ref.read(workoutsProvider.notifier).reorderHomeGroup(from, to);
 }
 
-Future<void> dropHomeWorkoutOnSection(
-  WidgetRef ref,
-  Workout workout,
-  String section,
-) {
-  return ref.read(workoutsProvider.notifier).moveToSection(workout.id, section);
-}
-
-Future<void> dropHomeWorkoutOnHome(WidgetRef ref, Workout workout) {
-  return ref.read(workoutsProvider.notifier).moveToSection(workout.id, null);
-}
-
-Future<void> reorderHomeWorkoutInSection(
-  WidgetRef ref,
-  Workout workout,
-  int to,
-) {
-  return ref
-      .read(workoutsProvider.notifier)
-      .reorderWorkoutInSection(workout.id, to);
-}

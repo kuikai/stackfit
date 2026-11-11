@@ -125,13 +125,39 @@ class WorkoutsNotifier extends StateNotifier<List<Workout>> {
     if (workout.section == next) {
       return;
     }
-    await updateWorkout(
-      workout.copyWith(
-        section: next,
-        clearSection: next == null,
-        updatedAt: DateTime.now(),
-      ),
+    // Menu moves append inside the folder (or land after every Home row).
+    final groups = groupWorkoutsForHome(state);
+    var index = groups.length;
+    if (next != null) {
+      for (final group in groups) {
+        if (group.section == next) {
+          index = group.workouts.length;
+          break;
+        }
+      }
+    }
+    await moveWorkoutTo(workoutId, section: next, index: index);
+  }
+
+  /// Puts a workout on Home or in a folder at [index] (drop position).
+  Future<void> moveWorkoutTo(
+    String workoutId, {
+    String? section,
+    required int index,
+  }) async {
+    final next = placeWorkoutAt(
+      state,
+      workoutId,
+      section: section,
+      index: index,
+      updatedAt: DateTime.now(),
     );
+    if (identical(next, state)) {
+      return;
+    }
+    await _accountStorage.setHomeOrderUpdatedAt(DateTime.now().toUtc());
+    state = next;
+    await _persist();
   }
 
   Future<void> renameSection(String from, String to) async {
@@ -162,18 +188,26 @@ class WorkoutsNotifier extends StateNotifier<List<Workout>> {
     await _saveOrder(moveHomeGroup(state, from, to));
   }
 
+  /// Writes a new Home order from a flat drag (gaps inside open folders).
+  Future<void> replaceHomeOrder(List<Workout> next) async {
+    await _saveOrder(next);
+  }
+
   /// Moves a workout to slot [to] among the others in its section.
   Future<void> reorderWorkoutInSection(String workoutId, int to) async {
     await _saveOrder(moveWorkoutInSectionTo(state, workoutId, to));
   }
 
   /// Saves a new list order. Workout edits stay on their own timestamps.
+  ///
+  /// Updates [state] before any await so ReorderableListView does not snap
+  /// back to the old order for a frame (that flicker on release).
   Future<void> _saveOrder(List<Workout> next) async {
     if (identical(next, state)) {
       return;
     }
-    await _accountStorage.setHomeOrderUpdatedAt(DateTime.now().toUtc());
     state = next;
+    await _accountStorage.setHomeOrderUpdatedAt(DateTime.now().toUtc());
     await _persist();
   }
 

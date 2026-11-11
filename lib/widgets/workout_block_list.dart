@@ -43,7 +43,7 @@ class WorkoutBlockList extends StatelessWidget {
       buildDefaultDragHandles: false,
       padding: EdgeInsets.zero,
       itemCount: blocks.length,
-      onReorder: onReorder,
+      onReorderItem: onReorder,
       itemBuilder: (context, index) {
         final block = blocks[index];
         final moveUp = index == 0 ? null : () => onMoveBlock(index, -1);
@@ -190,7 +190,7 @@ class _CircuitCard extends StatelessWidget {
                 buildDefaultDragHandles: false,
                 padding: EdgeInsets.zero,
                 itemCount: circuit.exercises.length,
-                onReorder: onReorderStation,
+                onReorderItem: onReorderStation,
                 itemBuilder: (context, station) {
                   final exercise = circuit.exercises[station];
                   return ReorderableDelayedDragStartListener(

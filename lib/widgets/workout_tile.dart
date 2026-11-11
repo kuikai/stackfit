@@ -17,6 +17,8 @@ class WorkoutTile extends StatelessWidget {
     required this.onHistory,
     this.onDuplicate,
     this.onMoveToSection,
+    this.onMoveUp,
+    this.onMoveDown,
     this.onStartOver,
     this.inProgress = false,
     this.embedded = false,
@@ -29,6 +31,8 @@ class WorkoutTile extends StatelessWidget {
   final VoidCallback onHistory;
   final VoidCallback? onDuplicate;
   final VoidCallback? onMoveToSection;
+  final VoidCallback? onMoveUp;
+  final VoidCallback? onMoveDown;
 
   /// Clears a saved run and starts from the first exercise.
   final VoidCallback? onStartOver;
@@ -114,6 +118,10 @@ class WorkoutTile extends StatelessWidget {
                     onHistory();
                   case _WorkoutMenuAction.startOver:
                     onStartOver?.call();
+                  case _WorkoutMenuAction.moveUp:
+                    onMoveUp?.call();
+                  case _WorkoutMenuAction.moveDown:
+                    onMoveDown?.call();
                   case _WorkoutMenuAction.move:
                     onMoveToSection?.call();
                   case _WorkoutMenuAction.duplicate:
@@ -136,6 +144,16 @@ class WorkoutTile extends StatelessWidget {
                     value: _WorkoutMenuAction.startOver,
                     child: Text('Start over'),
                   ),
+                if (onMoveUp != null)
+                  const PopupMenuItem(
+                    value: _WorkoutMenuAction.moveUp,
+                    child: Text('Move up'),
+                  ),
+                if (onMoveDown != null)
+                  const PopupMenuItem(
+                    value: _WorkoutMenuAction.moveDown,
+                    child: Text('Move down'),
+                  ),
                 if (onMoveToSection != null)
                   const PopupMenuItem(
                     value: _WorkoutMenuAction.move,
@@ -157,11 +175,9 @@ class WorkoutTile extends StatelessWidget {
       ),
     );
 
+    // Embedded rows sit inside a folder shell — no second card chrome.
     if (embedded) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 6),
-        child: SkinPanel(overPortrait: true, child: row),
-      );
+      return row;
     }
     return SkinPanel(
       margin: EdgeInsets.only(bottom: look.listGap),
@@ -171,4 +187,13 @@ class WorkoutTile extends StatelessWidget {
   }
 }
 
-enum _WorkoutMenuAction { edit, history, startOver, move, duplicate, delete }
+enum _WorkoutMenuAction {
+  edit,
+  history,
+  startOver,
+  moveUp,
+  moveDown,
+  move,
+  duplicate,
+  delete,
+}

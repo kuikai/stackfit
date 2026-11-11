@@ -322,7 +322,7 @@ models/                           Data shapes. Saved ones have toJson / fromJson
   exercise_type.dart              enum: timer, sets, or hold
   exercise.dart                   One exercise: timer, sets, or a hold that counts up until Done
   circuit.dart                    A circuit: exercises that play in order, then repeat
-  workout.dart                    A named list of exercises and circuits, optional Home section, createdAt / updatedAt
+  workout.dart                    A named list of exercises and circuits, optional Home section, createdAt / updatedAt. Also Home grouping, flat folder rows, and place-at-index moves
   tabata_clock.dart               Classic 20/10/8 recipe. Builds a temporary workout the clock runs, and does not save it
   completed_session.dart          One history row: workout name, when, how long, how many exercises
   history_group.dart              Groups finished sessions by workout, and chart points for kilograms, sets, or seconds held
@@ -376,7 +376,7 @@ services/                         Does the work the providers ask for.
 screens/                          One folder per screen.
   home/home_screen.dart           Workout list grouped into sections, continue rows, + button. Tabata is an icon beside Plans
   home/continue_run_row.dart      A plan day left unfinished, shown on Home because it is not in the workout list
-  home/home_rows.dart             Draws one Home row (a loose workout or a section). Short press-and-drag reorders; a longer hold carries a workout onto a folder or back to Home.
+  home/home_rows.dart             Home list. Open folder days sit in the same press-and-hold list as loose workouts, with a drop gap under each open folder so a workout can land below the plan. ⋮ has Move up / Move down and Move to section.
   home/home_actions.dart          Start or continue, start over, create, delete, duplicate, sections, Tabata, and moving rows
   home/section_dialogs.dart       Name a section, move workouts in, pick which days to group
   workout_editor/workout_editor_screen.dart   Create or edit a workout, including a circuit box. Saving one exercise writes the workout
@@ -400,9 +400,10 @@ screens/                          One folder per screen.
 
 widgets/                          Reusable pieces used by several screens.
   fit_menu_button.dart            The ⋮ menu on Home. Scrolls a bottom row up so the menu stays on screen
-  home_reorder.dart               Lifted look while a Home row is dragged, including when a workout is carried to a folder
-  workout_tile.dart               One workout row on Home. Shows In progress, with Start over when a run is saved
-  workout_section_card.dart       A named folder of days on Home. Drop a workout on it to add that day
+  home_reorder.dart               Lifted look while a Home row is dragged
+  folder_shell.dart               Shared plate for an open Home folder (header / middle / footer slices) so days look inside one card
+  workout_tile.dart               One workout row on Home. Shows In progress, with Start over when a run is saved, plus Move up / Move down in the ⋮ menu
+  workout_section_card.dart       Folder header on Home. Open days continue the folder shell as separate rows so drag gaps still work
   workout_limit_banner.dart       "2 of 3 workouts" banner for Free users
   exercise_editor_tile.dart       One exercise row inside the workout editor
   workout_block_list.dart         The editor list: loose exercises and circuit boxes
@@ -621,8 +622,9 @@ One pass over the product. Use Skip and Skip rest so the timer stays short.
 A one-exercise sets workout is enough for the run path. Tick each item.
 
 - [ ] **Home** — list loads; can open a workout; unfinished workout shows
-  Continue when one exists; drop a loose workout on a folder to join it,
-  and drop one from a folder onto Home to leave
+  Continue when one exists; press-and-hold drag makes gaps between loose
+  rows and between days inside an open folder; drag into/out of a folder
+  lands in that gap
 - [ ] **Editor** — open a workout, change one exercise, move one with
   arrows or by pressing and holding then dragging, save, back to Home
   with the change kept

@@ -5,12 +5,9 @@ import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../models/models.dart';
 import '../../providers/in_progress_provider.dart';
-import '../../providers/pro_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/workouts_provider.dart';
 import '../../widgets/empty_state.dart';
-import '../../widgets/fit_menu_button.dart';
-import '../../widgets/home_reorder.dart';
 import '../../widgets/skin_artwork.dart';
 import '../../widgets/workout_limit_banner.dart';
 import '../history/history_screen.dart';
@@ -24,7 +21,6 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final workouts = ref.watch(workoutsProvider);
-    final isPro = ref.watch(isProProvider);
     final runs = ref.watch(inProgressProvider);
     final groups = groupWorkoutsForHome(workouts);
     final looseRuns = _runsNotOnHome(runs, workouts);
@@ -101,13 +97,11 @@ class HomeScreen extends ConsumerWidget {
                 Expanded(
                   child: workouts.isEmpty && looseRuns.isEmpty
                       ? _emptyHome(context, ref)
-                      : _homeList(
-                          context,
-                          ref,
-                          looseRuns: looseRuns,
+                      : HomeWorkoutList(
                           groups: groups,
                           runs: runs,
-                          isPro: isPro,
+                          looseRuns: looseRuns,
+                          emptyHome: _emptyHome(context, ref),
                         ),
                 ),
               ],
@@ -143,65 +137,6 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _homeList(
-    BuildContext context,
-    WidgetRef ref, {
-    required List<InProgressWorkout> looseRuns,
-    required List<WorkoutHomeGroup> groups,
-    required List<InProgressWorkout> runs,
-    required bool isPro,
-  }) {
-    final padding = context.pageGutter(top: 8, bottom: FitMenuButton.menuRoom);
-    final header = buildHomeHeader(context, ref, looseRuns: looseRuns);
-    if (groups.isEmpty) {
-      return ListView(
-        padding: padding,
-        children: [header, _emptyHome(context, ref)],
-      );
-    }
-    return DragTarget<HomeWorkoutDrag>(
-      onWillAcceptWithDetails: (details) => details.data.fromSection != null,
-      onAcceptWithDetails: (details) {
-        dropHomeWorkoutOnHome(ref, details.data.workout);
-      },
-      builder: (context, candidate, rejected) {
-        final leaving = candidate.isNotEmpty;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          color: leaving
-              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)
-              : Colors.transparent,
-          child: ReorderableListView.builder(
-            padding: padding,
-            header: header,
-            buildDefaultDragHandles: false,
-            itemCount: groups.length,
-            proxyDecorator: homeReorderProxy,
-            onReorderItem: (from, to) {
-              reorderHomeRow(ref, from, to);
-            },
-            itemBuilder: (context, index) {
-              final group = groups[index];
-              final id = group.isSection
-                  ? 's:${group.section}'
-                  : 'w:${group.workouts.single.id}';
-              return KeyedSubtree(
-                key: ValueKey(id),
-                child: buildHomeGroup(
-                  context,
-                  ref,
-                  group,
-                  groupIndex: index,
-                  runs: runs,
-                  isPro: isPro,
-                ),
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
 }
 
 List<InProgressWorkout> _runsNotOnHome(

@@ -4,90 +4,59 @@ import '../core/theme.dart';
 import '../core/utils.dart';
 import '../models/models.dart';
 import 'fit_menu_button.dart';
-import 'home_reorder.dart';
-import 'skin_panel.dart';
-import 'workout_tile.dart';
+import 'folder_shell.dart';
 
-/// A named folder on Home, with its days listed like a Bro Split plan.
-class WorkoutSectionCard extends StatefulWidget {
+/// Folder header on Home. Open days continue the same shell as separate rows.
+class WorkoutSectionCard extends StatelessWidget {
   const WorkoutSectionCard({
     super.key,
     required this.section,
     required this.workouts,
-    required this.onStart,
-    required this.onEdit,
-    required this.onHistory,
-    required this.onDelete,
-    required this.onMoveToSection,
+    required this.open,
+    required this.onToggleOpen,
     required this.onRename,
     required this.onDissolve,
     required this.onAddWorkout,
-    this.onDuplicate,
-    this.onStartOver,
-    this.isInProgress,
     this.dragIndex,
-    this.onReorderWorkouts,
-    this.onDropWorkout,
+    this.onMoveUp,
+    this.onMoveDown,
   });
 
   final String section;
   final List<Workout> workouts;
-  final void Function(Workout workout) onStart;
-  final void Function(Workout workout) onEdit;
-  final void Function(Workout workout) onHistory;
-  final void Function(Workout workout) onDelete;
-  final void Function(Workout workout) onMoveToSection;
+  final bool open;
+  final VoidCallback onToggleOpen;
   final VoidCallback onRename;
   final VoidCallback onDissolve;
   final VoidCallback onAddWorkout;
-  final void Function(Workout workout)? onDuplicate;
-  final void Function(Workout workout)? onStartOver;
-  final bool Function(Workout workout)? isInProgress;
 
-  /// Home-list index so a long-press on the header can start the same drag.
+  /// Home-list index so a long-press can drag a closed folder among Home rows.
   final int? dragIndex;
 
-  final void Function(int from, int to)? onReorderWorkouts;
-
-  /// Drop a workout here to put it in this folder.
-  final void Function(Workout workout)? onDropWorkout;
-
-  @override
-  State<WorkoutSectionCard> createState() => _WorkoutSectionCardState();
-}
-
-class _WorkoutSectionCardState extends State<WorkoutSectionCard> {
-  bool _open = true;
-
-  VoidCallback? _startOverFor(Workout workout) {
-    if (widget.onStartOver == null ||
-        !(widget.isInProgress?.call(workout) ?? false)) {
-      return null;
-    }
-    return () => widget.onStartOver!(workout);
-  }
+  final VoidCallback? onMoveUp;
+  final VoidCallback? onMoveDown;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurface.withValues(alpha: 0.6);
-    final count = widget.workouts.length;
+    final count = workouts.length;
     var seconds = 0;
-    for (final workout in widget.workouts) {
+    for (final workout in workouts) {
       seconds += workout.estimatedDurationSeconds;
     }
     final average = count == 0 ? 0 : seconds ~/ count;
     final duration = AppUtils.formatDurationFriendly(average);
-
     final look = context.skinLook;
+
     Widget header = ListTile(
-      onTap: () => setState(() => _open = !_open),
+      onTap: onToggleOpen,
       contentPadding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
       leading: Icon(
-        _open ? Icons.expand_more_rounded : Icons.chevron_right_rounded,
+        open ? Icons.expand_more_rounded : Icons.chevron_right_rounded,
       ),
       title: Text(
-        widget.section,
+        section,
         style: theme.textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w700,
         ),
@@ -103,11 +72,15 @@ class _WorkoutSectionCardState extends State<WorkoutSectionCard> {
         onSelected: (action) {
           switch (action) {
             case _SectionMenuAction.add:
-              widget.onAddWorkout();
+              onAddWorkout();
+            case _SectionMenuAction.moveUp:
+              onMoveUp?.call();
+            case _SectionMenuAction.moveDown:
+              onMoveDown?.call();
             case _SectionMenuAction.rename:
-              widget.onRename();
+              onRename();
             case _SectionMenuAction.dissolve:
-              widget.onDissolve();
+              onDissolve();
           }
         },
         itemBuilder: (context) => [
@@ -115,6 +88,16 @@ class _WorkoutSectionCardState extends State<WorkoutSectionCard> {
             value: _SectionMenuAction.add,
             child: Text('Add workout'),
           ),
+          if (onMoveUp != null)
+            const PopupMenuItem(
+              value: _SectionMenuAction.moveUp,
+              child: Text('Move up'),
+            ),
+          if (onMoveDown != null)
+            const PopupMenuItem(
+              value: _SectionMenuAction.moveDown,
+              child: Text('Move down'),
+            ),
           const PopupMenuItem(
             value: _SectionMenuAction.rename,
             child: Text('Rename section'),
@@ -126,7 +109,8 @@ class _WorkoutSectionCardState extends State<WorkoutSectionCard> {
         ],
       ),
     );
-    final dragIndex = widget.dragIndex;
+
+    final dragIndex = this.dragIndex;
     if (dragIndex != null) {
       header = ReorderableDelayedDragStartListener(
         index: dragIndex,
@@ -134,98 +118,12 @@ class _WorkoutSectionCardState extends State<WorkoutSectionCard> {
       );
     }
 
-    final card = SkinPanel(
-      margin: EdgeInsets.only(bottom: look.listGap),
-      overPortrait: true,
-      child: Column(children: [header, if (_open) _workoutList()]),
-    );
-    final onDrop = widget.onDropWorkout;
-    if (onDrop == null) {
-      return card;
-    }
-    return DragTarget<HomeWorkoutDrag>(
-      onWillAcceptWithDetails: (_) => true,
-      onAcceptWithDetails: (details) {
-        if (details.data.workout.section == widget.section) {
-          return;
-        }
-        onDrop(details.data.workout);
-      },
-      builder: (context, candidate, rejected) {
-        final hovering = candidate.isNotEmpty;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          decoration: BoxDecoration(
-            borderRadius: look.cornerRadius,
-            color: hovering
-                ? theme.colorScheme.primary.withValues(alpha: 0.16)
-                : Colors.transparent,
-          ),
-          child: card,
-        );
-      },
-    );
-  }
-
-  Widget _workoutList() {
-    final workouts = widget.workouts;
-    if (workouts.length < 2 || widget.onReorderWorkouts == null) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-        child: Column(
-          children: [
-            for (var i = 0; i < workouts.length; i++) ...[
-              if (i > 0) const Divider(height: 1),
-              wrapHomeWorkoutDrag(
-                workout: workouts[i],
-                fromSection: widget.section,
-                buildChild: () => _tile(workouts[i]),
-              ),
-            ],
-          ],
-        ),
-      );
-    }
-    return ReorderableListView.builder(
-      shrinkWrap: true,
-      primary: false,
-      physics: const NeverScrollableScrollPhysics(),
-      buildDefaultDragHandles: false,
-      padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-      itemCount: workouts.length,
-      proxyDecorator: homeReorderProxy,
-      onReorderItem: widget.onReorderWorkouts!,
-      itemBuilder: (context, index) {
-        final workout = workouts[index];
-        return ReorderableDelayedDragStartListener(
-          key: ValueKey(workout.id),
-          index: index,
-          child: wrapHomeWorkoutDrag(
-            workout: workout,
-            fromSection: widget.section,
-            buildChild: () => _tile(workout),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _tile(Workout workout) {
-    return WorkoutTile(
-      workout: workout,
-      embedded: true,
-      inProgress: widget.isInProgress?.call(workout) ?? false,
-      onStart: () => widget.onStart(workout),
-      onEdit: () => widget.onEdit(workout),
-      onHistory: () => widget.onHistory(workout),
-      onDelete: () => widget.onDelete(workout),
-      onMoveToSection: () => widget.onMoveToSection(workout),
-      onDuplicate: widget.onDuplicate == null
-          ? null
-          : () => widget.onDuplicate!(workout),
-      onStartOver: _startOverFor(workout),
+    return FolderShell(
+      role: open ? FolderShellRole.header : FolderShellRole.alone,
+      margin: EdgeInsets.only(bottom: open ? 0 : look.listGap),
+      child: header,
     );
   }
 }
 
-enum _SectionMenuAction { add, rename, dissolve }
+enum _SectionMenuAction { add, moveUp, moveDown, rename, dissolve }
