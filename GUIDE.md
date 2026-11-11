@@ -362,9 +362,9 @@ services/                         Does the work the providers ask for.
   workout_session_state.dart      Where the timer is: block, round, exercise, ready/work/rest/set/hold, seconds left, paused
   session_set_log.dart            Reps and kg typed in while a workout is still running
   previous_set_log.dart           Last time's reps and kg, on the log and in the add fields
-  station_exit.dart               Rest between circuit stations and between rounds
+  station_exit.dart               Rest between circuit stations and between rounds. No rest after the last exercise of the workout
   workout_session_controller.dart Start, pause, skip, reset, and Done. Rest and an open hold keep counting if you lock the phone
-  workout_session_phases.dart     Work, rest, holds, circuits, and ticks. A new timer exercise waits for Start. A hold starts counting immediately
+  workout_session_phases.dart     Work, rest, holds, circuits, and ticks. A new timer exercise waits for Start. A hold starts counting immediately. Last exercise goes straight to Done with no rest flash
   sound_service.dart              Soft beeps on the last 3 seconds of work and of rest, and a tone when the clock hits 0
   revenue_cat_service.dart        Talks to RevenueCat: start, buy Pro, restore, and read the entitlement
   plan_workout_builder.dart       Turns a plan day into a workout; multi-day plans share a section
@@ -383,7 +383,7 @@ screens/                          One folder per screen.
   workout_editor/workout_editor_actions.dart  Add an exercise or a circuit, and edit the stations inside it
   exercise_editor/exercise_editor_screen.dart Create or edit one exercise (timer, sets, or hold)
   catalog/catalog_screen.dart     Searchable catalog: built-in exercises plus ones you added
-  active_timer/active_timer_screen.dart       The big timer. Saves an unfinished run and can continue it.
+  active_timer/active_timer_screen.dart       The big timer. Saves an unfinished run and can continue it. Finishing cuts straight to Done with no fade
   active_timer/timer_controls.dart            Start, Done, skip rest, pause, skip, reset, and stop. Logging hides pause and skip
   active_timer/active_timer_card.dart         READY, WORK, and REST countdown, drawn on the background
   active_timer/workout_complete_screen.dart   Done screen. Saves the session, plays a celebrate jump for the mascot and her partner when the skin has both, and always returns to Home.

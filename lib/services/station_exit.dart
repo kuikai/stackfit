@@ -15,7 +15,8 @@ class StationExit {
 ///
 /// [restAfterLastSet] is true for a sets exercise, which already rests after
 /// its last set before the next exercise. A timer skips that trailing rest,
-/// except between stations of a circuit, where its rest is the gap.
+/// except between stations of a circuit, where its rest is the gap. Leaving
+/// the last block of the workout never rests — the session is done.
 StationExit planStationExit({
   required Workout workout,
   required int blockIndex,
@@ -34,11 +35,12 @@ StationExit planStationExit({
   final stationRest = _nonNegative(
     restAfterLastSet ? exercise?.restSeconds ?? 0 : 0,
   );
+  final leaveWorkout = blockIndex >= workout.blocks.length - 1;
 
   if (block is! CircuitBlock) {
     return StationExit(
       destination: StationDestination.block,
-      restSeconds: stationRest,
+      restSeconds: leaveWorkout ? 0 : stationRest,
     );
   }
 
@@ -59,7 +61,7 @@ StationExit planStationExit({
   }
   return StationExit(
     destination: StationDestination.block,
-    restSeconds: stationRest,
+    restSeconds: leaveWorkout ? 0 : stationRest,
   );
 }
 

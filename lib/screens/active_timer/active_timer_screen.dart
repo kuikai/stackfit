@@ -170,7 +170,6 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
       return;
     }
     if (_controller.state.isComplete) {
-      setState(() {});
       _openComplete();
       return;
     }
@@ -279,15 +278,21 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
     final logs = List<SetLog>.of(_controller.setLogs);
     final duration = _controller.elapsedSeconds;
     unawaited(_inProgress.discard(widget.workout.id));
+    // Cut straight to Done — no soft leave fade of the timer (or a leftover
+    // rest) while the finish screen comes in.
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) => WorkoutCompleteScreen(
-          args: WorkoutCompleteArgs(
-            workout: state.workout,
-            durationSeconds: duration,
-            setLogs: logs,
-          ),
-        ),
+      PageRouteBuilder<void>(
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return WorkoutCompleteScreen(
+            args: WorkoutCompleteArgs(
+              workout: state.workout,
+              durationSeconds: duration,
+              setLogs: logs,
+            ),
+          );
+        },
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
       ),
     );
   }

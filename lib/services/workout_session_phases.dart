@@ -156,6 +156,12 @@ mixin WorkoutSessionPhases on ChangeNotifier {
       exerciseIndex: state.exerciseIndex,
       restAfterLastSet: restAfterLastSet,
     );
+    // End of the workout: jump to Done. Do not open a zero-length rest.
+    if (exit.destination == StationDestination.block &&
+        state.blockIndex >= state.workout.blocks.length - 1) {
+      _completeWorkout();
+      return;
+    }
     _startRest(exit.restSeconds, _afterRestFor(exit.destination));
   }
 

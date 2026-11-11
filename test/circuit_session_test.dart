@@ -128,6 +128,30 @@ void main() {
     );
     expect(plain.destination, StationDestination.block);
     expect(plain.restSeconds, 0);
+
+    final lastSets = planStationExit(
+      workout: _setsWorkout(),
+      blockIndex: 0,
+      roundIndex: 0,
+      exerciseIndex: 0,
+      restAfterLastSet: true,
+    );
+    expect(lastSets.destination, StationDestination.block);
+    expect(lastSets.restSeconds, 0);
+  });
+
+  test('the last set of the workout finishes with no rest', () {
+    final clock = _Clock(DateTime.utc(2026, 10, 29, 12));
+    final controller = _controller(workout: _setsWorkout(), clock: clock);
+
+    controller.completeSet(repsDone: 8);
+    controller.skipRest();
+    controller.completeSet(repsDone: 8);
+    controller.skipRest();
+    controller.completeSet(repsDone: 8);
+
+    expect(controller.state.phase, SessionPhase.complete);
+    expect(controller.setLogs, hasLength(3));
   });
 
   test('a circuit repeats, then the workout continues', () {
