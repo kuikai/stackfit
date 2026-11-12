@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -15,7 +16,8 @@ int runFrameIndex({
   return index % frameCount;
 }
 
-/// Plays a run cycle. With [travel] she walks left to right; without it she hops in place.
+/// Plays a run cycle. With [travel] she walks left to right; without it she
+/// hops in place with a bounce and pastel sparkles for workout complete.
 class ChibiRun extends StatefulWidget {
   const ChibiRun({
     super.key,
@@ -38,9 +40,11 @@ class ChibiRun extends StatefulWidget {
 
 class _ChibiRunState extends State<ChibiRun>
     with SingleTickerProviderStateMixin {
-  static const _framesPerSecond = 8.0;
+  static const _runFps = 8.0;
+  static const _celebrateFps = 10.0;
   static const _lap = Duration(milliseconds: 2800);
-  static const _spriteHeight = 112.0;
+  static const _runHeight = 112.0;
+  static const _celebrateHeight = 148.0;
 
   late final AnimationController _run;
   var _framesReady = false;
@@ -82,6 +86,11 @@ class _ChibiRunState extends State<ChibiRun>
     super.dispose();
   }
 
+  double get _fps => widget.travel ? _runFps : _celebrateFps;
+
+  double get _spriteHeight =>
+      widget.travel ? _runHeight : _celebrateHeight;
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(animation: _run, builder: (context, _) => _lane());
@@ -104,7 +113,7 @@ class _ChibiRunState extends State<ChibiRun>
     return runFrameIndex(
       elapsedSeconds: elapsed,
       frameCount: frames.length,
-      framesPerSecond: _framesPerSecond,
+      framesPerSecond: _fps,
     );
   }
 
@@ -112,19 +121,50 @@ class _ChibiRunState extends State<ChibiRun>
     if (widget.partnerFrames.isNotEmpty && !widget.travel) {
       return _pair(frame, partner);
     }
+    if (!widget.travel) {
+      return _celebrateSolo(frame);
+    }
     const offscreen = 72.0;
     final span = laneWidth + offscreen * 2;
-    final left = widget.travel
-        ? -offscreen + span * _run.value
-        : (laneWidth - 96) / 2;
+    final left = -offscreen + span * _run.value;
     return Stack(
       clipBehavior: Clip.none,
       children: [
         Positioned(
           left: left,
           bottom: 0,
+          child: IgnorePointer(child: _mascot(widget.frames[frame])),
+        ),
+      ],
+    );
+  }
+
+  /// In-place hop with a bounce and floating hearts / stars.
+  Widget _celebrateSolo(int frame) {
+    final hop = (math.sin(_run.value * math.pi * 4).abs()) * 18;
+    final pulse = 1 + (math.sin(_run.value * math.pi * 4).abs()) * 0.06;
+    final colors = Theme.of(context).colorScheme;
+    return Stack(
+      alignment: Alignment.bottomCenter,
+      clipBehavior: Clip.none,
+      children: [
+        Positioned.fill(
+          child: CustomPaint(
+            painter: _CelebrateSparklesPainter(
+              progress: _run.value,
+              primary: colors.primary,
+              secondary: colors.secondary,
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: hop,
           child: IgnorePointer(
-            child: _mascot(widget.frames[frame]),
+            child: Transform.scale(
+              scale: pulse,
+              alignment: Alignment.bottomCenter,
+              child: _mascot(widget.frames[frame]),
+            ),
           ),
         ),
       ],
@@ -132,16 +172,20 @@ class _ChibiRunState extends State<ChibiRun>
   }
 
   Widget _pair(int frame, int partner) {
+    final hop = (math.sin(_run.value * math.pi * 4).abs()) * 14;
     return Align(
       alignment: Alignment.bottomCenter,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          _mascot(widget.frames[frame]),
-          const SizedBox(width: 12),
-          _mascot(widget.partnerFrames[partner]),
-        ],
+      child: Transform.translate(
+        offset: Offset(0, -hop),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            _mascot(widget.frames[frame]),
+            const SizedBox(width: 12),
+            _mascot(widget.partnerFrames[partner]),
+          ],
+        ),
       ),
     );
   }
@@ -156,5 +200,99 @@ class _ChibiRunState extends State<ChibiRun>
       // is ready, so a late decode cannot flash the gym through her.
       gaplessPlayback: true,
     );
+  }
+}
+
+/// Soft pastel hearts and stars that drift while she hops.
+class _CelebrateSparklesPainter extends CustomPainter {
+  _CelebrateSparklesPainter({
+    required this.progress,
+    required this.primary,
+    required this.secondary,
+  });
+
+  final double progress;
+  final Color primary;
+  final Color secondary;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final seeds = <(double, double, double, bool)>[
+      (0.18, 0.55, 0.0, true),
+      (0.78, 0.48, 0.12, false),
+      (0.32, 0.28, 0.25, true),
+      (0.68, 0.22, 0.38, false),
+      (0.48, 0.12, 0.5, true),
+      (0.12, 0.35, 0.62, false),
+      (0.88, 0.38, 0.75, true),
+      (0.55, 0.42, 0.88, false),
+    ];
+    for (final (nx, ny, phase, heart) in seeds) {
+      final t = (progress + phase) % 1.0;
+      final rise = ny - t * 0.55;
+      if (rise < -0.05) {
+        continue;
+      }
+      final x = nx * size.width;
+      final y = rise * size.height;
+      final fade = (1 - t).clamp(0.0, 1.0);
+      final paint = Paint()
+        ..color = (heart ? primary : secondary).withValues(alpha: 0.55 * fade);
+      final r = 5.0 + 4.0 * (1 - t);
+      if (heart) {
+        _heart(canvas, Offset(x, y), r, paint);
+      } else {
+        _star(canvas, Offset(x, y), r, paint);
+      }
+    }
+  }
+
+  void _heart(Canvas canvas, Offset c, double r, Paint paint) {
+    final path = Path()
+      ..moveTo(c.dx, c.dy + r * 0.35)
+      ..cubicTo(
+        c.dx - r,
+        c.dy - r * 0.2,
+        c.dx - r * 0.35,
+        c.dy - r,
+        c.dx,
+        c.dy - r * 0.45,
+      )
+      ..cubicTo(
+        c.dx + r * 0.35,
+        c.dy - r,
+        c.dx + r,
+        c.dy - r * 0.2,
+        c.dx,
+        c.dy + r * 0.35,
+      );
+    canvas.drawPath(path, paint);
+  }
+
+  void _star(Canvas canvas, Offset c, double r, Paint paint) {
+    final path = Path();
+    for (var i = 0; i < 4; i++) {
+      final a = -math.pi / 2 + i * math.pi / 2;
+      final outer = Offset(c.dx + math.cos(a) * r, c.dy + math.sin(a) * r);
+      final mid = Offset(
+        c.dx + math.cos(a + math.pi / 4) * r * 0.28,
+        c.dy + math.sin(a + math.pi / 4) * r * 0.28,
+      );
+      if (i == 0) {
+        path.moveTo(outer.dx, outer.dy);
+      } else {
+        path.lineTo(outer.dx, outer.dy);
+      }
+      path.lineTo(mid.dx, mid.dy);
+    }
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _CelebrateSparklesPainter oldDelegate) {
+    return oldDelegate.progress != progress ||
+        oldDelegate.primary != primary ||
+        oldDelegate.secondary != secondary;
   }
 }

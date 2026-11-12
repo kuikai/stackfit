@@ -205,6 +205,16 @@ enum AppSkin {
 
   /// In-place hop on workout complete. Empty skins keep the run cycle.
   List<String> get mascotCelebrateFrames => switch (this) {
+    AppSkin.chibi => const [
+      'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-1.png',
+      'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-2.png',
+      'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-3.png',
+      'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-4.png',
+      'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-5.png',
+      'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-6.png',
+      'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-7.png',
+      'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-8.png',
+    ],
     AppSkin.dumbbell => const [
       'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-companion-celebrate-1.png',
       'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-companion-celebrate-2.png',

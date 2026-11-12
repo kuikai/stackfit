@@ -16,11 +16,12 @@ const _seatMascotSize = 148.0;
 /// Standing pair beside Done (companion and trainer).
 const _doneMascotSize = 76.0;
 
-/// How far a solo rest pose sits above Skip rest.
-const _restLift = 96.0;
+/// How far a solo rest pose sits above Skip rest. High enough that Skip
+/// rest stays readable, low enough that she still sits on the bar.
+const _restLift = 108.0;
 
 /// Lying pose across Skip rest.
-const _restPoseWidth = 260.0;
+const _restPoseWidth = 236.0;
 
 /// Sitting pair beside Skip rest. Kept low so they stay near the button.
 const _restSitSize = 56.0;

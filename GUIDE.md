@@ -419,7 +419,7 @@ widgets/                          Reusable pieces used by several screens.
   skin_picker.dart                Grid of skins in Settings
   collapsible_section.dart        A settings card that can hide its contents behind Show
   skin_artwork.dart               Big picture on Home, empty gym behind dark anime screens, skin mascots
-  chibi_run.dart                  Mascot run across workout complete, or an in-place jump. A partner list hops beside her
+  chibi_run.dart                  Mascot run across workout complete, or an in-place celebrate hop with sparkles. A partner list hops beside her
   skin_panel.dart                 Holder: solid on everyday skins, Home-style glass on anime skins
   account_settings_card.dart      Account box for Settings. Hidden while accountsEnabled is false. Email, save status, sign out, delete, move data
   empty_state.dart                Centered "nothing here yet" message
@@ -474,7 +474,7 @@ js/
 ```
 themes/README.md                  Shared recipe for the four Pro anime themes
 themes/bold-sports/               Bold Sports art. Home is girl-standing.jpg. background.jpg behind other dark screens. Mascot is mascots/mascot-power.png (sit / rest / run-1..8)
-themes/chibi/                     Chibi art. Home is girl-standing.jpg. background.jpg behind other dark screens. Mascot is mascots/mascot-pastel.png (sit / rest / run-1..8)
+themes/chibi/                     Chibi art. Home is girl-standing.jpg. background.jpg behind other dark screens. Mascot is mascots/mascot-pastel.png (sit / rest / run-1..8). Celebrate hop is mascots/animation/celebrate/ (8 frames)
 themes/cyberpunk/                 Cyberpunk art. Home is girl-standing.jpg. The night gym in background.jpg sits behind every other dark screen. Home mascot is mascots/mascot-chibi.png. She sits on Done, rests on Skip rest, and the run frames in mascots/animation/running/ cross workout complete.
 themes/dumbbell/                  Dumbbell art. Home is girl-standing.jpg. background.jpg behind other dark screens. Home shows mascot-companion.png beside mascot-trainer.png. Done has mascot-companion-set.png on the left and mascot-trainer-set.png on the right. Skip rest has mascot-companion-rest.png on the left and mascot-trainer-rest.png on the right. Celebrate jump is mascots/animation/celebrate/ for both the companion and the trainer (her 8 frames, his 12). New run cycle is mascots/animation/run/. Older run-1..8 still sit in mascots/animation/running/.
 ```

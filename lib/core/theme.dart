@@ -48,7 +48,7 @@ class AppTheme {
         collapsedBackgroundColor: Colors.transparent,
       ),
       filledButtonTheme: _filledButtonTheme(look),
-      outlinedButtonTheme: _outlinedButtonTheme(look),
+      outlinedButtonTheme: _outlinedButtonTheme(look, colorScheme),
       floatingActionButtonTheme: _fabTheme(colorScheme, look),
       segmentedButtonTheme: _segmentedTheme(colorScheme),
       inputDecorationTheme: _inputTheme(colorScheme, look),
@@ -232,12 +232,32 @@ FilledButtonThemeData _filledButtonTheme(SkinLook look) {
   );
 }
 
-OutlinedButtonThemeData _outlinedButtonTheme(SkinLook look) {
+OutlinedButtonThemeData _outlinedButtonTheme(
+  SkinLook look,
+  ColorScheme colors,
+) {
+  final base = OutlinedButton.styleFrom(
+    minimumSize: Size(48, look.outlinedButtonHeight),
+    padding: look.outlinedButtonPadding,
+    shape: RoundedRectangleBorder(borderRadius: look.cornerRadiusSmall),
+  );
+  // Anime skins put outlined actions on busy gym plates. A frosted fill
+  // keeps them readable without matching the solid primary Save button.
+  if (look.cardOpacity >= 1) {
+    return OutlinedButtonThemeData(style: base);
+  }
   return OutlinedButtonThemeData(
-    style: OutlinedButton.styleFrom(
-      minimumSize: Size(48, look.outlinedButtonHeight),
-      padding: look.outlinedButtonPadding,
-      shape: RoundedRectangleBorder(borderRadius: look.cornerRadiusSmall),
+    style: base.copyWith(
+      foregroundColor: WidgetStatePropertyAll(colors.primary),
+      backgroundColor: WidgetStatePropertyAll(
+        colors.surface.withValues(alpha: 0.78),
+      ),
+      side: WidgetStatePropertyAll(
+        BorderSide(
+          color: colors.primary.withValues(alpha: 0.75),
+          width: 1.5,
+        ),
+      ),
     ),
   );
 }

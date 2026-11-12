@@ -122,19 +122,30 @@ class _WorkoutCompleteScreenState extends ConsumerState<WorkoutCompleteScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    Icons.check_rounded,
-                    size: 48,
+                    Icons.celebration_rounded,
+                    size: 44,
                     color: colorScheme.onPrimaryContainer,
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 Text(
-                  'Workout complete',
+                  travel ? 'Workout complete' : 'You crushed it!',
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
                   textAlign: TextAlign.center,
                 ),
+                if (!travel) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Workout complete',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: colorScheme.onSurface.withValues(alpha: 0.65),
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
                 const SizedBox(height: 8),
                 Text(
                   args.workout.name,
@@ -186,7 +197,7 @@ class _WorkoutCompleteScreenState extends ConsumerState<WorkoutCompleteScreen> {
     }
     return IgnorePointer(
       child: SizedBox(
-        height: 120,
+        height: travel ? 120 : 168,
         width: double.infinity,
         child: ChibiRun(
           frames: frames,

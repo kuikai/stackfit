@@ -95,7 +95,11 @@ void main() {
     );
     expect(AppSkin.classic.mascotCelebratePartnerFrames, isEmpty);
     expect(AppSkin.classic.mascotCelebrateFrames, isEmpty);
-    expect(AppSkin.chibi.mascotCelebrateFrames, isEmpty);
+    expect(AppSkin.chibi.mascotCelebrateFrames, hasLength(8));
+    expect(
+      AppSkin.chibi.mascotCelebrateFrames.first,
+      contains('mascot-pastel-celebrate'),
+    );
     expect(runFrameIndex(elapsedSeconds: 0, frameCount: 6), 0);
     expect(runFrameIndex(elapsedSeconds: 0.5, frameCount: 6), 4);
     expect(runFrameIndex(elapsedSeconds: 0.75, frameCount: 6), 0);
@@ -122,7 +126,7 @@ void main() {
     final portraitFill = AppSkins.look(
       AppSkin.cyberpunk,
     ).cardFill(const ColorScheme.dark(), overPortrait: true);
-    expect(portraitFill.a, closeTo(0.72, 0.01));
+    expect(portraitFill.a, closeTo(0.9, 0.01));
     expect(
       AppSkins.look(AppSkin.classic).cardFill(const ColorScheme.dark()).a,
       1,
