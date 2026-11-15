@@ -153,6 +153,47 @@ enum AppSkin {
     _ => null,
   };
 
+  /// How far the sit mascot hangs above Done / Start. Each skin's PNG
+  /// seats differently, so this is hard-coded per skin.
+  double get mascotSeatLift => switch (this) {
+    AppSkin.chibi => 118,
+    AppSkin.boldSports => 108,
+    AppSkin.cyberpunk => 108,
+    _ => 108,
+  };
+
+  /// Distance from the right edge of Done / Start. Negative hangs past it.
+  double get mascotSeatRight => switch (this) {
+    AppSkin.chibi => -14,
+    AppSkin.boldSports => 6,
+    AppSkin.cyberpunk => 6,
+    _ => 6,
+  };
+
+  /// Sit picture size on Done / Start.
+  double get mascotSeatSize => switch (this) {
+    AppSkin.chibi => 148,
+    AppSkin.boldSports => 148,
+    AppSkin.cyberpunk => 148,
+    _ => 148,
+  };
+
+  /// How far the rest pose hangs above Skip rest.
+  double get mascotRestLift => switch (this) {
+    AppSkin.chibi => 108,
+    AppSkin.boldSports => 96,
+    AppSkin.cyberpunk => 96,
+    _ => 96,
+  };
+
+  /// Width of the lying rest pose.
+  double get mascotRestWidth => switch (this) {
+    AppSkin.chibi => 236,
+    AppSkin.boldSports => 260,
+    AppSkin.cyberpunk => 260,
+    _ => 260,
+  };
+
   /// Run-cycle frames. Empty unless this skin has a runner.
   List<String> get mascotRunFrames => switch (this) {
     AppSkin.boldSports => const [
@@ -214,6 +255,19 @@ enum AppSkin {
       'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-6.png',
       'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-7.png',
       'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-8.png',
+      'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-9.png',
+      'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-10.png',
+      'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-11.png',
+      'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-12.png',
+      'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-13.png',
+      'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-14.png',
+      'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-15.png',
+      'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-16.png',
+      'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-17.png',
+      'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-18.png',
+      'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-19.png',
+      'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-20.png',
+      'StackFitWeb/themes/chibi/mascots/animation/celebrate/mascot-pastel-celebrate-21.png',
     ],
     AppSkin.dumbbell => const [
       'StackFitWeb/themes/dumbbell/mascots/animation/celebrate/mascot-companion-celebrate-1.png',

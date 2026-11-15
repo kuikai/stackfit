@@ -95,11 +95,26 @@ void main() {
     );
     expect(AppSkin.classic.mascotCelebratePartnerFrames, isEmpty);
     expect(AppSkin.classic.mascotCelebrateFrames, isEmpty);
-    expect(AppSkin.chibi.mascotCelebrateFrames, hasLength(8));
+    expect(AppSkin.chibi.mascotCelebrateFrames, hasLength(21));
     expect(
       AppSkin.chibi.mascotCelebrateFrames.first,
       contains('mascot-pastel-celebrate'),
     );
+    expect(
+      AppSkin.chibi.mascotCelebrateFrames.last,
+      contains('celebrate-21'),
+    );
+    // Seat / rest placement is hard-coded per skin so Chibi nudges
+    // never move Cyberpunk or Bold Sports.
+    expect(AppSkin.chibi.mascotSeatLift, 118);
+    expect(AppSkin.chibi.mascotSeatRight, -14);
+    expect(AppSkin.cyberpunk.mascotSeatLift, 108);
+    expect(AppSkin.cyberpunk.mascotSeatRight, 6);
+    expect(AppSkin.boldSports.mascotSeatLift, 108);
+    expect(AppSkin.boldSports.mascotSeatRight, 6);
+    expect(AppSkin.chibi.mascotRestLift, 108);
+    expect(AppSkin.cyberpunk.mascotRestLift, 96);
+    expect(AppSkin.boldSports.mascotRestLift, 96);
     expect(runFrameIndex(elapsedSeconds: 0, frameCount: 6), 0);
     expect(runFrameIndex(elapsedSeconds: 0.5, frameCount: 6), 4);
     expect(runFrameIndex(elapsedSeconds: 0.75, frameCount: 6), 0);

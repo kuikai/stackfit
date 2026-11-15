@@ -6,22 +6,8 @@ import '../../providers/settings_provider.dart';
 import '../../services/workout_session_controller.dart';
 import '../../widgets/skin_artwork.dart';
 
-/// How far a solo mascot sits above the Done button. The picture hangs
-/// past this so her seat lands on the bar.
-const _seatLift = 108.0;
-
-/// Sitting picture on Done.
-const _seatMascotSize = 148.0;
-
 /// Standing pair beside Done (companion and trainer).
 const _doneMascotSize = 76.0;
-
-/// How far a solo rest pose sits above Skip rest. High enough that Skip
-/// rest stays readable, low enough that she still sits on the bar.
-const _restLift = 108.0;
-
-/// Lying pose across Skip rest.
-const _restPoseWidth = 236.0;
 
 /// Sitting pair beside Skip rest. Kept low so they stay near the button.
 const _restSitSize = 56.0;
@@ -82,6 +68,7 @@ class TimerPrimaryAction extends ConsumerWidget {
       );
     }
     return _doneSolo(
+      skin,
       label,
       onPrimary,
       theme,
@@ -90,16 +77,19 @@ class TimerPrimaryAction extends ConsumerWidget {
     );
   }
 
-  /// Full-width bar. The mascot overlaps the top-right edge.
+  /// Full-width bar. The mascot overlaps the top-right edge using this
+  /// skin's own seat lift / right inset.
   Widget _doneSolo(
+    AppSkin skin,
     String label,
     Color onPrimary,
     ThemeData theme,
     bool seated,
     VoidCallback onPressed,
   ) {
+    final lift = skin.mascotSeatLift;
     return Padding(
-      padding: EdgeInsets.only(top: seated ? _seatLift : 0),
+      padding: EdgeInsets.only(top: seated ? lift : 0),
       child: SizedBox(
         width: double.infinity,
         height: 60,
@@ -110,12 +100,12 @@ class TimerPrimaryAction extends ConsumerWidget {
               child: _actionButton(label, onPrimary, theme, onPressed),
             ),
             if (seated)
-              const Positioned(
-                right: 6,
-                top: -_seatLift,
+              Positioned(
+                right: skin.mascotSeatRight,
+                top: -lift,
                 child: SkinMascot(
                   seated: true,
-                  size: _seatMascotSize,
+                  size: skin.mascotSeatSize,
                   pinned: false,
                 ),
               ),
@@ -176,7 +166,7 @@ class TimerPrimaryAction extends ConsumerWidget {
     if (skin.mascotRestAsset == null) {
       return _restButton(expand: false);
     }
-    return _restSolo();
+    return _restSolo(skin);
   }
 
   Widget _restButton({bool expand = true}) {
@@ -194,10 +184,11 @@ class TimerPrimaryAction extends ConsumerWidget {
     return Expanded(child: button);
   }
 
-  /// Full-width bar. The lying pose overlaps the top edge.
-  Widget _restSolo() {
+  /// Full-width bar. She sits on the top edge using this skin's rest lift.
+  Widget _restSolo(AppSkin skin) {
+    final lift = skin.mascotRestLift;
     return Padding(
-      padding: const EdgeInsets.only(top: _restLift),
+      padding: EdgeInsets.only(top: lift),
       child: SizedBox(
         width: double.infinity,
         height: 52,
@@ -205,14 +196,14 @@ class TimerPrimaryAction extends ConsumerWidget {
           clipBehavior: Clip.none,
           children: [
             Positioned.fill(child: _restButton(expand: false)),
-            const Positioned(
+            Positioned(
               left: 0,
               right: 0,
-              top: -_restLift,
+              top: -lift,
               child: Center(
                 child: SkinMascot(
                   resting: true,
-                  width: _restPoseWidth,
+                  width: skin.mascotRestWidth,
                   pinned: false,
                 ),
               ),

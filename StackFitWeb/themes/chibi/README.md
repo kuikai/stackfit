@@ -13,7 +13,7 @@ Super cute oversized-head style.
 - `mascots/mascot-pastel-sit.png` — Sitting on the Done / Next Set button
 - `mascots/mascot-pastel-rest.png` — Lying on the Skip rest bar
 - `mascots/animation/running/mascot-pastel-run-1.png` through `run-8.png` — Run cycle
-- `mascots/animation/celebrate/mascot-pastel-celebrate-1.png` through `celebrate-8.png` — In-place celebrate hop on workout complete
+- `mascots/animation/celebrate/mascot-pastel-celebrate-1.png` through `celebrate-21.png` — In-place celebrate run cycle on workout complete (from sheet)
 
 ## Vibe
 Big eyes, tiny body, pastel colors, hearts and sparkles, maximum adorableness.
