@@ -359,12 +359,12 @@ providers/                        Riverpod state. Screens read from here.
 
 services/                         Does the work the providers ask for.
   storage_service.dart            Reads and writes workouts, history, unfinished runs, custom exercises, Pro, and settings
-  workout_session_state.dart      Where the timer is: block, round, exercise, ready/work/rest/set/hold, seconds left, paused
+  workout_session_state.dart      Where the timer is: block, round, exercise, ready/work/rest/set/holdReady/hold, seconds left, paused
   session_set_log.dart            Reps and kg typed in while a workout is still running
   previous_set_log.dart           Last time's reps and kg, on the log and in the add fields
   station_exit.dart               Rest between circuit stations and between rounds. No rest after the last exercise of the workout
   workout_session_controller.dart Start, pause, skip, reset, and Done. Rest and an open hold keep counting if you lock the phone
-  workout_session_phases.dart     Work, rest, holds, circuits, and ticks. A new timer exercise waits for Start. A hold starts counting immediately. Last exercise goes straight to Done with no rest flash
+  workout_session_phases.dart     Work, rest, holds, circuits, and ticks. A new timer exercise waits for Start. A hold waits for Start, then counts up. Last exercise goes straight to Done with no rest flash
   sound_service.dart              Soft beeps on the last 3 seconds of work and of rest, and a tone when the clock hits 0
   revenue_cat_service.dart        Talks to RevenueCat: start, buy Pro, restore, and read the entitlement
   plan_workout_builder.dart       Turns a plan day into a workout; multi-day plans share a section
@@ -385,7 +385,7 @@ screens/                          One folder per screen.
   catalog/catalog_screen.dart     Searchable catalog: built-in exercises plus ones you added
   active_timer/active_timer_screen.dart       The big timer. Saves an unfinished run and can continue it. Finishing cuts straight to Done with no fade
   active_timer/timer_controls.dart            Start, Done, skip rest, pause, skip, reset, and stop. Logging hides pause and skip
-  active_timer/active_timer_card.dart         READY, WORK, and REST countdown, drawn on the background
+  active_timer/active_timer_card.dart         READY, WORK, REST, and HOLD countdown, drawn on the background
   active_timer/workout_complete_screen.dart   Done screen. Saves the session, plays a celebrate jump for the mascot and her partner when the skin has both, and always returns to Home.
   tabata/tabata_screen.dart       Tabata clock. Opens on 20/10/8, then start, pause, skip a work round, skip rest, and stop. Not a saved workout
   history/history_screen.dart     Completed sessions grouped by workout, with a load chart. A trash icon deletes that workout's logs. Clear wipes all history after confirm
@@ -464,7 +464,7 @@ js/
   editor.js                       Workout editor form: open, read the draft, validate
   editor_blocks.js                Exercise cards and circuit boxes in the workout editor
   session.js                      "Log a session" form
-  workout_run.js                  Run a workout in the browser, including circuits and holds
+  workout_run.js                  Run a workout in the browser, including circuits and holds that wait for Start
   tabata.js                       The /tabata page: classic 20/10 × 8 timer, savable when signed in
   sharing.js                      Share buttons, the public /s/… page, "Add to my account", paste-a-routine
 ```
@@ -486,7 +486,7 @@ widget_test.dart                  Home screen renders
 tabata_clock_test.dart            Classic Tabata is one timer exercise, 20/10/8, and Home opens that clock
 snapshot_merge_test.dart          Merge rules, including session deletions and Home order
 history_group_test.dart           History groups sessions by workout, and the chart uses kilograms, sets, or seconds held
-hold_session_test.dart            A hold starts counting up, and Done saves the seconds
+hold_session_test.dart            A hold waits for Start, counts up, and Done saves the seconds
 completed_sessions_test.dart      Deleting a session or clearing history writes tombstones so sync cannot bring them back
 custom_catalog_test.dart          A custom exercise joins the catalog, and sync keeps one copy of each name
 website_snapshot_test.dart        Phone can read a snapshot the website wrote
@@ -527,6 +527,7 @@ countdown_beep_test.dart          The last 3 seconds and the zero of work and of
 | **Home order** | The saved order of sections and workouts on Home. Dragging a row updates it. |
 | **Circuit** | A box in a workout. The exercises inside play in order, then the box repeats. Exercises outside the box run once. |
 | **Work ready** | A timer exercise just opened. The time is on screen and the clock waits until Start. The next round of that same exercise starts on its own after rest. |
+| **Hold ready** | A hold just opened, or the next attempt after rest. The clock shows 0:00 and waits until Start. |
 | **Hold** | An exercise that counts up from zero until you press Done. The seconds are the log. A plank, wall sit, or dead hang. |
 | **Tabata clock** | A round timer opened from Home. Classic is 20 seconds on, 10 off, 8 rounds. It is not a saved workout. |
 | **Pro skin** | A fun theme, such as anime, listed under Pro skins. Everyday skins stay available without Pro. |

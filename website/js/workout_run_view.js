@@ -16,7 +16,7 @@ export function renderRun(run) {
   clockNode.textContent = showSet ? setLabel(run, exercise) : formatClock(run.remaining);
   clockNode.className = showSet ? 'tabata-clock set-prompt' : 'tabata-clock';
   renderControls(run);
-  if (run.phase === 'work' || run.phase === 'rest' || run.phase === 'hold') {
+  if (run.phase === 'work' || run.phase === 'rest' || run.phase === 'hold' || run.phase === 'holdReady') {
     document.title = `${formatClock(run.remaining)} ${phaseLabel(run.phase)}`;
   }
 }
@@ -57,8 +57,14 @@ function renderControls(run) {
   const primary = document.querySelector('#run-primary');
   const pause = document.querySelector('#run-pause');
   primary.hidden = run.phase === 'work';
-  primary.textContent = run.phase === 'rest' ? 'Skip rest' : 'Done';
-  pause.hidden = run.phase === 'set';
+  if (run.phase === 'holdReady') {
+    primary.textContent = 'Start';
+  } else if (run.phase === 'rest') {
+    primary.textContent = 'Skip rest';
+  } else {
+    primary.textContent = 'Done';
+  }
+  pause.hidden = run.phase === 'set' || run.phase === 'holdReady';
   pause.textContent = run.paused ? 'Resume' : 'Pause';
 }
 
@@ -84,6 +90,9 @@ function phaseLabel(phase) {
   if (phase === 'set') {
     return 'Set';
   }
+  if (phase === 'holdReady') {
+    return 'Ready';
+  }
   if (phase === 'hold') {
     return 'Hold';
   }
@@ -98,7 +107,7 @@ function detailLabel(state, exercise) {
     return exercise.reps ? `${exercise.reps} reps` : '';
   }
   const total = exercise.sets ?? 1;
-  if (total > 1 && (exercise.type === 'hold' || state.phase === 'hold')) {
+  if (total > 1 && (exercise.type === 'hold' || state.phase === 'hold' || state.phase === 'holdReady')) {
     return `Attempt ${state.setIndex + 1} of ${total}`;
   }
   if (total > 1) {

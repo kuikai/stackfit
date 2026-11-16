@@ -24,7 +24,7 @@ class ActiveTimerCard extends StatelessWidget {
     final exercise = state.currentExercise;
 
     final phaseLabel = switch (state.phase) {
-      SessionPhase.workReady => 'READY',
+      SessionPhase.workReady || SessionPhase.holdReady => 'READY',
       SessionPhase.work => 'WORK',
       SessionPhase.rest => 'REST',
       SessionPhase.setReady => 'SET',
@@ -48,7 +48,9 @@ class ActiveTimerCard extends StatelessWidget {
     final showAttempt =
         exercise?.type == ExerciseType.hold &&
         state.totalSets > 1 &&
-        (state.phase == SessionPhase.hold || state.phase == SessionPhase.rest);
+        (state.phase == SessionPhase.hold ||
+            state.phase == SessionPhase.holdReady ||
+            state.phase == SessionPhase.rest);
 
     final countdown = Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
@@ -74,7 +76,9 @@ class ActiveTimerCard extends StatelessWidget {
             Text(
               showRound
                   ? '$countLabel ${state.setNumber} of ${state.totalSets}'
-                  : showAttempt && state.phase == SessionPhase.hold
+                  : showAttempt &&
+                          (state.phase == SessionPhase.hold ||
+                              state.phase == SessionPhase.holdReady)
                   ? 'Attempt ${state.setNumber} of ${state.totalSets}'
                   : _restCaption(),
               style: theme.textTheme.bodyLarge?.copyWith(

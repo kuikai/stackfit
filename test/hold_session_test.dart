@@ -3,12 +3,20 @@ import 'package:stackfit/models/models.dart';
 import 'package:stackfit/services/workout_session_controller.dart';
 
 void main() {
-  test('a hold starts at zero and Done stores 45 seconds', () {
+  test('a hold waits for Start, then Done stores 45 seconds', () {
     final clock = _Clock(DateTime.utc(2026, 11, 9, 12));
     final heard = <int>[];
     final controller = _controller(_plank(), clock, heard);
     addTearDown(controller.disposeController);
 
+    expect(controller.state.phase, SessionPhase.holdReady);
+    expect(controller.displayedSeconds, 0);
+
+    clock.advance(const Duration(seconds: 20));
+    expect(controller.state.phase, SessionPhase.holdReady);
+    expect(controller.displayedSeconds, 0);
+
+    controller.startHold();
     expect(controller.state.phase, SessionPhase.hold);
     expect(controller.displayedSeconds, 0);
 
@@ -24,17 +32,22 @@ void main() {
     expect(heard, isEmpty);
   });
 
-  test('a second attempt is a second log', () {
+  test('a second attempt waits for Start again', () {
     final clock = _Clock(DateTime.utc(2026, 11, 9, 12));
     final controller = _controller(_plank(attempts: 2), clock, []);
     addTearDown(controller.disposeController);
 
+    controller.startHold();
     clock.advance(const Duration(seconds: 45));
     controller.completeHold();
-    expect(controller.state.phase, SessionPhase.hold);
+    expect(controller.state.phase, SessionPhase.holdReady);
     expect(controller.state.setIndex, 1);
     expect(controller.displayedSeconds, 0);
 
+    clock.advance(const Duration(seconds: 8));
+    expect(controller.displayedSeconds, 0);
+
+    controller.startHold();
     clock.advance(const Duration(seconds: 12));
     controller.completeHold();
 
@@ -49,6 +62,7 @@ void main() {
     final controller = _controller(_plank(), clock, []);
     addTearDown(controller.disposeController);
 
+    controller.startHold();
     clock.advance(const Duration(seconds: 10));
     controller.togglePause();
     expect(controller.state.isPaused, isTrue);
@@ -141,6 +155,45 @@ void main() {
     clock.advance(const Duration(seconds: 3));
     controller.completeHold();
     expect(controller.setLogs.single.heldSeconds, 48);
+  });
+
+  test('a holdReady run can be resumed', () {
+    final workout = _plank();
+    final progress = InProgressWorkout(
+      workout: workout,
+      blockIndex: 0,
+      roundIndex: 0,
+      exerciseIndex: 0,
+      setIndex: 0,
+      phase: 'holdReady',
+      remainingSeconds: 0,
+      isPaused: false,
+      elapsedSeconds: 0,
+      savedAt: DateTime.utc(2026, 11, 9, 12),
+    );
+
+    expect(progress.canResume, isTrue);
+
+    final clock = _Clock(DateTime.utc(2026, 11, 9, 12, 5));
+    final controller = WorkoutSessionController(
+      workout: workout,
+      onWorkFinished: () {},
+      onRestFinished: () {},
+      onWorkoutFinished: () {},
+      resumeState: stateFromProgress(progress, workout, clock.now),
+      clock: clock.call,
+    );
+    addTearDown(controller.disposeController);
+
+    expect(controller.state.phase, SessionPhase.holdReady);
+    expect(controller.displayedSeconds, 0);
+    clock.advance(const Duration(seconds: 10));
+    expect(controller.displayedSeconds, 0);
+
+    controller.startHold();
+    clock.advance(const Duration(seconds: 5));
+    controller.completeHold();
+    expect(controller.setLogs.single.heldSeconds, 5);
   });
 }
 

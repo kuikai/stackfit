@@ -202,10 +202,19 @@ class WorkoutSessionController extends ChangeNotifier
     _noteCountdown(work);
   }
 
+  /// Starts the hold clock. Used when a hold is waiting on READY.
+  void startHold() {
+    if (state.phase != SessionPhase.holdReady || state.isComplete) {
+      return;
+    }
+    _beginHold(setIndex: state.setIndex);
+  }
+
   void togglePause() {
     if (state.isComplete ||
         state.phase == SessionPhase.setReady ||
-        state.phase == SessionPhase.workReady) {
+        state.phase == SessionPhase.workReady ||
+        state.phase == SessionPhase.holdReady) {
       return;
     }
     if (!state.isPaused) {
@@ -450,6 +459,7 @@ class WorkoutSessionController extends ChangeNotifier
       case SessionPhase.setReady:
         completeSet();
         break;
+      case SessionPhase.holdReady:
       case SessionPhase.hold:
         completeHold();
         break;
@@ -489,8 +499,10 @@ class WorkoutSessionController extends ChangeNotifier
   }
 
   /// Saves the seconds on the clock and moves to the next attempt or exercise.
+  /// From READY, logs zero and advances (same as Done at 0:00).
   void completeHold() {
-    if (state.phase != SessionPhase.hold || state.isComplete) {
+    final fromReady = state.phase == SessionPhase.holdReady;
+    if ((!fromReady && state.phase != SessionPhase.hold) || state.isComplete) {
       return;
     }
     final exercise = state.currentExercise;
@@ -498,7 +510,7 @@ class WorkoutSessionController extends ChangeNotifier
       return;
     }
 
-    final held = _holdSecondsNow();
+    final held = fromReady ? 0 : _holdSecondsNow();
     state = state.copyWith(remainingSeconds: held);
     _clearHoldClock();
     _setLog.add(

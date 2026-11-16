@@ -42,7 +42,7 @@ class InProgressWorkout {
   final int exerciseIndex;
   final int setIndex;
 
-  /// `workReady`, `work`, `rest`, `setReady`, or `hold`.
+  /// `workReady`, `work`, `rest`, `setReady`, `holdReady`, or `hold`.
   final String phase;
   final int remainingSeconds;
   final bool isPaused;
@@ -76,6 +76,7 @@ class InProgressWorkout {
         phase == 'work' ||
         phase == 'rest' ||
         phase == 'setReady' ||
+        phase == 'holdReady' ||
         phase == 'hold';
   }
 

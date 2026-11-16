@@ -67,7 +67,7 @@ mixin WorkoutSessionPhases on ChangeNotifier {
       return;
     }
     if (exercise.type == ExerciseType.hold) {
-      _beginHold();
+      _armHold();
       return;
     }
     _instantSkips = 0;
@@ -189,7 +189,7 @@ mixin WorkoutSessionPhases on ChangeNotifier {
         _stopTicker();
         notifyListeners();
       case _AfterRest.hold:
-        _beginHold(setIndex: state.setIndex + 1);
+        _armHold(setIndex: state.setIndex + 1);
       case _AfterRest.station:
         _openExercise(
           blockIndex: state.blockIndex,
@@ -227,7 +227,21 @@ mixin WorkoutSessionPhases on ChangeNotifier {
     _noteCountdown(seconds);
   }
 
-  /// Starts a hold at 0:00, or continues at [setIndex] for the next attempt.
+  /// Parks a hold on READY at 0:00 until Start. [setIndex] is the next attempt.
+  void _armHold({int? setIndex}) {
+    _instantSkips = 0;
+    _clearHoldClock();
+    state = state.copyWith(
+      setIndex: setIndex ?? state.setIndex,
+      phase: SessionPhase.holdReady,
+      remainingSeconds: 0,
+      isPaused: false,
+    );
+    _stopTicker();
+    notifyListeners();
+  }
+
+  /// Starts a hold counting up from 0:00 at the current attempt.
   void _beginHold({int? setIndex}) {
     _instantSkips = 0;
     _holdLeftRunning = false;

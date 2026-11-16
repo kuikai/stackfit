@@ -71,12 +71,25 @@ export function advanceWork(state) {
   return leaveStation(state, false);
 }
 
+export function startHold(state) {
+  return {
+    ...state,
+    phase: 'hold',
+    remaining: 0,
+    paused: false,
+    holdStartedAt: Date.now(),
+  };
+}
+
 export function completeHold(state) {
   const exercise = currentExercise(state);
+  const fromReady = state.phase === 'holdReady';
   const started = state.holdStartedAt;
-  const seconds = started
-    ? Math.max(0, Math.floor((Date.now() - started) / 1000))
-    : Math.max(0, state.remaining || 0);
+  const seconds = fromReady
+    ? 0
+    : started
+      ? Math.max(0, Math.floor((Date.now() - started) / 1000))
+      : Math.max(0, state.remaining || 0);
   const round = (state.roundIndex || 0) + 1;
   const entry = {
     exerciseId: exercise?.id || '',
@@ -88,7 +101,7 @@ export function completeHold(state) {
   if (round > 1) {
     entry.round = round;
   }
-  const logged = { ...state, logs: [...(state.logs || []), entry] };
+  const logged = { ...state, logs: [...(state.logs || []), entry], holdStartedAt: null };
   const total = exercise?.sets ?? 1;
   const last = state.setIndex >= total - 1;
   if (last) {
@@ -143,7 +156,7 @@ function openExercise(state, blockIndex, roundIndex, exerciseIndex) {
     return armTimer(next, exercise);
   }
   if (exercise.type === 'hold') {
-    return { ...next, phase: 'hold', remaining: 0, holdStartedAt: Date.now() };
+    return { ...next, phase: 'holdReady', remaining: 0, holdStartedAt: null };
   }
   return { ...next, phase: 'set', remaining: 0 };
 }
@@ -187,10 +200,10 @@ function applyAfterRest(state, after) {
     return {
       ...state,
       setIndex: state.setIndex + 1,
-      phase: 'hold',
+      phase: 'holdReady',
       remaining: 0,
       paused: false,
-      holdStartedAt: Date.now(),
+      holdStartedAt: null,
     };
   }
   if (after === 'station') {
@@ -260,6 +273,10 @@ function onPrimary(app) {
   if (!run || run.phase === 'done') {
     return;
   }
+  if (run.phase === 'holdReady') {
+    applyStep(startHold(run), app);
+    return;
+  }
   if (run.phase === 'set') {
     applyStep(completeSet(run), app);
     return;
@@ -285,7 +302,7 @@ function skipCurrent(app) {
     applyStep(finishRest(run), app);
     return;
   }
-  if (run.phase === 'hold') {
+  if (run.phase === 'holdReady' || run.phase === 'hold') {
     applyStep(completeHold(run), app);
     return;
   }
@@ -293,7 +310,7 @@ function skipCurrent(app) {
 }
 
 function toggleRunPause() {
-  if (!run || run.phase === 'set' || run.phase === 'done') {
+  if (!run || run.phase === 'set' || run.phase === 'holdReady' || run.phase === 'done') {
     return;
   }
   if (run.phase === 'hold' && !run.paused) {
@@ -316,7 +333,7 @@ function onRunKey(event, app) {
     return;
   }
   event.preventDefault();
-  if (run?.phase === 'set' || run?.phase === 'hold') {
+  if (run?.phase === 'set' || run?.phase === 'hold' || run?.phase === 'holdReady') {
     onPrimary(app);
     return;
   }
@@ -377,6 +394,9 @@ function applyStep(next, app) {
   }
   if (run.phase === 'hold' && !run.paused) {
     run.holdStartedAt = Date.now() - (run.remaining || 0) * 1000;
+  }
+  if (run.phase === 'holdReady') {
+    run.holdStartedAt = null;
   }
   renderRun(run);
 }

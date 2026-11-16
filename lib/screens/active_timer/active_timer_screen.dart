@@ -449,7 +449,11 @@ class _ActiveTimerScreenState extends ConsumerState<ActiveTimerScreen>
                   state: state,
                   onStart: () {
                     unawaited(_sound.prime());
-                    _controller.startWork();
+                    if (state.phase == SessionPhase.holdReady) {
+                      _controller.startHold();
+                    } else {
+                      _controller.startWork();
+                    }
                   },
                   onCompleteSet: _completeSet,
                   onCompleteHold: _controller.completeHold,

@@ -32,7 +32,8 @@ class TimerPrimaryAction extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final skin = ref.watch(settingsProvider).skin;
-    if (state.phase == SessionPhase.workReady) {
+    if (state.phase == SessionPhase.workReady ||
+        state.phase == SessionPhase.holdReady) {
       return _markedButton(context, skin, 'Start', onStart);
     }
     if (state.phase == SessionPhase.setReady) {
@@ -253,7 +254,8 @@ class TimerSecondaryControls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (state.phase == SessionPhase.setReady ||
-        state.phase == SessionPhase.workReady) {
+        state.phase == SessionPhase.workReady ||
+        state.phase == SessionPhase.holdReady) {
       return Row(
         children: [
           Expanded(
